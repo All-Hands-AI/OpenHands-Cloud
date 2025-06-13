@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openhands-mcp
+  labels:
+    app: openhands-mcp
+spec:
+  replicas: {{ .Values.mcpEvents.deployment.replicas | default 2 }}
+  selector:
+    matchLabels:
+      app: openhands-mcp
+  template:
+    metadata:
+      labels:
+        app: openhands-mcp
+      annotations:
+        {{- if .Values.allowedUsers }}
+        checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}
+        {{- end }}
+    spec:
+      terminationGracePeriodSeconds: 60
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- if .Values.allowedUsers }}
+        - name: user-waitlist
+          configMap:
+            name: user-waitlist
+        {{- end }}
+      containers:
+      - name: openhands-mcp
+        imagePullPolicy: Always
+        image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
+        command: ["/bin/sh"]
+        args: 
+          - "-c"
+          - "exec ddtrace-run uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.mcpEvents.uvicorn.workers | default 2 }}"
+        ports:
+        - containerPort: 3000
+        resources:
+          {{- toYaml .Values.deployment.resources | nindent 12 }}
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        volumeMounts:
+          {{- if .Values.allowedUsers }}
+          - name: user-waitlist
+            mountPath: /app/user-waitlist
+          {{- end }}
+        env:
+        {{- include "openhands.env" . | nindent 8 }}

@@ -1,0 +1,36 @@
+{{- if .Values.gitlabWebhookInstallation.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-install-hooks
+  labels:
+    app: {{ .Release.Name }}-install-hooks
+spec:
+  schedule: {{ .Values.gitlabWebhookInstallation.schedule | quote }}
+  concurrencyPolicy: {{ .Values.gitlabWebhookInstallation.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.gitlabWebhookInstallation.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.gitlabWebhookInstallation.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.gitlabWebhookInstallation.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-install-hooks
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Release.Name }}-install-hooks
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              command: ["python", "-m", "sync.install_gitlab_webhooks"]
+              resources:
+                {{- toYaml .Values.gitlabWebhookInstallation.resources | nindent 16 }}
+              env:
+                {{- include "openhands.env" . | nindent 16 }}
+{{- end }}

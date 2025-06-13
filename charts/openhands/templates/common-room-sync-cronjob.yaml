@@ -1,0 +1,71 @@
+{{- if .Values.commonRoomSync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-common-room-sync
+  labels:
+    app: {{ .Release.Name }}-common-room-sync
+spec:
+  schedule: {{ .Values.commonRoomSync.schedule | quote }}
+  concurrencyPolicy: {{ .Values.commonRoomSync.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.commonRoomSync.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.commonRoomSync.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.commonRoomSync.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-common-room-sync
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Release.Name }}-common-room-sync
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              command: ["/bin/sh", "-c"]
+              args:
+                - "cd /app && python -m sync.common_room_sync"
+              resources:
+                {{- toYaml .Values.commonRoomSync.resources | nindent 16 }}
+              env:
+                - name: BATCH_SIZE
+                  value: {{ .Values.commonRoomSync.batchSize | quote }}
+                - name: MAX_RETRIES
+                  value: {{ .Values.commonRoomSync.maxRetries | quote }}
+                - name: INITIAL_BACKOFF_SECONDS
+                  value: {{ .Values.commonRoomSync.initialBackoffSeconds | quote }}
+                - name: MAX_BACKOFF_SECONDS
+                  value: {{ .Values.commonRoomSync.maxBackoffSeconds | quote }}
+                - name: BACKOFF_FACTOR
+                  value: {{ .Values.commonRoomSync.backoffFactor | quote }}
+                - name: RATE_LIMIT
+                  value: {{ .Values.commonRoomSync.rateLimit | quote }}
+                - name: KEYCLOAK_BATCH_SIZE
+                  value: {{ .Values.commonRoomSync.keycloakBatchSize | default "20" | quote }}
+                - name: COMMON_ROOM_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: common-room-api-key
+                      key: commonroom-api-key
+                - name: COMMON_ROOM_DESTINATION_SOURCE_ID
+                  value: "118984"
+                # Database configuration is included in openhands.env
+                # GCP configuration (if applicable)
+                {{- if .Values.gcp }}
+                {{- if .Values.gcp.dbInstance }}
+                - name: GCP_DB_INSTANCE
+                  value: "{{ .Values.gcp.dbInstance }}"
+                - name: GCP_PROJECT
+                  value: "{{ .Values.gcp.project }}"
+                - name: GCP_REGION
+                  value: "{{ .Values.gcp.region }}"
+                {{- end }}
+                {{- end }}
+                {{- include "openhands.env" . | nindent 16 }}
+{{- end }}
