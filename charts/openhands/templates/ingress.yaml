@@ -25,6 +25,27 @@ spec:
   {{- end }}
     http:
       paths:
+      - path: /integration/github/events
+        pathType: Exact
+        backend:
+          service:
+            name: openhands-integrations-service
+            port:
+              number: 3000
+      - path: /slack
+        pathType: Prefix
+        backend:
+          service:
+            name: openhands-integrations-service
+            port:
+              number: 3000
+      - path: /mcp/mcp
+        pathType: Prefix
+        backend:
+          service:
+            name: openhands-mcp-service
+            port:
+              number: 3000
       - path: /
         pathType: Prefix
         backend:
