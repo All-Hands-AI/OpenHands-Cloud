@@ -86,8 +86,8 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -98,11 +98,17 @@ jobs:
           echo "Updating dependencies for ${{ matrix.chart.name }}"
           helm dependency update ${{ matrix.chart.path }}
 
-      - name: Publish ${{ matrix.chart.name }} chart to GHCR
-        uses: appany/helm-oci-chart-releaser@v0.4.2
-        with:
-          name: ${{ matrix.chart.name }}
-          repository: ${{ matrix.chart.repository }}
-          path: ${{ matrix.chart.path }}
-          registry: ghcr.io/${{ github.repository_owner }}
-          tag: auto
+      - name: Package and Push Helm Chart
+        run: |
+          # Package the chart
+          helm package ${{ matrix.chart.path }}
+          
+          # Get chart name and version from the packaged file
+          CHART_PACKAGE=$(ls *.tgz | head -1)
+          CHART_NAME="${{ matrix.chart.name }}"
+          CHART_VERSION=$(helm show chart ${{ matrix.chart.path }} | grep "version:" | awk '{print $2}')
+          
+          echo "Publishing $CHART_NAME chart version $CHART_VERSION to GHCR"
+          
+          # Push to GHCR
+          helm push $CHART_PACKAGE oci://ghcr.io/${{ github.repository_owner }}/${{ matrix.chart.repository }}
