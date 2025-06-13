@@ -45,6 +45,15 @@ jobs:
           echo "Testing ${{ matrix.chart.name }} chart with default values"
           echo "Updating dependencies for ${{ matrix.chart.name }}"
           helm dependency update ${{ matrix.chart.path }}
+          
+          echo "Running helm lint for ${{ matrix.chart.name }}"
+          helm lint ${{ matrix.chart.path }}
+          if [ $? -ne 0 ]; then
+            echo "Helm lint test failed for ${{ matrix.chart.name }}"
+            exit 1
+          fi
+          echo "Helm lint test passed for ${{ matrix.chart.name }}"
+          
           echo "Running helm template for ${{ matrix.chart.name }}"
           helm template ${{ matrix.chart.path }} --debug
           if [ $? -ne 0 ]; then
