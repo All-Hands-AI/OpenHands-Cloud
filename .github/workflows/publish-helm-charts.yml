@@ -95,12 +95,17 @@ jobs:
         with:
           version: 'latest'
           
-      - name: Extract chart version from Chart.yaml
-        id: chart_version
+      - name: Extract chart version and prepare repository
+        id: chart_info
         run: |
           VERSION=$(grep '^version:' ${{ matrix.chart.path }}/Chart.yaml | awk '{print $2}')
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using chart version: ${VERSION}"
+          
+          # Convert repository owner to lowercase for GHCR
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_OUTPUT
+          echo "Using repository owner: ${REPO_OWNER}"
 
       - name: Publish ${{ matrix.chart.name }} chart to GHCR
         uses: appany/helm-oci-chart-releaser@v0.4.2
@@ -108,8 +113,8 @@ jobs:
           name: ${{ matrix.chart.name }}
           repository: ${{ matrix.chart.repository }}
           path: ${{ matrix.chart.path }}
-          registry: ghcr.io/${{ github.repository_owner }}
+          registry: ghcr.io/${{ steps.chart_info.outputs.REPO_OWNER }}
           registry_username: ${{ github.actor }}
           registry_password: ${{ secrets.GITHUB_TOKEN }}
           update_dependencies: 'true'
-          tag: ${{ steps.chart_version.outputs.VERSION }}
+          tag: ${{ steps.chart_info.outputs.VERSION }}
