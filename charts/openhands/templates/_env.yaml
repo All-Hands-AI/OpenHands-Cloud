@@ -222,6 +222,25 @@
   value: {{ $value | quote }}
 {{- end }}
 {{- end }}
+{{- if .Values.datadog.enabled }}
+# Datadog configuration
+- name: DD_AGENT_HOST
+  value: {{ .Values.datadog.agentHost | quote }}
+- name: DD_TRACE_AGENT_PORT
+  value: "8126"
+- name: DD_DOGSTATSD_PORT
+  value: "8125"
+- name: DD_SERVICE
+  value: {{ .Values.datadog.service | quote }}
+- name: DD_ENV
+  value: {{ .Values.datadog.env | quote }}
+- name: DD_LOGS_INJECTION
+  value: "true"
+- name: DD_TRACE_ENABLED
+  value: "true"
+- name: DD_TRACE_SAMPLING_RULES
+  value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
+{{- end }}
 - name: DB_PASS
   valueFrom:
     secretKeyRef:
