@@ -35,9 +35,9 @@ spec:
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
         command: ["/bin/sh"]
-        args: 
+        args:
           - "-c"
-          - "exec uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.uvicorn.workers }}"
+          - "exec {{- if .Values.datadog.enabled }} ddtrace-run {{- end }} uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.uvicorn.workers }}"
         ports:
         - containerPort: 3000
         resources:

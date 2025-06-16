@@ -371,3 +371,9 @@ langfuse:
     auth:
       existingSecret: redis
       existingSecretPasswordKey: redis-password
+
+datadog:
+  enabled: false
+  env: "production"
+  service: "openhands"
+  agentHost: "datadog-agent"
