@@ -79,10 +79,93 @@ stripe:
 
 resendSync:
   enabled: false
+  schedule: "0 1 * * *"  # Daily at 1 AM
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  backoffLimit: 3
+  audienceId: ""
+  batchSize: "100"
+  maxRetries: "3"
+  initialBackoffSeconds: "1"
+  maxBackoffSeconds: "60"
+  backoffFactor: "2"
+  rateLimit: "10"
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
 gitlab:
   enabled: false
 github:
   enabled: false
+
+proactiveConvoClean:
+  enabled: false
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  backoffLimit: 3
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
+commonRoomSync:
+  enabled: false
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  backoffLimit: 3
+  batchSize: "100"
+  maxRetries: "3"
+  initialBackoffSeconds: "1"
+  maxBackoffSeconds: "60"
+  backoffFactor: "2"
+  rateLimit: "10"
+  keycloakBatchSize: "20"
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
+gitlabWebhookInstallation:
+  enabled: false
+  schedule: "0 4 * * *"  # Daily at 4 AM
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  backoffLimit: 3
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
+mcpEvents:
+  deployment:
+    replicas: 2
+  uvicorn:
+    workers: 2
+
+integrationEvents:
+  deployment:
+    replicas: 2
+  uvicorn:
+    workers: 2
 
 monitoring:
   enabled: false

@@ -14,14 +14,14 @@ dependencies:
 - name: litellm-helm
   repository: oci://ghcr.io/berriai
   version: 0.1.664
-- name: runtime-api-helm
-  repository: oci://ghcr.io/all-hands-ai
-  version: 0.1.3
+- name: runtime-api
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  version: 0.1.5
 - name: langfuse
   repository: https://langfuse.github.io/langfuse-k8s
   version: 1.2.13
 - name: clickhouse
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 9.2.5
-digest: sha256:d0f83450fd44ce09e90677aa8e162935a31a34b209742026c07c39e9447d5538
-generated: "2025-06-13T12:58:23.533527259-04:00"
+digest: sha256:d3d50a34e0ff1f6a48930aad3e33c4e541226c5f42d80b0e7a80185171548297
+generated: "2025-06-16T20:59:03.766299723Z"
