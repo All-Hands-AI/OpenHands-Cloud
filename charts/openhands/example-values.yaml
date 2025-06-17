@@ -54,3 +54,9 @@ runtime-api:
     host: runtime-api.example.com
   env:
     RUNTIME_BASE_URL: "runtime.example.com"
+
+# Tavily API for web search functionality (optional)
+# tavily:
+#   enabled: true
+#   auth:
+#     existingSecret: tavily-api-key

@@ -241,6 +241,14 @@
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
 {{- end }}
+{{- if .Values.tavily.enabled }}
+# Tavily API configuration
+- name: TAVILY_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.tavily.auth.existingSecret }}
+      key: tavily-api-key
+{{- end }}
 - name: DB_PASS
   valueFrom:
     secretKeyRef:

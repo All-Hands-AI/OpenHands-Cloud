@@ -460,3 +460,8 @@ datadog:
   env: "production"
   service: "openhands"
   agentHost: "datadog-agent"
+
+tavily:
+  enabled: false
+  auth:
+    existingSecret: tavily-api-key
