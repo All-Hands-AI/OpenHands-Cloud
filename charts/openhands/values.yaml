@@ -18,10 +18,10 @@ deployment:
       cpu: 500m
 
 uvicorn:
-  workers: 1
+  workers: 3
 
 tls:
-  enabled: true
+  enabled: false
 
 ingress:
   enabled: false
@@ -43,7 +43,7 @@ sandbox:
   apiHostname: "https://dummy-runtime-api.example.com"
 
 filestore:
-  ephemeral: true
+  ephemeral: false
   bucket: openhands-sessions
 
 sessions:
@@ -62,12 +62,14 @@ appConfig:
   OPENHANDS_GITHUB_SERVICE_CLS: "integrations.github.github_service.SaaSGitHubService"
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
+  OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
 
 env:
   DISABLE_WAITLIST: "true"
-  # replace prod/claude-3-7-sonnet-20250219 with your LLM model
-  LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
+  SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
+  # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
+  # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
 allowedUsers: null
 
@@ -123,14 +125,14 @@ commonRoomSync:
   schedule: "0 3 * * *"  # Daily at 3 AM
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
   backoffLimit: 3
   batchSize: "100"
   maxRetries: "3"
   initialBackoffSeconds: "1"
   maxBackoffSeconds: "60"
   backoffFactor: "2"
-  rateLimit: "10"
+  rateLimit: "2"
   keycloakBatchSize: "20"
   resources:
     requests:
@@ -142,10 +144,10 @@ commonRoomSync:
 
 gitlabWebhookInstallation:
   enabled: false
-  schedule: "0 4 * * *"  # Daily at 4 AM
+  schedule: "* * * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
   backoffLimit: 3
   resources:
     requests:
@@ -154,6 +156,10 @@ gitlabWebhookInstallation:
     limits:
       memory: 512Mi
       cpu: 200m
+
+githubProxy:
+  enabled: false
+  endpointsEnabled: false
 
 mcpEvents:
   deployment:
@@ -224,7 +230,7 @@ redis:
       cpu: 100m
 
 postgresql:
-  enabled: true
+  enabled: false
   auth:
     username: postgres
     existingSecret: postgres-password
@@ -238,12 +244,12 @@ postgresql:
       postgresql: 5432
 
 keycloak:
-  enabled: true
+  enabled: false
+  url: "http://keycloak.keycloak"
   fullnameOverride: keycloak
   # REQUIRED: Update to match the host set in the ingress section below
   # url: "https://auth.app.example.com"
   replicaCount: 1
-  enabled: true
   production: true
   proxyHeaders: forwarded
   ingress:
@@ -277,7 +283,7 @@ keycloak:
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
-  enabled: true
+  enabled: false
   masterkeySecretName: lite-llm-api-key
   masterkeySecretKey: lite-llm-api-key
   environmentSecrets: [litellm-env-secrets]
@@ -336,7 +342,7 @@ litellm-helm:
       allowed_fails: 3
 
 runtime-api:
-  enabled: true
+  enabled: false
   replicaCount: 1
   monitoring:
     enabled: false
@@ -457,7 +463,7 @@ langfuse:
 
 datadog:
   enabled: false
-  env: "production"
+  env: "dev" # Default environment, can be overridden
   service: "openhands"
   agentHost: "datadog-agent"
 
@@ -465,3 +471,9 @@ tavily:
   enabled: false
   auth:
     existingSecret: tavily-api-key
+
+slack:
+  enabled: false
+
+debuggingRoutes:
+  enabled: false

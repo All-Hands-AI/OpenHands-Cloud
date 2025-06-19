@@ -11,6 +11,8 @@
   value: {{ .Values.appConfig.OPENHANDS_MCP_CONFIG_CLS }}
 - name: OPENHANDS_CONVERSATION_VALIDATOR_CLS
   value: {{ .Values.appConfig.OPENHANDS_CONVERSATION_VALIDATOR_CLS }}
+- name: OPENHANDS_EXPERIMENT_MANAGER_CLS
+  value: {{ .Values.appConfig.OPENHANDS_EXPERIMENT_MANAGER_CLS }}
 - name: LOG_JSON # Configure structured logging for Google Cloud
   value: '1'
 - name: LOG_JSON_LEVEL_KEY
@@ -84,7 +86,6 @@
       name: {{ .Values.redis.auth.existingSecret }}
       key: redis-password
 {{- end }}
-{{- if .Values.keycloak.enabled }}
 - name: KEYCLOAK_SERVER_URL
   value: {{ .Values.keycloak.url }}
 - name: KEYCLOAK_REALM_NAME
@@ -107,15 +108,20 @@
     secretKeyRef:
       name: keycloak-realm
       key: client-secret
+- name: KEYCLOAK_SMTP_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-realm
+      key: smtp-password
+{{- if .Values.keycloak.enabled }}
 - name: KEYCLOAK_TMPADMIN_PASSWORD
   value: {{ .Values.keycloak.auth.adminPassword }}
+{{- end}}
 - name: KEYCLOAK_ADMIN_PASSWORD
   valueFrom:
     secretKeyRef:
       name: keycloak-admin
       key: admin-password
-{{- end }}
-{{- if .Values.github.enabled }}
 - name: GITHUB_APP_PRIVATE_KEY
   valueFrom:
     secretKeyRef:
@@ -141,8 +147,6 @@
     secretKeyRef:
       name: github-app
       key: client-secret
-{{- end }}
-{{- if .Values.gitlab.enabled }}
 - name: GITLAB_APP_CLIENT_ID
   valueFrom:
     secretKeyRef:
@@ -153,15 +157,12 @@
     secretKeyRef:
       name: gitlab-app
       key: client-secret
-{{- end }}
 {{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
 - name: LITE_LLM_API_URL
   value: http://{{ .Release.Name }}-litellm
-{{- else }}
+{{- else if .Values.litellm.enabled }}
 - name: LITE_LLM_API_URL
   value: {{ .Values.litellm.url }}
-{{- end }}
-{{- if .Values.litellm.enabled }}
 - name: LITE_LLM_TEAM_ID
   value: {{ .Values.litellm.teamId }}
 - name: LITE_LLM_API_KEY
@@ -181,7 +182,13 @@
 - name: REQUIRE_PAYMENT
   value: "{{ .Values.stripe.requirePayment | default false }}"
 {{- end }}
-
+{{- if .Values.tavily.enabled }}
+- name: TAVILY_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.tavily.auth.existingSecret }}
+      key: tavily-api-key
+{{- end }}
 {{- if .Values.ingress.enabled }}
 {{- if .Values.ingress.prefixWithBranch }}
 - name: WEB_HOST
@@ -207,6 +214,36 @@
   value: {{ .Values.ingress.host }}
 {{- end }}
 
+{{- if .Values.slack.enabled }}
+- name: SLACK_CLIENT_ID
+  value: "{{ .Values.slack.clientId }}"
+- name: SLACK_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: slack-auth
+      key: client-secret
+- name: SLACK_SIGNING_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: slack-auth
+      key: signing-secret
+- name: SLACK_WEBHOOKS_ENABLED
+  value: "1"
+{{- end }}
+
+{{- if .Values.githubProxy.enabled }}
+- name: GITHUB_PROXY
+  value: "1"
+{{- end }}
+{{- if .Values.githubProxy.endpointsEnabled }}
+- name: GITHUB_PROXY_ENDPOINTS
+  value: "1"
+{{- end }}
+
+{{- if .Values.debuggingRoutes.enabled }}
+- name: ADD_DEBUGGING_ROUTES
+  value: "1"
+{{- end }}
 
 {{- if .Values.postgresql.enabled }}
 - name: DB_HOST
@@ -240,14 +277,6 @@
   value: "true"
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
-{{- end }}
-{{- if .Values.tavily.enabled }}
-# Tavily API configuration
-- name: TAVILY_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.tavily.auth.existingSecret }}
-      key: tavily-api-key
 {{- end }}
 - name: DB_PASS
   valueFrom:

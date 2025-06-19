@@ -1,3 +1,4 @@
+{{- if .Values.postgresql.enabled -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,3 +17,4 @@ data:
     GRANT ALL PRIVILEGES ON DATABASE bitnami_keycloak TO postgres;
     CREATE DATABASE runtime_api_db;
     GRANT ALL PRIVILEGES ON DATABASE runtime_api_db TO postgres;
+{{- end }}
