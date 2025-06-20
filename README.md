@@ -1,6 +1,6 @@
 # OpenHands Cloud
 > [!WARNING]
-> This software is licensed under the [Polyform Free Trial License](./LICENSE). This is **NOT** an open source license. Usage is limited to 30 days per calendar year without a commercial license.
+> This software is licensed under the [Polyform Free Trial License](./LICENSE). This is **NOT** an open source license. Usage is limited to 30 days per calendar year without a commercial license. If you would like to use it beyond 30 days, please [contact us](https://www.all-hands.dev/contact).
 
 > [!WARNING]
 > This is a work in progress and may contain bugs, incomplete features, or breaking changes.
