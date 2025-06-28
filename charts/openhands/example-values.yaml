@@ -1,19 +1,12 @@
+env:
+  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
+  LITE_LLM_TEAM_NAME: openhands
+
 ingress:
   host: "app.example.com"
   annotations: {}
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
     # cert-manager.io/cluster-issuer: letsencrypt-production
-
-sandbox:
-  apiHostname: https://runtime-api.example.com
-
-env:
-  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
-  LITE_LLM_TEAM_NAME: openhands
-
-litellm:
-  enabled: true
-  url: "https://llm-proxy.example.com"
 
 keycloak:
   url: "https://auth.app.example.com"
@@ -22,6 +15,10 @@ keycloak:
     annotations: {}
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
     # cert-manager.io/cluster-issuer: letsencrypt-production
+
+litellm:
+  enabled: true
+  url: "https://llm-proxy.example.com"
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
@@ -54,6 +51,9 @@ runtime-api:
     host: runtime-api.example.com
   env:
     RUNTIME_BASE_URL: "runtime.example.com"
+
+sandbox:
+  apiHostname: https://runtime-api.example.com
 
 # Tavily API for web search functionality (optional)
 # tavily:

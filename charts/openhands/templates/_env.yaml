@@ -7,6 +7,10 @@
   value: {{ .Values.appConfig.OPENHANDS_GITHUB_SERVICE_CLS }}
 - name: OPENHANDS_GITLAB_SERVICE_CLS
   value: {{ .Values.appConfig.OPENHANDS_GITLAB_SERVICE_CLS }}
+{{- if .Values.bitbucket.enabled }}
+- name: OPENHANDS_BITBUCKET_SERVICE_CLS
+  value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_SERVICE_CLS }}
+{{- end }}
 - name: OPENHANDS_MCP_CONFIG_CLS
   value: {{ .Values.appConfig.OPENHANDS_MCP_CONFIG_CLS }}
 - name: OPENHANDS_CONVERSATION_VALIDATOR_CLS
@@ -157,6 +161,18 @@
     secretKeyRef:
       name: gitlab-app
       key: client-secret
+{{- if .Values.bitbucket.enabled }}
+- name: BITBUCKET_APP_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.bitbucket.auth.existingSecret }}
+      key: client-id
+- name: BITBUCKET_APP_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.bitbucket.auth.existingSecret }}
+      key: client-secret
+{{- end }}
 {{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
 - name: LITE_LLM_API_URL
   value: http://{{ .Release.Name }}-litellm

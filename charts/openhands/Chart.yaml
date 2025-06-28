@@ -8,36 +8,35 @@ maintainers:
   - name: xingyao
   - name: tofarr
 dependencies:
-  - name: minio
-    version: 5.0.10
-    condition: filestore.ephemeral
-    repository: https://charts.min.io/
-  - name: redis
-    version: 20.3.0
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: redis.enabled
-  - name: postgresql
-    version: 15.x.x
-    repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
-  - name: keycloak
-    version: 24.5.2
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: keycloak.enabled
-  - name: litellm-helm
-    repository: oci://ghcr.io/berriai
-    version: 0.1.664
-    condition: litellm-helm.enabled
-  - name: runtime-api
-    repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.5
-    alias: runtime-api
-    condition: runtime-api.enabled
-  - name: langfuse
-    repository: https://langfuse.github.io/langfuse-k8s
-    version: 1.2.13
-    condition: langfuse.enabled
   - name: clickhouse
     repository: oci://registry-1.docker.io/bitnamicharts
     version: 9.2.5
     condition: clickhouse.enabled
+  - name: keycloak
+    version: 24.5.2
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: keycloak.enabled
+  - name: langfuse
+    repository: https://langfuse.github.io/langfuse-k8s
+    version: 1.2.13
+    condition: langfuse.enabled
+  - name: litellm-helm
+    repository: oci://ghcr.io/berriai
+    version: 0.1.664
+    condition: litellm-helm.enabled
+  - name: minio
+    version: 5.0.10
+    condition: filestore.ephemeral
+    repository: https://charts.min.io/
+  - name: postgresql
+    version: 15.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 20.3.0
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: redis.enabled
+  - name: runtime-api
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.5
+    condition: runtime-api.enabled

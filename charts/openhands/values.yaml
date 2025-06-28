@@ -1,53 +1,4 @@
-image:
-  repository: ghcr.io/all-hands-ai/deploy
-  tag: sha-4ec3e2f
-
-runtime:
-  image:
-    repository: ghcr.io/all-hands-ai/runtime
-    tag: 35426a04d82956e8282f557c4ef75d022804a9f4-nikolaik
-
-deployment:
-  replicas: 1
-  resources:
-    requests:
-      memory: 1.5Gi
-      cpu: 500m
-    limits:
-      memory: 1.5Gi
-      cpu: 500m
-
-uvicorn:
-  workers: 3
-
-tls:
-  enabled: false
-
-ingress:
-  enabled: false
-  # REQUIRED: Update to a hostname in a DNS domain you own
-  # host: "app.example.com"
-  class: traefik
-  annotations:
-    {}
-    # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
-    # cert-manager.io/cluster-issuer: letsencrypt-production
-
-serviceAccount:
-  create: true
-  name: openhands-sa
-
-sandbox:
-  # REQUIRED: Update so this matches what you have set in the runtime api ingress
-  # apiHostname: https://runtime-api.example.com
-  apiHostname: "https://dummy-runtime-api.example.com"
-
-filestore:
-  ephemeral: false
-  bucket: openhands-sessions
-
-sessions:
-  existingSecret: jwt-secret
+allowedUsers: null
 
 autoscaling:
   enabled: false
@@ -61,64 +12,10 @@ appConfig:
   OPENHANDS_CONVERSATION_VALIDATOR_CLS: "storage.saas_conversation_validator.SaasConversationValidator"
   OPENHANDS_GITHUB_SERVICE_CLS: "integrations.github.github_service.SaaSGitHubService"
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
+  OPENHANDS_BITBUCKET_SERVICE_CLS: "integrations.bitbucket.bitbucket_service.SaaSBitBucketService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
   OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
-
-env:
-  DISABLE_WAITLIST: "true"
-  SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
-  # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
-  # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
-
-allowedUsers: null
-
-stripe:
-  enabled: false
-  requirePayment: false
-  auth:
-    existingSecret: stripe-secret
-
-resendSync:
-  enabled: false
-  schedule: "0 1 * * *"  # Daily at 1 AM
-  concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 1
-  backoffLimit: 3
-  audienceId: ""
-  batchSize: "100"
-  maxRetries: "3"
-  initialBackoffSeconds: "1"
-  maxBackoffSeconds: "60"
-  backoffFactor: "2"
-  rateLimit: "10"
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: 100m
-    limits:
-      memory: 512Mi
-      cpu: 200m
-gitlab:
-  enabled: false
-github:
-  enabled: false
-
-proactiveConvoClean:
-  enabled: false
-  schedule: "0 2 * * *"  # Daily at 2 AM
-  concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 1
-  backoffLimit: 3
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: 100m
-    limits:
-      memory: 512Mi
-      cpu: 200m
 
 commonRoomSync:
   enabled: false
@@ -142,6 +39,50 @@ commonRoomSync:
       memory: 512Mi
       cpu: 200m
 
+datadog:
+  enabled: false
+  env: "dev" # Default environment, can be overridden
+  service: "openhands"
+  agentHost: "datadog-agent"
+
+debuggingRoutes:
+  enabled: false
+
+deployment:
+  replicas: 1
+  resources:
+    requests:
+      memory: 1.5Gi
+      cpu: 500m
+    limits:
+      memory: 1.5Gi
+      cpu: 500m
+
+env:
+  DISABLE_WAITLIST: "true"
+  SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
+  # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
+  # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
+
+filestore:
+  ephemeral: false
+  bucket: openhands-sessions
+
+github:
+  enabled: false
+
+githubProxy:
+  enabled: false
+  endpointsEnabled: false
+
+gitlab:
+  enabled: false
+
+bitbucket:
+  enabled: false
+  auth:
+    existingSecret: bitbucket-app
+
 gitlabWebhookInstallation:
   enabled: false
   schedule: "* * * * *"
@@ -157,15 +98,19 @@ gitlabWebhookInstallation:
       memory: 512Mi
       cpu: 200m
 
-githubProxy:
-  enabled: false
-  endpointsEnabled: false
+image:
+  repository: ghcr.io/all-hands-ai/deploy
+  tag: sha-4ec3e2f
 
-mcpEvents:
-  deployment:
-    replicas: 2
-  uvicorn:
-    workers: 2
+ingress:
+  enabled: false
+  # REQUIRED: Update to a hostname in a DNS domain you own
+  # host: "app.example.com"
+  class: traefik
+  annotations:
+    {}
+    # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
+    # cert-manager.io/cluster-issuer: letsencrypt-production
 
 integrationEvents:
   deployment:
@@ -173,10 +118,6 @@ integrationEvents:
   uvicorn:
     workers: 2
 
-monitoring:
-  enabled: false
-migrationJob:
-  enabled: true
 litellm:
   enabled: true
   # NOTE: to set the LLM model, set the LITELLM_DEFAULT_MODEL variable in the env section above.
@@ -187,61 +128,105 @@ litellm:
   auth:
     existingSecret: lite-llm-api-key
 
-# External Dependencies
-minio:
-  replicas: 1
-  mode: standalone
-  persistence:
-    enabled: false
-  buckets:
-    - name: openhands-sessions
-      policy: none
-      purge: true
-  svcaccts:
-    - accessKey: "default"
-      secretKey: "notasecret"
-      user: root
-  rootUser: "root"
-  resources:
-    requests:
-      memory: 512Mi
-      cpu: 100m
-    limits:
-      memory: 512Mi
-      cpu: 100m
+mcpEvents:
+  deployment:
+    replicas: 2
+  uvicorn:
+    workers: 2
 
-redis:
+migrationJob:
   enabled: true
-  architecture: standalone
-  auth:
-    enabled: true
-    existingSecret: "redis"
-  master:
-    persistence:
-      enabled: false
-  replica:
-    replicaCount: 0
+
+monitoring:
+  enabled: false
+
+proactiveConvoClean:
+  enabled: false
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  backoffLimit: 3
   resources:
     requests:
-      memory: 512Mi
+      memory: 256Mi
       cpu: 100m
     limits:
       memory: 512Mi
-      cpu: 100m
+      cpu: 200m
 
-postgresql:
+resendSync:
+  enabled: false
+  schedule: "0 1 * * *"  # Daily at 1 AM
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  backoffLimit: 3
+  audienceId: ""
+  batchSize: "100"
+  maxRetries: "3"
+  initialBackoffSeconds: "1"
+  maxBackoffSeconds: "60"
+  backoffFactor: "2"
+  rateLimit: "10"
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
+runtime:
+  image:
+    repository: ghcr.io/all-hands-ai/runtime
+    tag: 35426a04d82956e8282f557c4ef75d022804a9f4-nikolaik
+
+sandbox:
+  # REQUIRED: Update so this matches what you have set in the runtime api ingress
+  # apiHostname: https://runtime-api.example.com
+  apiHostname: "https://dummy-runtime-api.example.com"
+
+serviceAccount:
+  create: true
+  name: openhands-sa
+
+sessions:
+  existingSecret: jwt-secret
+
+slack:
+  enabled: false
+
+stripe:
+  enabled: false
+  requirePayment: false
+  auth:
+    existingSecret: stripe-secret
+
+tavily:
   enabled: false
   auth:
-    username: postgres
-    existingSecret: postgres-password
-  primary:
-    initdb:
-      scriptsConfigMap: oh-psql-scripts-configmap
-    persistence:
-      enabled: false
-  service:
-    ports:
-      postgresql: 5432
+    existingSecret: tavily-api-key
+
+tls:
+  enabled: false
+
+uvicorn:
+  workers: 3
+
+## Chart dependency configurations
+
+clickhouse:
+  # Enable this if you enable langfuse, as it will use clickhouse for storage
+  enabled: false
+  shards: 2
+  replicaCount: 1
+  keeper:
+    enabled: true
+  auth:
+    username: default
+    existingSecret: clickhouse-password
+    existingSecretKey: password
 
 keycloak:
   enabled: false
@@ -280,6 +265,40 @@ keycloak:
   extraEnvVars:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
+
+langfuse:
+  # Enable this if you want to use langfuse for tracing
+  enabled: false
+  langfuse:
+    salt:
+      secretKeyRef:
+        name: langfuse-salt
+        key: salt
+    nextauth:
+      secret:
+        secretKeyRef:
+          name: langfuse-nextauth
+          key: nextauth-secret
+  clickhouse:
+    deploy: false
+    host: oh-main-clickhouse
+    auth:
+      username: default
+      existingSecret: clickhouse-password
+      existingSecretKey: password
+  postgresql:
+    deploy: false
+    host: oh-main-postgresql
+    auth:
+      username: postgres
+      existingSecret: postgres-password
+      existingSecretKey: password
+  redis:
+    deploy: false
+    host: oh-main-redis
+    auth:
+      existingSecret: redis
+      existingSecretPasswordKey: redis-password
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
@@ -340,6 +359,61 @@ litellm-helm:
       # langfuse_default_tags: ["cache_hit", "cache_key", "proxy_base_url", "user_api_key_alias", "user_api_key_user_id", "user_api_key_team_alias"]
       context_window_fallbacks: []
       allowed_fails: 3
+
+minio:
+  replicas: 1
+  mode: standalone
+  persistence:
+    enabled: false
+  buckets:
+    - name: openhands-sessions
+      policy: none
+      purge: true
+  svcaccts:
+    - accessKey: "default"
+      secretKey: "notasecret"
+      user: root
+  rootUser: "root"
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 100m
+
+postgresql:
+  enabled: false
+  auth:
+    username: postgres
+    existingSecret: postgres-password
+  primary:
+    initdb:
+      scriptsConfigMap: oh-psql-scripts-configmap
+    persistence:
+      enabled: false
+  service:
+    ports:
+      postgresql: 5432
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    existingSecret: "redis"
+  master:
+    persistence:
+      enabled: false
+  replica:
+    replicaCount: 0
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 100m
 
 runtime-api:
   enabled: false
@@ -414,66 +488,3 @@ runtime-api:
     MEMORY_LIMIT: "2048Mi"
     CPU_REQUEST: "500m"
     EPHEMERAL_STORAGE_SIZE: "10Gi"
-
-clickhouse:
-  # Enable this if you enable langfuse, as it will use clickhouse for storage
-  enabled: false
-  shards: 2
-  replicaCount: 1
-  keeper:
-    enabled: true
-  auth:
-    username: default
-    existingSecret: clickhouse-password
-    existingSecretKey: password
-
-langfuse:
-  # Enable this if you want to use langfuse for tracing
-  enabled: false
-  langfuse:
-    salt:
-      secretKeyRef:
-        name: langfuse-salt
-        key: salt
-    nextauth:
-      secret:
-        secretKeyRef:
-          name: langfuse-nextauth
-          key: nextauth-secret
-  clickhouse:
-    deploy: false
-    host: oh-main-clickhouse
-    auth:
-      username: default
-      existingSecret: clickhouse-password
-      existingSecretKey: password
-  postgresql:
-    deploy: false
-    host: oh-main-postgresql
-    auth:
-      username: postgres
-      existingSecret: postgres-password
-      existingSecretKey: password
-  redis:
-    deploy: false
-    host: oh-main-redis
-    auth:
-      existingSecret: redis
-      existingSecretPasswordKey: redis-password
-
-datadog:
-  enabled: false
-  env: "dev" # Default environment, can be overridden
-  service: "openhands"
-  agentHost: "datadog-agent"
-
-tavily:
-  enabled: false
-  auth:
-    existingSecret: tavily-api-key
-
-slack:
-  enabled: false
-
-debuggingRoutes:
-  enabled: false
