@@ -100,7 +100,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/all-hands-ai/deploy
-  tag: sha-4ec3e2f
+  tag: 0.47.0
 
 ingress:
   enabled: false
@@ -180,7 +180,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
-    tag: 35426a04d82956e8282f557c4ef75d022804a9f4-nikolaik
+    tag: 3c39b93f7e151f88e7b4274b80aafa604fcae092-nikolaik
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -422,7 +422,7 @@ runtime-api:
     enabled: false
   runtimeInSameCluster: true
   image:
-    tag: sha-530719c
+    tag: sha-77dd418
   imagePullSecrets: []
   resources:
     requests:
@@ -436,7 +436,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:35426a04d82956e8282f557c4ef75d022804a9f4-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:3c39b93f7e151f88e7b4274b80aafa604fcae092-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
