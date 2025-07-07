@@ -137,7 +137,7 @@ mcpEvents:
 migrationJob:
   enabled: true
 
-monitoring:
+gcpMonitoring:
   enabled: false
 
 proactiveConvoClean:

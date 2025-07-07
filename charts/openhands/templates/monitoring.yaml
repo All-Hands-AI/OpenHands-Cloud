@@ -1,4 +1,4 @@
-{{- if .Values.monitoring.enabled }}
+{{- if .Values.gcpMonitoring.enabled }}
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
