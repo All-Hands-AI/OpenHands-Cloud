@@ -71,6 +71,21 @@ filestore:
 github:
   enabled: false
 
+enrichUserInteractionData:
+  enabled: false
+  schedule: "*/10 * * * *" # Run every 10 minutes
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  backoffLimit: 3
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+
 githubProxy:
   enabled: false
   endpointsEnabled: false

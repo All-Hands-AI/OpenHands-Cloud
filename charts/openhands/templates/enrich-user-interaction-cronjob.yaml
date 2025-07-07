@@ -1,0 +1,37 @@
+
+{{- if .Values.enrichUserInteractionData.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
+  labels:
+    app: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
+spec:
+  schedule: {{ .Values.enrichUserInteractionData.schedule | quote }}
+  concurrencyPolicy: {{ .Values.enrichUserInteractionData.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.enrichUserInteractionData.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.enrichUserInteractionData.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.enrichUserInteractionData.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            app: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+              command: ["python", "-m", "sync.enrich_user_interaction_data"]
+              resources:
+                {{- toYaml .Values.enrichUserInteractionData.resources | nindent 16 }}
+              env:
+                {{- include "openhands.env" . | nindent 16 }}
+{{- end }}
