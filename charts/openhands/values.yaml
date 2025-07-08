@@ -19,7 +19,7 @@ appConfig:
 
 commonRoomSync:
   enabled: false
-  schedule: "0 3 * * *"  # Daily at 3 AM
+  schedule: "0 3 * * *" # Daily at 3 AM
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 3
@@ -52,10 +52,10 @@ deployment:
   replicas: 1
   resources:
     requests:
-      memory: 1.5Gi
+      memory: 3Gi
       cpu: 500m
     limits:
-      memory: 1.5Gi
+      memory: 3Gi
       cpu: 500m
 
 env:
@@ -142,7 +142,7 @@ monitoring:
 
 proactiveConvoClean:
   enabled: false
-  schedule: "0 2 * * *"  # Daily at 2 AM
+  schedule: "0 2 * * *" # Daily at 2 AM
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 1
@@ -157,7 +157,7 @@ proactiveConvoClean:
 
 resendSync:
   enabled: false
-  schedule: "0 1 * * *"  # Daily at 1 AM
+  schedule: "0 1 * * *" # Daily at 1 AM
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 1
