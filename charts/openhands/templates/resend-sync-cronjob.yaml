@@ -56,5 +56,9 @@ spec:
                     secretKeyRef:
                       name: resend-api-key
                       key: resend-api-key
+                {{- if .Values.resendSync.fromEmail }}
+                - name: RESEND_FROM_EMAIL
+                  value: {{ .Values.resendSync.fromEmail | quote }}
+                {{- end }}
                 {{- include "openhands.env" . | nindent 16 }}
 {{- end }}
