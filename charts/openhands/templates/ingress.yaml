@@ -32,6 +32,13 @@ spec:
             name: openhands-integrations-service
             port:
               number: 3000
+      - path: /integration/gitlab/events
+        pathType: Exact
+        backend:
+          service:
+            name: openhands-integrations-service
+            port:
+              number: 3000
       - path: /slack
         pathType: Prefix
         backend:
