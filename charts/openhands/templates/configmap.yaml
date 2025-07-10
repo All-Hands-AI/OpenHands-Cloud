@@ -1,20 +1,20 @@
-{{- if .Values.postgresql.enabled -}}
+{{- if and .Values.postgresql.enabled (ne .Values.postgresql.primary.initdb.scriptsConfigMap "") -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: oh-psql-scripts-configmap
+  name: {{ .Values.postgresql.primary.initdb.scriptsConfigMap }}
 data:
   init.sql: |
     CREATE DATABASE litellm;
-    GRANT ALL PRIVILEGES ON DATABASE litellm TO postgres;
+    GRANT ALL PRIVILEGES ON DATABASE litellm TO {{ .Values.postgresql.auth.username }};
     CREATE DATABASE keycloak;
-    GRANT ALL PRIVILEGES ON DATABASE keycloak TO postgres;
+    GRANT ALL PRIVILEGES ON DATABASE keycloak TO {{ .Values.postgresql.auth.username }};
     CREATE DATABASE openhands;
-    GRANT ALL PRIVILEGES ON DATABASE openhands TO postgres;
+    GRANT ALL PRIVILEGES ON DATABASE openhands TO {{ .Values.postgresql.auth.username }};
     CREATE DATABASE postgres_langfuse;
-    GRANT ALL PRIVILEGES ON DATABASE postgres_langfuse TO postgres;
+    GRANT ALL PRIVILEGES ON DATABASE postgres_langfuse TO {{ .Values.postgresql.auth.username }};
     CREATE DATABASE bitnami_keycloak;
-    GRANT ALL PRIVILEGES ON DATABASE bitnami_keycloak TO postgres;
+    GRANT ALL PRIVILEGES ON DATABASE bitnami_keycloak TO {{ .Values.postgresql.auth.username }};
     CREATE DATABASE runtime_api_db;
-    GRANT ALL PRIVILEGES ON DATABASE runtime_api_db TO postgres;
+    GRANT ALL PRIVILEGES ON DATABASE runtime_api_db TO {{ .Values.postgresql.auth.username }};
 {{- end }}
