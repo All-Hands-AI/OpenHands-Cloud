@@ -39,11 +39,7 @@ spec:
                 sleep 5
             done
 
-            {{- if .Values.keycloak.enabled }}
-            ACCESS_TOKEN=$(curl -s -X POST "$KEYCLOAK_SERVER_URL/realms/master/protocol/openid-connect/token" -H "Content-Type: application/x-www-form-urlencoded" -d "client_id=admin-cli" -d "grant_type=password" -d "username=tmpadmin" -d "password=$KEYCLOAK_TMPADMIN_PASSWORD" | jq -r '.access_token')
-            {{- else }}
             ACCESS_TOKEN=$(curl -s -X POST "$KEYCLOAK_SERVER_URL/realms/master/protocol/openid-connect/token" -H "Content-Type: application/x-www-form-urlencoded" -d "client_id=admin-cli" -d "grant_type=password" -d "username=tmpadmin" -d "password=$KEYCLOAK_ADMIN_PASSWORD" | jq -r '.access_token')
-            {{- end }}
             if [ "$ACCESS_TOKEN" = "null" ]; then
               NEW_ACCESS_TOKEN=$(curl -s -X POST "$KEYCLOAK_SERVER_URL/realms/master/protocol/openid-connect/token" -H "Content-Type: application/x-www-form-urlencoded" -d "client_id=admin-cli" -d "grant_type=password" -d "username=admin" -d "password=$KEYCLOAK_ADMIN_PASSWORD" | jq -r '.access_token')
               if [ "$NEW_ACCESS_TOKEN" = "null" ]; then

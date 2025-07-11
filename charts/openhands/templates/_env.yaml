@@ -117,10 +117,6 @@
     secretKeyRef:
       name: keycloak-realm
       key: smtp-password
-{{- if .Values.keycloak.enabled }}
-- name: KEYCLOAK_TMPADMIN_PASSWORD
-  value: {{ .Values.keycloak.auth.adminPassword }}
-{{- end}}
 - name: KEYCLOAK_ADMIN_PASSWORD
   valueFrom:
     secretKeyRef:
