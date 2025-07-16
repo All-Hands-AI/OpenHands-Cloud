@@ -6,7 +6,7 @@ OpenHands Cloud is deployed as two Kubernetes clusters, the **Core App cluster**
 
 ## OpenHands components
 
-**OpenHands API** has the main entrypoints for using OpenHands. This includes the user interface as well as webhooks such as the GitHub / GitLab resolvers.
+**OpenHands** has the main entrypoints for using OpenHands agents. This includes the user interface as well as the conversations API and webhooks such as the GitHub / GitLab resolvers.
 
 **Runtime API** manages the Runtime pods. It maintains a pool of waiting runtime pods (called "warm runtimes") and assigns them to conversations on request.
 

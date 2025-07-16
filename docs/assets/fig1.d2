@@ -12,7 +12,7 @@ classes: {
 }
 
 core-app: Core App K8s Cluster {
-  openhands-api: OpenHands API {
+  openhands: OpenHands {
     class: all-hands
   }
   runtime-api: Runtime API {
@@ -55,18 +55,18 @@ lb: Load\nBalancer {
 lb -> runtime.runtimes
 core-app.litellm -> llms
 
-lb -> core-app.openhands-api
+lb -> core-app.openhands
 lb -> core-app.keycloak
-core-app.openhands-api -> core-app.runtime-api
-core-app.openhands-api -> core-app.keycloak
-core-app.openhands-api -> core-app.redis
+core-app.openhands -> core-app.runtime-api
+core-app.openhands -> core-app.keycloak
+core-app.openhands -> core-app.redis
 runtime.runtimes -> convo-bucket
 core-app.runtime-api -> runtime.runtimes
 core-app.litellm -> core-app.langfuse
 core-app.langfuse -> core-app.clickhouse
-core-app.openhands-api -> core-app.litellm
+core-app.openhands -> core-app.litellm
 
-core-app.openhands-api -> core-app.postgres
+core-app.openhands -> core-app.postgres
 core-app.litellm -> core-app.postgres
 core-app.keycloak -> core-app.postgres
 core-app.runtime-api -> core-app.postgres
