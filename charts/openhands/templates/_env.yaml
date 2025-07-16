@@ -122,6 +122,7 @@
     secretKeyRef:
       name: keycloak-admin
       key: admin-password
+{{- if .Values.github.enabled }}
 - name: GITHUB_APP_PRIVATE_KEY
   valueFrom:
     secretKeyRef:
@@ -147,6 +148,8 @@
     secretKeyRef:
       name: github-app
       key: client-secret
+{{- end }}
+{{- if .Values.gitlab.enabled }}
 - name: GITLAB_APP_CLIENT_ID
   valueFrom:
     secretKeyRef:
@@ -157,6 +160,7 @@
     secretKeyRef:
       name: gitlab-app
       key: client-secret
+{{- end }}
 {{- if .Values.bitbucket.enabled }}
 - name: BITBUCKET_APP_CLIENT_ID
   valueFrom:
