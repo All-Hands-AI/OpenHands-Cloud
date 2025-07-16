@@ -1,0 +1,73 @@
+# Use https://play.d2lang.com to edit with preview (layout engine ELK)
+# To update the SVG, run: (cd docs && ./build-diagrams.sh)
+
+direction: right
+
+classes: {
+  all-hands: {
+    style: {
+      double-border: true
+    }
+  }
+}
+
+core-app: Core App K8s Cluster {
+  openhands-api: OpenHands API {
+    class: all-hands
+  }
+  runtime-api: Runtime API {
+    class: all-hands
+  }
+
+  keycloak: Keycloak
+
+  langfuse: LangFuse
+  litellm: LiteLLM Proxy
+  redis: Redis {
+    shape: cylinder
+  }
+  clickhouse: Clickhouse {
+    shape: cylinder
+  }
+  postgres: PostgreSQL {
+    shape: cylinder
+  }
+}
+
+runtime: Runtime K8s Cluster {
+  image-loader: Image Loader {
+    class: all-hands
+  }
+  runtimes: Runtimes {
+    class: all-hands
+  }
+}
+convo-bucket: Conversation\n Bucket {
+  shape: cylinder
+}
+llms: AI Language\n Models {
+  shape: cloud
+}
+lb: Load\nBalancer {
+  shape: cloud
+}
+
+lb -> runtime.runtimes
+core-app.litellm -> llms
+
+lb -> core-app.openhands-api
+lb -> core-app.keycloak
+core-app.openhands-api -> core-app.runtime-api
+core-app.openhands-api -> core-app.keycloak
+core-app.openhands-api -> core-app.redis
+runtime.runtimes -> convo-bucket
+core-app.runtime-api -> runtime.runtimes
+core-app.litellm -> core-app.langfuse
+core-app.langfuse -> core-app.clickhouse
+core-app.openhands-api -> core-app.litellm
+
+core-app.openhands-api -> core-app.postgres
+core-app.litellm -> core-app.postgres
+core-app.keycloak -> core-app.postgres
+core-app.runtime-api -> core-app.postgres
+runtime.runtimes -> core-app.litellm
