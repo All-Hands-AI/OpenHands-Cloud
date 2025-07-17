@@ -118,7 +118,7 @@ sandbox-api-key       Opaque   1      3s
 
 #### 4. Create a helm values file
 
-Copy the example-values.yaml file to a file name of your choice. For the purposes of this document we will call this file `sitevalues.yaml`
+Copy the example-values.yaml file to a file name of your choice. For the purposes of this document we will call this file `site-values.yaml`
 
 Update the values as necessary for your environment (see comments in the file for more information).
 
@@ -149,7 +149,7 @@ authentication as well.
      --from-file=private-key=<path-to-your-private-key-file>
    ```
 
-3. Update sitevalues.yaml file:
+3. Update site-values.yaml file:
 
    ```yaml
    github:
@@ -175,7 +175,7 @@ authentication as well.
      --from-literal=client-secret=<your-gitlab-client-secret> \
    ```
 
-3. Update sitevalues.yaml file:
+3. Update site-values.yaml file:
 
    ```yaml
    gitlab:
@@ -201,7 +201,7 @@ authentication as well.
      --from-literal=client-secret=<your-bitbucket-client-secret> \
    ```
 
-3. Update sitevalues.yaml file:
+3. Update site-values.yaml file:
 
    ```yaml
    bitbucket:
@@ -217,7 +217,7 @@ Now we can install the helm chart.
 
 ```bash
 helm dependency update
-helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands
+helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
 ```
 
 This installation won't complete successfully the first time because we need to set up LiteLLM.
@@ -237,7 +237,7 @@ Next, create a new Team in LiteLLM:
 - login using the username `admin` password $GLOBAL_SECRET (set above)
 - go to Teams -> Create New Team
 - Name it whatever you want
-- Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to my-values.yaml:
+- Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to site-values.yaml:
 
 ```yaml
 litellm:
@@ -264,7 +264,7 @@ litellm-helm:
 Finally, upgrade the release:
 
 ```bash
-helm upgrade --install openhands --namespace openhands . -f my-values.yaml
+helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
 ```
 
 You should now be able to see OpenHands running with:
@@ -288,7 +288,7 @@ In this example, we'll use `openhands.example.com` as the base domain.
 First, set up a CNAME record pointing `*.openhands.example.com` to your ingress
 controller's IP address.
 
-Next, enable ingress in my-values.yaml:
+Next, enable ingress in site-values.yaml:
 
 ```yaml
 ingress:
@@ -311,6 +311,12 @@ litellm-helm:
         paths:
           - path: /
             pathType: Prefix
+```
+
+Upgrade the release:
+
+```bash
+helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
 ```
 
 ## Hardening

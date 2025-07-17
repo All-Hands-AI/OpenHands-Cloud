@@ -5,7 +5,7 @@ env:
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
 ingress:
-  enabled: true
+  enabled: false
   host: "app.example.com"
   annotations:
     {}
@@ -31,7 +31,7 @@ bitbucket:
 keycloak:
   enabled: true
   ingress:
-    enabled: true
+    enabled: false
     hostname: "auth.app.example.com"
     annotations: {}
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
@@ -46,6 +46,7 @@ litellm-helm:
   # Set this to false if you are using your own litellm instance
   enabled: true
   ingress:
+    enabled: false
     hosts:
       - host: llm-proxy.example.com
         paths:
@@ -75,13 +76,14 @@ litellm-helm:
 runtime-api:
   enabled: true
   ingress:
-    enabled: true
+    enabled: false
     host: runtime-api.example.com
     annotations: {}
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
     # cert-manager.io/cluster-issuer: letsencrypt
   env:
     RUNTIME_BASE_URL: "runtime.example.com"
+    # Set to storage class you want to use.
     STORAGE_CLASS: "gp2"
 
 sandbox:
