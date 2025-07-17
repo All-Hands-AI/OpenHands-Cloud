@@ -1,3 +1,7 @@
+# If you need to update an image prior to release, we will have you uncomment and update the tag value.
+# image:
+#   tag: 0.47.0
+
 env:
   # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
   LITE_LLM_TEAM_NAME: openhands
