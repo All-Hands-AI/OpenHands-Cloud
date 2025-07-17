@@ -132,9 +132,18 @@ authentication as well.
 1. Create a GitHub OAuth App:
 
    - Go to your GitHub organization settings or personal settings
-   - Navigate to "Developer settings" > "OAuth Apps" > "New OAuth App"
-   - Set the "Authorization callback URL" to `https://auth.openhands.example.com/realms/openhands/broker/github/endpoint`
-   - Note the Client ID and Client Secret provided by GitHub
+   - Navigate to "Developer settings" > "GitHub Apps" > "New GitHub App"
+   - Add the "Callback URL" `https://auth.openhands.example.com/realms/openhands/broker/github/endpoint`
+   - If you want to get webhooks
+
+     - Generate a webhook secret `export WEBHOOK_SECRET=head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`
+     - Check the "Active" checkbox.
+     - Set the "Webhook URL" `https://openhands.example.com/integration/github/events`
+     - Set the "Secret" to $WEBHOOK_SECRET
+
+   - Create the App
+   - Generate a private key which will download a private key file
+   - Note the App ID, Client ID, and Client Secret provided by GitHub
 
 2. Create a GitHub App secret with the following structure:
    This secret contains the GitHub App configuration information from your GitHub account.
@@ -143,7 +152,7 @@ authentication as well.
    ```bash
    kubectl create secret generic github-app -n openhands \
      --from-literal=app-id=<your-github-app-id> \
-     --from-literal=webhook-secret=<your-github-webhook-secret> \
+     --from-literal=webhook-secret=$WEBHOOK_SECRET \
      --from-literal=client-id=<your-github-client-id> \
      --from-literal=client-secret=<your-github-client-secret> \
      --from-file=private-key=<path-to-your-private-key-file>
