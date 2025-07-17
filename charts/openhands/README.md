@@ -129,7 +129,7 @@ authentication as well.
 
 #### GitHub
 
-1. Create a GitHub OAuth App:
+1. Create a GitHub App:
 
    - Go to your GitHub organization settings or personal settings
    - Navigate to "Developer settings" > "GitHub Apps" > "New GitHub App"
