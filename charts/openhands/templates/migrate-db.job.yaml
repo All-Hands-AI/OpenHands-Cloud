@@ -21,6 +21,31 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: wait-for-postgres
+          image: "bitnami/postgresql:latest"
+          command: ['sh', '-c']
+          args:
+            - |
+              PG_HOST="oh-main-postgresql"
+              {{- if .Values.externalDatabase }}
+              {{- if .Values.externalDatabase.host }}
+              PG_HOST="{{ .Values.externalDatabase.host }}"
+              {{- end }}
+              {{- end }}
+
+              echo "Waiting for PostgreSQL at $PG_HOST to be ready..."
+              until PGPASSWORD=$POSTGRES_PASSWORD psql -h $PG_HOST -p 5432 -U postgres -c '\q' > /dev/null 2>&1; do
+                echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+                sleep 2
+              done
+              echo "PostgreSQL is up and running!"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.auth.existingSecret }}
+                  key: password
       containers:
         - name: migrate-db
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"

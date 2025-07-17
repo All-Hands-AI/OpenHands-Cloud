@@ -53,10 +53,9 @@ deployment:
   resources:
     requests:
       memory: 3Gi
-      cpu: 500m
+      cpu: 1
     limits:
       memory: 3Gi
-      cpu: 500m
 
 env:
   DISABLE_WAITLIST: "true"
