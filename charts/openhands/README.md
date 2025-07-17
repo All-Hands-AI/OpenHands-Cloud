@@ -20,26 +20,32 @@ to override when deploying the chart with the default included services
 (without using external data stores). Remember to update the domain names and other
 environment-specific values in the example file before using it.
 
-
 ## Installation
+
 ### Initial setup
+
 #### 1. Create the openhands namespace
+
 If you want to use a different namespace, you'll need to change the `-n` option
 in all the commands below.
+
 ```bash
 kubectl create namespace openhands
 ```
 
 #### 2. Create a secret for your LLM
+
 We'll assume Anthropic here, but you can set any env vars you'll need to connect to your LLM,
 including e.g. OpenAPI keys, or AWS keys for Bedrock models. You can use any env var names
 you want--we'll reference them again below in our LiteLLM setup.
+
 ```bash
 kubectl create secret generic litellm-env-secrets -n openhands \
     --from-literal=ANTHROPIC_API_KEY=<your-anthropic-api-key>
 ```
 
 #### 3. Create required secrets
+
 There are several databases and other services that need a secret or admin password to function.
 We'll create a single `$GLOBAL_SECRET` to drive all of these, but we recommend using
 [SOPS](https://github.com/getsops/sops) or another solution for managing Kubernetes secrets long-term.
@@ -90,6 +96,7 @@ kubectl create secret generic sandbox-api-key -n openhands \
 ```
 
 You should now have these secrets in the openhands namespace:
+
 ```bash
 kubectl get secret -n openhands
 
@@ -106,7 +113,70 @@ redis                 Opaque   1      35s
 sandbox-api-key       Opaque   1      3s
 ```
 
+### Enabling IDP Authentication
+
+You'll need to set up GitHub, GitLab, and/or BitBucket as an auth provider. We're working on email-based
+authentication as well.
+
+#### GitHub
+
+1. Create a GitHub OAuth App:
+
+   - Go to your GitHub organization settings or personal settings
+   - Navigate to "Developer settings" > "OAuth Apps" > "New OAuth App"
+   - Set the "Authorization callback URL" to `https://auth.openhands.example.com/realms/openhands/broker/github/endpoint`
+   - Note the Client ID and Client Secret provided by GitHub
+
+2. Create a GitHub App secret with the following structure:
+   This secret contains the GitHub App configuration information from your GitHub account.
+   You can create it using kubectl:
+   ```bash
+   kubectl create secret generic github-app -n openhands \
+     --from-literal=app-id=<your-github-app-id> \
+     --from-literal=webhook-secret=<your-github-webhook-secret> \
+     --from-literal=client-id=<your-github-client-id> \
+     --from-literal=client-secret=<your-github-client-secret> \
+     --from-file=private-key=<path-to-your-private-key-file>
+   ```
+
+#### GitLab
+
+1. Create a GitLab Application:
+
+   - Go to your GitLab Group.
+   - Navigate to "Settings" > "Applications"
+   - Set the "Redirect URI" to `https://auth.openhands.example.com/realms/openhands/broker/gitlab/endpoint`
+   - Select the following scopes: api, read_user, write_repository, openid, email, profile
+   - Note the Client ID and Client Secret provided by GitLab
+
+2. Create a GitLab App secret:
+   ```bash
+   kubectl create secret generic gitlab-app -n openhands \
+     --from-literal=client-id=<your-gitlab-client-id> \
+     --from-literal=client-secret=<your-gitlab-client-secret> \
+   ```
+
+#### BitBucket
+
+1. Create a BitBucket OAuth Consumer:
+
+   - Go to your Workspace Settings.
+   - Select "OAuth consumers" in the left pane
+   - Set the "Callback URL" to `https://auth.openhands.example.com/realms/openhands/broker/bitbucket/endpoint`
+   - Select the following permissions: account:read, workspace:read, projects:write, repositories:write, pullrequests:write, issues:write, snippets:read, pipelines:read
+   - Note the Client ID and Client Secret provided by BitBucket
+
+2. Create a BitBucket App secret:
+   ```bash
+   kubectl create secret generic bitbucket-app -n openhands \
+     --from-literal=client-id=<your-bitbucket-client-id> \
+     --from-literal=client-secret=<your-bitbucket-client-secret> \
+   ```
+
+When the chart is deployed, a job will run to configure the Keycloak realm with the identity provider credentials you provided.
+
 ### Install OpenHands
+
 Now we can install the helm chart.
 
 ```bash
@@ -126,11 +196,12 @@ kubectl port-forward svc/openhands-litellm 4000:4000
 ```
 
 Next, create a new Team in LiteLLM:
-* Navigate to http://localhost:4000/ui in your browser
-* login using the username `admin` password $GLOBAL_SECRET (set above)
-* go to Teams -> Create New Team
-* Name it whatever you want
-* Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to my-values.yaml:
+
+- Navigate to http://localhost:4000/ui in your browser
+- login using the username `admin` password $GLOBAL_SECRET (set above)
+- go to Teams -> Create New Team
+- Name it whatever you want
+- Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to my-values.yaml:
 
 ```yaml
 litellm:
@@ -138,6 +209,7 @@ litellm:
 ```
 
 You'll also need to set your model list for LiteLLM, using the LLM secrets you set above:
+
 ```yaml
 litellm:
   teamId: "<TEAM_ID>"
@@ -145,19 +217,22 @@ litellm:
 litellm-helm:
   proxy_config:
     model_list:
-    - model_name: "prod/claude-sonnet-4-20250514"
-      litellm_params:
-        model: "anthropic/claude-sonnet-4-20250514"
-        api_key: os.environ/ANTHROPIC_API_KEY
+      - model_name: "prod/claude-sonnet-4-20250514"
+        litellm_params:
+          model: "anthropic/claude-sonnet-4-20250514"
+          api_key: os.environ/ANTHROPIC_API_KEY
 ```
 
 ### Verify your Setup
+
 Finally, upgrade the release:
+
 ```bash
 helm upgrade --install openhands --namespace openhands . -f my-values.yaml
 ```
 
 You should now be able to see OpenHands running with:
+
 ```bash
 kubectl port-forward svc/openhands-service 3000:3000
 ```
@@ -167,6 +242,7 @@ If you visit `http://localhost:3000` you should see the login screen!
 But we're not done yet...
 
 ## Setting up DNS and Ingress
+
 We recommend traefik as an ingress controller. If you're not using traefik,
 you can set ingress.class in the objects below.
 
@@ -177,6 +253,7 @@ First, set up a CNAME record pointing `*.openhands.example.com` to your ingress
 controller's IP address.
 
 Next, enable ingress in my-values.yaml:
+
 ```yaml
 ingress:
   enabled: true
@@ -194,41 +271,14 @@ litellm-helm:
   ingress:
     enabled: true
     hosts:
-    - host: llm-proxy.example.com
-      paths:
-      - path: /
-        pathType: Prefix
+      - host: llm-proxy.example.com
+        paths:
+          - path: /
+            pathType: Prefix
 ```
 
-## Enabling GitHub Authentication
-
-You'll need to set up GitHub or GitLab as an auth provider. We're working on email-based
-authentication as well.
-
-The instructions here are for GitHub, but
-similar instructions apply to GitLab authentication.
-
-1. Create a GitHub OAuth App:
-   - Go to your GitHub organization settings or personal settings
-   - Navigate to "Developer settings" > "OAuth Apps" > "New OAuth App"
-   - Set the "Authorization callback URL" to `https://auth.openhands.example.com/realms/openhands/broker/github/endpoint`
-   - Note the Client ID and Client Secret provided by GitHub
-
-2. Create a GitHub App secret with the following structure:
-   This secret contains the GitHub App configuration information from your GitHub account.
-   You can create it using kubectl:
-   ```bash
-   kubectl create secret generic github-app -n openhands \
-     --from-literal=app-id=<your-github-app-id> \
-     --from-literal=webhook-secret=<your-github-webhook-secret> \
-     --from-literal=client-id=<your-github-client-id> \
-     --from-literal=client-secret=<your-github-client-secret> \
-     --from-file=private-key=<path-to-your-private-key-file>
-   ```
-
-When the chart is deployed, a job will run to configure the Keycloak realm with GitHub as an identity provider using the credentials you provided.
-
 ## Hardening
+
 The above configuration should work well for a POC. However, it uses several in-cluster databases,
 which creates risk of data loss.
 
@@ -240,19 +290,20 @@ using AWS RDS and AWS S3.
 To use an external PostgreSQL database instead of deploying one with the chart:
 
 1. Disable the included PostgreSQL:
+
    ```yaml
    postgresql:
      enabled: false
    ```
 
 2. Configure the external database connection:
+
    ```yaml
    externalDatabase:
      host: your-postgresql-host
      port: 5432
      database: openhands
      existingSecret: postgres-password
-
    # Make sure the secret exists with the correct credentials
    # kubectl create secret generic postgres-password \
    #   --from-literal=username=<your-db-username> \
@@ -260,6 +311,7 @@ To use an external PostgreSQL database instead of deploying one with the chart:
    ```
 
 3. Update the Keycloak, LiteLLM, and runtime-api configurations to use the external database:
+
    ```yaml
    keycloak:
      externalDatabase:
@@ -291,12 +343,14 @@ To use an external PostgreSQL database instead of deploying one with the chart:
 To use an external S3-compatible storage instead of MinIO:
 
 1. Disable the ephemeral filestore:
+
    ```yaml
    filestore:
      ephemeral: false
    ```
 
 2. Configure the S3 connection:
+
    ```yaml
    filestore:
      ephemeral: false
@@ -304,7 +358,6 @@ To use an external S3-compatible storage instead of MinIO:
      endpoint: https://your-s3-endpoint
      region: your-s3-region
      existingSecret: s3-credentials
-
    # Make sure the secret exists with the correct credentials
    # kubectl create secret generic s3-credentials \
    #   --from-literal=access-key=<your-access-key> \
@@ -316,23 +369,23 @@ To use an external S3-compatible storage instead of MinIO:
 To use an external Redis instance:
 
 1. Disable the included Redis:
+
    ```yaml
    redis:
      enabled: false
    ```
 
 2. Configure the external Redis connection:
+
    ```yaml
    externalRedis:
      host: your-redis-host
      port: 6379
      existingSecret: redis
-
    # Make sure the secret exists with the correct credentials
    # kubectl create secret generic redis \
    #   --from-literal=redis-password=<your-redis-password>
    ```
-
 
 ### Storage Class Configuration
 
@@ -341,7 +394,7 @@ By default, the chart expects a storage class named `standard-rwo`. If you're us
 ```yaml
 runtime-api:
   env:
-    STORAGE_CLASS: "gp2"  # Replace with your cluster's storage class name
+    STORAGE_CLASS: "gp2" # Replace with your cluster's storage class name
 ```
 
 Alternatively, you can create a storage class named `standard-rwo` that uses your cloud provider's block storage:
