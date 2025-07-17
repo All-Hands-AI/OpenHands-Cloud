@@ -1,8 +1,8 @@
 env:
   # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
   LITE_LLM_TEAM_NAME: openhands
-  # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment this variable
-  # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
+  # replace <your-model> with your LLM model and uncomment this variable
+  # LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
 
 ingress:
   enabled: false
