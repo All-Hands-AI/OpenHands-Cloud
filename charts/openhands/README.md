@@ -51,11 +51,12 @@ export GLOBAL_SECRET=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`
 kubectl create secret generic jwt-secret -n openhands --from-literal=jwt-secret=$GLOBAL_SECRET
 
 kubectl create secret generic keycloak-realm -n openhands \
-  --from-literal=realm-name=openhands \
+  --from-literal=realm-name=allhands \
   --from-literal=provider-name=email \
   --from-literal=server-url=http://keycloak \
-  --from-literal=client-id=openhands \
-  --from-literal=client-secret=$GLOBAL_SECRET
+  --from-literal=client-id=allhands \
+  --from-literal=client-secret=$GLOBAL_SECRET \
+  --from-literal=smtp-password=
 
 kubectl create secret generic keycloak-admin -n openhands \
   --from-literal=admin-password=$GLOBAL_SECRET
