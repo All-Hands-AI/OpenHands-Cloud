@@ -244,7 +244,7 @@ clickhouse:
 
 keycloak:
   enabled: false
-  url: "http://keycloak.keycloak"
+  url: "http://keycloak"
   fullnameOverride: keycloak
   # REQUIRED: Update to match the host set in the ingress section below
   # url: "https://auth.app.example.com"

@@ -50,6 +50,8 @@ There are several databases and other services that need a secret or admin passw
 We'll create a single `$GLOBAL_SECRET` to drive all of these, but we recommend using
 [SOPS](https://github.com/getsops/sops) or another solution for managing Kubernetes secrets long-term.
 
+If you are using your own LiteLLM instance, see the NOTE.
+
 ```bash
 
 export GLOBAL_SECRET=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`
@@ -75,6 +77,7 @@ kubectl create secret generic postgres-password -n openhands \
 kubectl create secret generic redis -n openhands \
   --from-literal=redis-password=$GLOBAL_SECRET
 
+# NOTE: if you are using your own LiteLLM instance, then change $GLOBAL_SECRET to your LiteLLM API Key
 kubectl create secret generic lite-llm-api-key -n openhands \
   --from-literal=lite-llm-api-key=$GLOBAL_SECRET
 
@@ -113,6 +116,12 @@ redis                 Opaque   1      35s
 sandbox-api-key       Opaque   1      3s
 ```
 
+#### 4. Create a helm values file
+
+Copy the example-values.yaml file to a file name of your choice. For the purposes of this document we will call this file `sitevalues.yaml`
+
+Update the values as necessary for your environment (see comments in the file for more information).
+
 ### Enabling IDP Authentication
 
 You'll need to set up GitHub, GitLab, and/or BitBucket as an auth provider. We're working on email-based
@@ -130,6 +139,7 @@ authentication as well.
 2. Create a GitHub App secret with the following structure:
    This secret contains the GitHub App configuration information from your GitHub account.
    You can create it using kubectl:
+
    ```bash
    kubectl create secret generic github-app -n openhands \
      --from-literal=app-id=<your-github-app-id> \
@@ -137,6 +147,14 @@ authentication as well.
      --from-literal=client-id=<your-github-client-id> \
      --from-literal=client-secret=<your-github-client-secret> \
      --from-file=private-key=<path-to-your-private-key-file>
+   ```
+
+3. Update sitevalues.yaml file:
+
+   ```yaml
+   github:
+     # Set this to true if you are using GitHub as your identity provider
+     enabled: true
    ```
 
 #### GitLab
@@ -150,10 +168,19 @@ authentication as well.
    - Note the Client ID and Client Secret provided by GitLab
 
 2. Create a GitLab App secret:
+
    ```bash
    kubectl create secret generic gitlab-app -n openhands \
      --from-literal=client-id=<your-gitlab-client-id> \
      --from-literal=client-secret=<your-gitlab-client-secret> \
+   ```
+
+3. Update sitevalues.yaml file:
+
+   ```yaml
+   gitlab:
+     # Set this to true if you are using GitLab as your identity provider
+     enabled: true
    ```
 
 #### BitBucket
@@ -167,10 +194,19 @@ authentication as well.
    - Note the Client ID and Client Secret provided by BitBucket
 
 2. Create a BitBucket App secret:
+
    ```bash
    kubectl create secret generic bitbucket-app -n openhands \
      --from-literal=client-id=<your-bitbucket-client-id> \
      --from-literal=client-secret=<your-bitbucket-client-secret> \
+   ```
+
+3. Update sitevalues.yaml file:
+
+   ```yaml
+   bitbucket:
+     # Set this to true if you are using BitBucket as your identity provider
+     enabled: true
    ```
 
 When the chart is deployed, a job will run to configure the Keycloak realm with the identity provider credentials you provided.
