@@ -120,7 +120,7 @@ sandbox-api-key       Opaque   1      3s
 
 Copy the example-values.yaml file to a file name of your choice. For the purposes of this document we will call this file `site-values.yaml`
 
-Update the values as necessary for your environment (see comments in the file for more information).
+We will update this file in the following sections and there will likely be customizations for your environment (see comments in the file for more information on common changes).
 
 ### Enabling IDP Authentication
 
