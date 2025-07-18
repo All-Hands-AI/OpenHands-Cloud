@@ -32,10 +32,10 @@ app-cluster: Kubernetes Cluster {
     shape: cylinder
   }
 
-  image-loader: Image Loader {
+  runtimes: Runtimes {
     class: all-hands
   }
-  runtimes: Runtimes {
+  image-loader: Image Loader {
     class: all-hands
   }
 }
@@ -69,3 +69,9 @@ app-cluster.keycloak -> app-cluster.postgres
 app-cluster.runtime-api -> app-cluster.postgres
 
 app-cluster.runtimes -> app-cluster.openhands
+
+app-cluster.runtimes -- app-cluster.image-loader {
+    style: {
+        stroke-dash: 3
+    }
+}
