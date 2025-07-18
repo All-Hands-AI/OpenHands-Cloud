@@ -1,6 +1,6 @@
 # Architecture
 
-OpenHands Cloud is deployed as two Kubernetes clusters, the **Core App cluster** and the **Runtime cluster**.
+OpenHands Cloud is deployed to a Kubernetes cluster using Helm charts, with minimal dependence on other infrastructure.
 
 ![Figure 1](./assets/fig1.svg)
 
@@ -16,16 +16,16 @@ OpenHands Cloud is deployed as two Kubernetes clusters, the **Core App cluster**
 
 ## Third-party components
 
-* Kubernetes
-* Postgres
-* Redis
-* Keycloak
-* LiteLLM Proxy
-* Langfuse
-* Clickhouse
+* [Kubernetes](https://kubernetes.io) (compute for OpenHands UI, agent and runtimes)
+* [PostgreSQL](https://www.postgresql.org) (databases for several of the components)
+* [Redis](https://redis.io) (caching)
+* [Keycloak](https://www.keycloak.org) (authentication)
+* [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) (handles connections to AI Language models)
+* [Langfuse](https://langfuse.com) (LLM monitoring)
+* [Clickhouse](https://clickhouse.com) (event-store used by LangFuses)
 * AI Language Models
 
-## Cloud services
+## Additional Infrastructure
 
 These will be implemented differently depending on which cloud provider you use.
 
