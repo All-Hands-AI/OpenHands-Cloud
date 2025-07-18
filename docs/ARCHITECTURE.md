@@ -10,7 +10,7 @@ OpenHands Cloud is deployed as two Kubernetes clusters, the **Core App cluster**
 
 **Runtime API** manages the Runtime pods. It maintains a pool of waiting runtime pods (called "warm runtimes") and assigns them to conversations on request.
 
-**Runtimes** are the insolated execution environments that run OpenHands agents.
+**Runtimes** are the isolated execution environments that run OpenHands agents.
 
 **Image Loader** is a daemon that ensures the Runtime image is cached on every node in the Runtime cluster
 
