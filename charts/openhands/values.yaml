@@ -14,6 +14,7 @@ appConfig:
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
   OPENHANDS_BITBUCKET_SERVICE_CLS: "integrations.bitbucket.bitbucket_service.SaaSBitBucketService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
+  OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
 
 commonRoomSync:

@@ -15,6 +15,8 @@
   value: {{ .Values.appConfig.OPENHANDS_MCP_CONFIG_CLS }}
 - name: OPENHANDS_CONVERSATION_VALIDATOR_CLS
   value: {{ .Values.appConfig.OPENHANDS_CONVERSATION_VALIDATOR_CLS }}
+- name: OPENHANDS_EXPERIMENT_MANAGER_CLS
+  value: {{ .Values.appConfig.OPENHANDS_EXPERIMENT_MANAGER_CLS }}
 - name: LOG_JSON # Configure structured logging for Google Cloud
   value: '1'
 - name: LOG_JSON_LEVEL_KEY
