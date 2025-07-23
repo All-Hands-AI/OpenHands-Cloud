@@ -41,6 +41,9 @@ keycloak:
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
     # cert-manager.io/cluster-issuer: letsencrypt
 
+postgresql:
+  enabled: true
+
 litellm:
   # Set this to true if you are using your own litellm instance
   enabled: false
