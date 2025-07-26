@@ -21,6 +21,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.migrationJob.initContainer.enabled }}
       initContainers:
         - name: wait-for-postgres
           image: "bitnami/postgresql:latest"
@@ -46,10 +47,12 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.postgresql.auth.existingSecret }}
                   key: password
+      {{- end }}
       containers:
         - name: migrate-db
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           command: ["/bin/sh", "-c"]
+          workingDir: /app
           args:
             - |
               echo "Running migrations..."

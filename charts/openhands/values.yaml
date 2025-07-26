@@ -150,6 +150,8 @@ mcpEvents:
 
 migrationJob:
   enabled: true
+  initContainer:
+    enabled: true
 
 gcpMonitoring:
   enabled: false
@@ -194,7 +196,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
-    tag: 3c39b93f7e151f88e7b4274b80aafa604fcae092-nikolaik
+    tag: 7a168b9b5f33e63746456779032c0caa623e23f4-nikolaik
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -435,7 +437,7 @@ runtime-api:
     enabled: false
   runtimeInSameCluster: true
   image:
-    tag: sha-77dd418
+    tag: sha-96c3513
   imagePullSecrets: []
   resources:
     requests:
@@ -449,7 +451,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:3c39b93f7e151f88e7b4274b80aafa604fcae092-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:7a168b9b5f33e63746456779032c0caa623e23f4-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
