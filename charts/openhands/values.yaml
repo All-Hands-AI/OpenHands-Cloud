@@ -150,6 +150,8 @@ mcpEvents:
 
 migrationJob:
   enabled: true
+  initContainer:
+    enabled: true
 
 gcpMonitoring:
   enabled: false
