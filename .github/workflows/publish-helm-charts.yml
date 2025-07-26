@@ -14,11 +14,86 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate-chart-versions:
+    runs-on: ubuntu-latest
+    # Run for all events, but only validate on main branch pushes
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    env:
+      YQ_VERSION: 'v4.47.1'  # Specify yq version to use
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2  # Need previous commit for comparison
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/${{ env.YQ_VERSION }}/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Check for chart changes and validate version bumps
+        run: |
+          # Only validate versions for pushes to main branch
+          if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Skipping version validation (not a push to main branch)"
+            exit 0
+          fi
+
+          # Get list of changed files since last commit
+          CHANGED_FILES=$(git diff --name-only HEAD~1)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Define chart directories
+          CHART_DIRS=("charts/runtime-api" "charts/openhands" "charts/image-loader")
+
+          # Track if any validation failed
+          VALIDATION_FAILED=false
+
+          for chart_dir in "${CHART_DIRS[@]}"; do
+            # Check if any files in this chart directory were changed
+            if echo "$CHANGED_FILES" | grep -q "^${chart_dir}/"; then
+              echo "Changes detected in ${chart_dir}, validating version bump..."
+
+              # Get current version
+              CURRENT_VERSION=$(yq e '.version' "${chart_dir}/Chart.yaml")
+              echo "Current version: $CURRENT_VERSION"
+
+              # Get previous version from last commit
+              PREVIOUS_VERSION=$(git show HEAD~1:"${chart_dir}/Chart.yaml" | yq e '.version' -)
+              echo "Previous version: $PREVIOUS_VERSION"
+
+              # Compare versions (simple string comparison for now)
+              if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+                echo "❌ ERROR: Chart ${chart_dir} has changes but version was not bumped!"
+                echo "   Current version: $CURRENT_VERSION"
+                echo "   Previous version: $PREVIOUS_VERSION"
+                echo "   Please increment the version in ${chart_dir}/Chart.yaml"
+                VALIDATION_FAILED=true
+              else
+                echo "✅ Version bumped for ${chart_dir}: $PREVIOUS_VERSION → $CURRENT_VERSION"
+              fi
+            else
+              echo "No changes in ${chart_dir}, skipping version validation"
+            fi
+          done
+
+          if [ "$VALIDATION_FAILED" = true ]; then
+            echo ""
+            echo "Version validation failed! Please bump the chart versions for all modified charts."
+            exit 1
+          fi
+
+          echo "All chart version validations passed!"
+
   test-charts:
     runs-on: ubuntu-latest
     # Skip duplicate runs for PRs (only run on PR, not on the push to the PR branch)
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
-    
+    # Always depend on version validation job
+    needs: [validate-chart-versions]
+
     strategy:
       matrix:
         chart:
@@ -28,7 +103,7 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -39,13 +114,13 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 'latest'
-          
+
       - name: Test ${{ matrix.chart.name }} chart with default values
         run: |
           echo "Testing ${{ matrix.chart.name }} chart with default values"
           echo "Updating dependencies for ${{ matrix.chart.name }}"
           helm dependency update ${{ matrix.chart.path }}
-          
+
           echo "Running helm lint for ${{ matrix.chart.name }}"
           helm lint ${{ matrix.chart.path }}
           if [ $? -ne 0 ]; then
@@ -53,7 +128,7 @@ jobs:
             exit 1
           fi
           echo "Helm lint test passed for ${{ matrix.chart.name }}"
-          
+
           echo "Running helm template for ${{ matrix.chart.name }}"
           helm template ${{ matrix.chart.path }} --debug
           if [ $? -ne 0 ]; then
@@ -70,7 +145,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     strategy:
       matrix:
         chart:
@@ -80,7 +155,7 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -91,14 +166,14 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 'latest'
-          
+
       - name: Extract chart version and prepare repository
         id: chart_info
         run: |
           VERSION=$(grep '^version:' ${{ matrix.chart.path }}/Chart.yaml | awk '{print $2}')
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using chart version: ${VERSION}"
-          
+
           # Convert repository owner to lowercase for GHCR
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_OUTPUT
