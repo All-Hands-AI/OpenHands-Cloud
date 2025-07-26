@@ -52,6 +52,7 @@ spec:
         - name: migrate-db
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           command: ["/bin/sh", "-c"]
+          workingDir: /app
           args:
             - |
               echo "Running migrations..."
