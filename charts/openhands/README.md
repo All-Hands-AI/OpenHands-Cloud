@@ -9,6 +9,10 @@ This Helm chart deploys the complete OpenHands stack, including all required dep
 - Ingress controller (recommended: Traefik)
 - A TLS solution for certificates (recommended: cert-manager)
 
+### Hardware prerequisites
+
+- Profile the application's resource usage (CPU, memory) to establish the minimum required specifications for the cluster.
+
 ## Configuration
 
 See the [values.yaml](values.yaml) file for the full list of configurable parameters.
@@ -131,19 +135,26 @@ authentication as well.
 
 1. Create a GitHub App:
 
-   - Go to your GitHub organization settings or personal settings
-   - Navigate to "Developer settings" > "GitHub Apps" > "New GitHub App"
-   - Add the "Callback URL" `https://auth.openhands.example.com/realms/openhands/broker/github/endpoint`
-   - If you want to get webhooks
+   - Go to your GitHub organization settings or personal settings.
+   - Navigate to "Developer settings" > "GitHub Apps" > "New GitHub App".
+   - In the "GitHub App name" field, enter a descriptive name (e.g., Openhands app).
+   - Add your "Homepage URL" `https://openhands.example.com`.
+   - Add the "Callback URL" `https://auth.openhands.example.com/realms/allhands/broker/github/endpoint`.
+   - In "Permissions": 
+     - Open "Account permissions" and select "Access: Read-only" to "Email addresses".
+     - In "Repository permissions" add "Access: Read and Write" to "Projects".
 
-     - Generate a webhook secret `export WEBHOOK_SECRET=head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`
+   - If you want to get webhooks:
+
+     - Generate a webhook secret `export WEBHOOK_SECRET=head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`.
      - Check the "Active" checkbox.
-     - Set the "Webhook URL" `https://openhands.example.com/integration/github/events`
-     - Set the "Secret" to $WEBHOOK_SECRET
+     - Set the "Webhook URL" `https://openhands.example.com/integration/github/events`.
+     - Go to "Permissions", click in "Organization permissions" and add "Access: Read-only" to "Events".
+     - Set the "Secret" to `$WEBHOOK_SECRET`.
 
-   - Create the App
-   - Generate a private key which will download a private key file
-   - Note the App ID, Client ID, and Client Secret provided by GitHub
+   - Create the App.
+   - Generate a private key which will download a private key file.
+   - Note the App ID, Client ID, and Client Secret provided by GitHub. Remember to save the Client Secret and your private key, because it is only displayed once.
 
 2. Create a GitHub App secret with the following structure:
    This secret contains the GitHub App configuration information from your GitHub account.
@@ -237,15 +248,15 @@ This installation won't complete successfully the first time because we need to 
 To set up LiteLLM, first use port-forward to connect:
 
 ```bash
-kubectl port-forward svc/openhands-litellm 4000:4000
+kubectl port-forward svc/openhands-litellm 4000:4000 -n openhands
 ```
 
 Next, create a new Team in LiteLLM:
 
-- Navigate to http://localhost:4000/ui in your browser
-- login using the username `admin` password $GLOBAL_SECRET (set above)
-- go to Teams -> Create New Team
-- Name it whatever you want
+- Navigate to http://localhost:4000/ui in your browser.
+- login using the username `admin` password $GLOBAL_SECRET (set above).
+- go to Teams -> Create New Team.
+- Name it whatever you want.
 - Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to site-values.yaml:
 
 ```yaml
@@ -279,7 +290,7 @@ helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-a
 You should now be able to see OpenHands running with:
 
 ```bash
-kubectl port-forward svc/openhands-service 3000:3000
+kubectl port-forward svc/openhands-service 3000:3000 -n openhands
 ```
 
 If you visit `http://localhost:3000` you should see the login screen!
@@ -481,7 +492,7 @@ EOF
 To upgrade the chart:
 
 ```bash
-helm upgrade openhands . -f my-values.yaml -n openhands
+helm upgrade openhands -n openhands . -f my-values.yaml -n openhands
 ```
 
 ## Uninstallation
