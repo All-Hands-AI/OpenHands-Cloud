@@ -1,0 +1,42 @@
+{{- if .Values.maintenanceTasks.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-maintenance-tasks
+  labels:
+    app: {{ .Release.Name }}-maintenance-tasks
+spec:
+  schedule: {{ .Values.maintenanceTasks.schedule | quote }}
+  concurrencyPolicy: {{ .Values.maintenanceTasks.concurrencyPolicy }}
+  failedJobsHistoryLimit: {{ .Values.maintenanceTasks.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.maintenanceTasks.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.maintenanceTasks.backoffLimit }}
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          name: maintenance-tasks
+          labels:
+            app: {{ .Release.Name }}-maintenance-tasks
+        spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: maintenance-tasks
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              command: ["/bin/sh", "-c"]
+              workingDir: /app
+              args:
+                - |
+                  echo "Running maintenance tasks..."
+                  python -m run_maintenance_tasks
+              env:
+                {{- include "openhands.env" . | nindent 16 }}
+              resources:
+                {{- toYaml .Values.maintenanceTasks.resources | nindent 16 }}
+{{- end }}
