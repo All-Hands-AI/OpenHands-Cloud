@@ -9,6 +9,10 @@ metadata:
 spec:
   template:
     spec:
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: create-user
         image: postgres:14

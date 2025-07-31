@@ -18,6 +18,10 @@ spec:
           labels:
             app: {{ .Release.Name }}-resend-sync
         spec:
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           serviceAccountName: {{ .Values.serviceAccount.name }}
           restartPolicy: OnFailure
           {{- with .Values.imagePullSecrets }}

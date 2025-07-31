@@ -15,6 +15,10 @@ spec:
           labels:
             {{- include "runtime-api.selectorLabels" . | nindent 12 }}
         spec:
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           serviceAccountName: {{ .Values.serviceAccount.name }}
           restartPolicy: OnFailure
           {{- with .Values.imagePullSecrets }}

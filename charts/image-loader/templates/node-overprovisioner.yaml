@@ -18,6 +18,10 @@ spec:
         app.kubernetes.io/component: node-overprovisioner
     spec:
       priorityClassName: {{ .Values.nodeOverprovisioner.priorityClassName | default "node-overprovisioner-priority" }}
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

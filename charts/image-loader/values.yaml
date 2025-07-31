@@ -13,6 +13,11 @@ resources:
     cpu: 100m
     memory: 128Mi
 
+# Security context settings for all pods
+securityContext:
+  runAsUser: 1000
+  runAsNonRoot: true
+
 nodeSelector:
   sysbox-install: "yes"
 

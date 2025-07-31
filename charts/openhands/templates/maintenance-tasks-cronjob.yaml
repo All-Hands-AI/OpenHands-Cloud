@@ -20,6 +20,10 @@ spec:
           labels:
             app: {{ .Release.Name }}-maintenance-tasks
         spec:
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           serviceAccountName: {{ .Values.serviceAccount.name }}
           restartPolicy: Never
           {{- with .Values.imagePullSecrets }}

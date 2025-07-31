@@ -17,6 +17,10 @@ spec:
       labels:
         {{- include "image-loader.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -43,6 +43,11 @@ resources:
     cpu: 1
     memory: 4Gi
 
+# Security context settings for all pods
+securityContext:
+  runAsUser: 1000
+  runAsNonRoot: true
+
 nodeSelector: {}
 
 tolerations: []

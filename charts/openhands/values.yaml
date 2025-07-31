@@ -57,6 +57,11 @@ deployment:
     limits:
       memory: 3Gi
 
+# Security context settings for all pods
+securityContext:
+  runAsUser: 1000
+  runAsNonRoot: true
+
 env:
   DISABLE_WAITLIST: "true"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
