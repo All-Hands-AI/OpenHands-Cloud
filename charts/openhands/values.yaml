@@ -398,7 +398,7 @@ minio:
       cpu: 100m
 
 postgresql:
-  enabled: false
+  enabled: true
   auth:
     username: postgres
     existingSecret: postgres-password
