@@ -140,7 +140,8 @@ authentication as well.
    - In the "GitHub App name" field, enter a descriptive name (e.g., Openhands app).
    - Add your "Homepage URL" `https://openhands.example.com`.
    - Add the "Callback URL" `https://auth.openhands.example.com/realms/allhands/broker/github/endpoint`.
-   - In "Permissions": 
+   - In "Permissions":
+
      - Open "Account permissions" and select "Access: Read-only" to "Email addresses".
      - In "Repository permissions" add "Access: Read and Write" to "Projects".
 
@@ -277,6 +278,16 @@ litellm-helm:
         litellm_params:
           model: "anthropic/claude-sonnet-4-20250514"
           api_key: os.environ/ANTHROPIC_API_KEY
+```
+
+Finally you will need to set the default LLM model to use in your site-values.yaml. Find the "env:" section below in your site-values.yaml and uncomment the LITELLM_DEFAULT_MODEL. Set "your-model" to one of the models you configured:
+
+```yaml
+env:
+  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
+  LITE_LLM_TEAM_NAME: openhands
+  # replace <your-model> with your LLM model and uncomment this variable
+  # LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
 ```
 
 ### Verify your Setup
