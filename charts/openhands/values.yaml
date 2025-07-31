@@ -446,7 +446,7 @@ maintenanceTasks:
       cpu: "500m"
 
 runtime-api:
-  enabled: false
+  enabled: true
   replicaCount: 1
   monitoring:
     enabled: false
