@@ -415,8 +415,9 @@ postgresql:
       scriptsConfigMap: oh-psql-scripts-configmap
     persistence:
       enabled: false
-    podAnnotations:
-      karpenter.sh/do-not-evict: "true"
+    # Add the following if using Karpenter with persistence
+    # podAnnotations:
+    #   karpenter.sh/do-not-evict: "true"
   service:
     ports:
       postgresql: 5432
