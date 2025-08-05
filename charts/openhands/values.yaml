@@ -59,7 +59,10 @@ deployment:
 
 # Security context settings for all pods
 securityContext:
-  runAsUser: 1000
+  runAsUser: 42420
+  runAsGroup: 42420
+  fsGroup: 42420 # optional, if the pod needs to write to mounted volumes
+  fsGroupChangePolicy: Always
   runAsNonRoot: true
 
 env:
@@ -412,6 +415,8 @@ postgresql:
       scriptsConfigMap: oh-psql-scripts-configmap
     persistence:
       enabled: false
+    podAnnotations:
+      karpenter.sh/do-not-evict: "true"
   service:
     ports:
       postgresql: 5432
@@ -457,7 +462,7 @@ runtime-api:
     enabled: false
   runtimeInSameCluster: true
   image:
-    tag: sha-96c3513
+    tag: sha-44338a3
   imagePullSecrets: []
   resources:
     requests:
@@ -471,7 +476,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:7a168b9b5f33e63746456779032c0caa623e23f4-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:cda29107f1c1dcf6c71e38c50809b53a97e47214-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -496,6 +501,10 @@ runtime-api:
           - root
           - --user-id
           - "0"
+          - --git-user-name
+          - openhands
+          - --git-user-email
+          - "openhands@all-hands.dev"
   postgresql:
     postMigrate: true
     auth:
