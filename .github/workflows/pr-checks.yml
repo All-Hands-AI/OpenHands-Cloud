@@ -1,0 +1,62 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+
+jobs:
+  validate-chart-versions:
+    uses: ./.github/workflows/validate-chart-versions.yml
+    with:
+      base_ref: origin/${{ github.base_ref }}
+      enforce_version_bump: true
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    needs: [validate-chart-versions]
+
+    strategy:
+      matrix:
+        chart:
+          - name: runtime-api
+            path: charts/runtime-api
+          - name: image-loader
+            path: charts/image-loader
+          - name: openhands
+            path: charts/openhands
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Lint ${{ matrix.chart.name }} chart
+        run: |
+          echo "Testing ${{ matrix.chart.name }} chart"
+          echo "Updating dependencies for ${{ matrix.chart.name }}"
+          helm dependency update ${{ matrix.chart.path }}
+
+          echo "Running helm lint for ${{ matrix.chart.name }}"
+          helm lint ${{ matrix.chart.path }}
+          if [ $? -ne 0 ]; then
+            echo "Helm lint failed for ${{ matrix.chart.name }}"
+            exit 1
+          fi
+          echo "Helm lint passed for ${{ matrix.chart.name }}"
+
+      - name: Template ${{ matrix.chart.name }} chart
+        run: |
+          echo "Running helm template for ${{ matrix.chart.name }}"
+          helm template ${{ matrix.chart.path }} --debug
+          if [ $? -ne 0 ]; then
+            echo "Helm template failed for ${{ matrix.chart.name }}"
+            exit 1
+          fi
+          echo "Helm template passed for ${{ matrix.chart.name }}"
