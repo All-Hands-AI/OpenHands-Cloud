@@ -9,7 +9,6 @@
 - [ ] I have tested the chart upgrade path from the previous version
 - [ ] I have verified backwards compatibility with existing values.yaml configurations
 - [ ] I have updated the chart's README.md if there are any breaking changes or new required values
-- [ ] I have tested the chart with both minimal and full values configurations
 
 ## Additional Notes
 
