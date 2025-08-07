@@ -139,6 +139,13 @@ integrationEvents:
     replicas: 2
   uvicorn:
     workers: 2
+  resources:
+    requests:
+      memory: 1.5Gi
+      cpu: 1000m
+    limits:
+      memory: 1.5Gi
+      cpu: 1000m
 
 litellm:
   enabled: true

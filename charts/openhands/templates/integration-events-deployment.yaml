@@ -39,13 +39,13 @@ spec:
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
         command: ["/bin/sh"]
-        args: 
+        args:
           - "-c"
           - "exec ddtrace-run uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.integrationEvents.uvicorn.workers | default 2 }}"
         ports:
         - containerPort: 3000
         resources:
-          {{- toYaml .Values.deployment.resources | nindent 12 }}
+          {{- toYaml .Values.integrationEvents.deployment.resources | nindent 12 }}
         startupProbe:
           httpGet:
             path: /health
