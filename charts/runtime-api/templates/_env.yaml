@@ -5,6 +5,10 @@
 {{- end }}
 - name: RUNTIME_DEAD_SECONDS
   value: {{ printf "%.0f" .Values.cleanup.dead_seconds | quote }}
+{{- if .Values.ingressBase.enabled }}
+- name: INGRESS_BASE
+  value: "/ingress-base/base-ingress.yaml"
+{{- end }}
 # Datadog environment variables
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"

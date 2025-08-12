@@ -23,11 +23,16 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.warmRuntimes.enabled }}
       volumes:
+      {{- if .Values.warmRuntimes.enabled }}
         - name: warm-runtimes-config
           configMap:
             name: {{ .Values.warmRuntimes.configMapName }}
+      {{- end }}
+      {{- if .Values.ingressBase.enabled }}
+        - name: ingress-base-config
+          configMap:
+            name: {{ include "runtime-api.fullname" . }}-ingress-base
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
@@ -60,8 +65,14 @@ spec:
 
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.warmRuntimes.enabled }}
+          {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}
           volumeMounts:
+          {{- if .Values.warmRuntimes.enabled }}
             - name: warm-runtimes-config
               mountPath: /config
+          {{- end }}
+          {{- if .Values.ingressBase.enabled }}
+            - name: ingress-base-config
+              mountPath: /ingress-base
+          {{- end }}
           {{- end }}
