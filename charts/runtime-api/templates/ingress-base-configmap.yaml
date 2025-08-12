@@ -7,5 +7,5 @@ metadata:
     {{- include "runtime-api.labels" . | nindent 4 }}
 data:
   base-ingress.yaml: |
-{{- .Values.ingressBase.content | nindent 4 }}
+{{- omit .Values.ingressBase "enabled" | toYaml | nindent 4 }}
 {{- end }}
