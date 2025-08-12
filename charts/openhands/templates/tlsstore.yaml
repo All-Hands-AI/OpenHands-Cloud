@@ -1,0 +1,9 @@
+{{- if .Values.tlsStore.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: {{ .Values.tlsStore.name }}
+spec:
+  defaultCertificate:
+    secretName: {{ .Values.tlsStore.secretName }}
+{{- end }}
