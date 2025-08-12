@@ -242,6 +242,15 @@ tavily:
 tls:
   enabled: false
 
+certificate:
+  enabled: false
+  name: runtime-wildcard
+  secretName: runtime-wildcard-tls
+  issuer: google-clouddns
+  # domains:
+  # - "*.prod-runtime.all-hands.dev"
+  # commonName: "*.prod-runtime.all-hands.dev"
+
 uvicorn:
   workers: 3
 
