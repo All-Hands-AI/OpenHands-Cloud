@@ -247,8 +247,10 @@ certificate:
   name: runtime-wildcard
   secretName: runtime-wildcard-tls
   issuer: google-clouddns
+  domains: []
+  # Example domains configuration:
   # domains:
-  # - "*.prod-runtime.all-hands.dev"
+  #   - "*.prod-runtime.all-hands.dev"
   # commonName: "*.prod-runtime.all-hands.dev"
 
 tlsStore:
