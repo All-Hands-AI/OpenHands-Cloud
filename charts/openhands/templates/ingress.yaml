@@ -7,7 +7,7 @@ metadata:
     {{ .Values.ingress.annotations | toYaml | nindent 4 }}
 spec:
   ingressClassName: {{ .Values.ingress.class }}
-  {{- if .Values.tls.enabled }}
+  {{- if or .Values.tls.enabled .Values.certificate.enabled }}
   tls:
   - hosts:
     {{- if .Values.ingress.prefixWithBranch }}
@@ -15,7 +15,11 @@ spec:
     {{- else }}
     - {{ .Values.ingress.host }}
     {{- end }}
+    {{- if .Values.certificate.enabled }}
+    secretName: {{ .Values.certificate.secretName }}
+    {{- else }}
     secretName: app-all-hands-{{ .Values.tls.env }}-tls
+    {{- end }}
   {{- end }}
   rules:
   {{- if .Values.ingress.prefixWithBranch }}
