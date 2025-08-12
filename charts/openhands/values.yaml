@@ -251,6 +251,11 @@ certificate:
   # - "*.prod-runtime.all-hands.dev"
   # commonName: "*.prod-runtime.all-hands.dev"
 
+tlsStore:
+  enabled: false
+  name: default
+  secretName: runtime-wildcard-tls
+
 uvicorn:
   workers: 3
 

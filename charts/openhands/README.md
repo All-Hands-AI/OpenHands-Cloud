@@ -26,7 +26,9 @@ The chart supports two methods for TLS configuration:
 
 2. **Wildcard Certificate**: Enable with `certificate.enabled: true`. This creates a cert-manager Certificate resource that can use a wildcard domain (e.g., `*.prod-runtime.all-hands.dev`). This is particularly useful for runtime environments where you need a wildcard certificate.
 
-For runtime environments, see the [values.runtime-example.yaml](values.runtime-example.yaml) file for an example configuration using a wildcard certificate.
+3. **TLSStore for Traefik**: Enable with `tlsStore.enabled: true`. This creates a Traefik TLSStore resource that configures the default certificate for Traefik to use. When combined with a wildcard certificate, this allows Traefik to use the wildcard certificate for all TLS connections.
+
+For runtime environments, see the [values.runtime-example.yaml](values.runtime-example.yaml) file for an example configuration using a wildcard certificate and TLSStore.
 
 An [example-values.yaml](example-values.yaml) file is also provided as a starting point
 for your own configuration. This example file contains the minimum set of values you need
