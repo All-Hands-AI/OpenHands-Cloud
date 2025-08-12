@@ -17,6 +17,12 @@ certificate:
   - "*.prod-runtime.all-hands.dev"
   commonName: "*.prod-runtime.all-hands.dev"
 
+# Enable the TLSStore for Traefik to use the wildcard certificate as default
+tlsStore:
+  enabled: true
+  name: default
+  secretName: runtime-wildcard-tls
+
 # No need to enable TLS separately as it's handled by the certificate
 tls:
   enabled: false
