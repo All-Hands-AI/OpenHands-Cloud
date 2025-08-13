@@ -1,0 +1,11 @@
+{{- if .Values.ingressBase.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "runtime-api.fullname" . }}-ingress-base
+  labels:
+    {{- include "runtime-api.labels" . | nindent 4 }}
+data:
+  base-ingress.yaml: |
+{{- omit .Values.ingressBase "enabled" | toYaml | nindent 4 }}
+{{- end }}
