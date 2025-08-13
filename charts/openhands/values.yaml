@@ -488,6 +488,12 @@ runtime-api:
   image:
     tag: sha-44338a3
   imagePullSecrets: []
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    fsGroupChangePolicy: Always
+    runAsNonRoot: true
   resources:
     requests:
       cpu: 500m
@@ -500,7 +506,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:cda29107f1c1dcf6c71e38c50809b53a97e47214-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:26abb81a866ee6bff90ee103e0f8f5a7aee4ea7a-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -552,7 +558,7 @@ runtime-api:
     # REQUIRED: Update to match the host set in the ingress section above
     # RUNTIME_BASE_URL: "runtime.example.com"
     RUNTIME_DISABLE_SSL: "true"
-    MEMORY_REQUEST: "1024Mi"
-    MEMORY_LIMIT: "2048Mi"
+    MEMORY_REQUEST: "3072Mi"
+    MEMORY_LIMIT: "3072Mi"
     CPU_REQUEST: "500m"
     EPHEMERAL_STORAGE_SIZE: "10Gi"
