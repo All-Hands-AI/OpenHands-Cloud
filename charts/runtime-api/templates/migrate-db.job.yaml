@@ -5,11 +5,7 @@ metadata:
   labels:
     {{- include "runtime-api.labels" . | nindent 4 }}
   annotations:
-  {{- if not (or .Values.postgresql.enabled .Values.postgresql.postMigrate) }}
-    "helm.sh/hook": "pre-install,pre-upgrade"
-  {{- else }}
     "helm.sh/hook": "post-install,post-upgrade"
-  {{- end }}
     "helm.sh/hook-weight": "-5"
   {{- if .Values.postgresql.isFeatureDeploy }}
     "helm.sh/hook-delete-policy": "hook-succeeded"
