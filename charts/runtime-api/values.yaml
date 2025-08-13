@@ -118,8 +118,6 @@ ingressBase:
       kubernetes.io/ingress.class: nginx
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
-  spec:
-    rules: []
 
 autoscaling:
   enabled: true
