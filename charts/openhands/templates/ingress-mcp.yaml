@@ -1,0 +1,39 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openhands-mcp-ingress
+  annotations:
+    {{- if .Values.ingress.mcp.annotations }}
+    {{ .Values.ingress.mcp.annotations | toYaml | nindent 4 }}
+    {{- else }}
+    {{ .Values.ingress.annotations | toYaml | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.class }}
+  {{- if .Values.tls.enabled }}
+  tls:
+  - hosts:
+    {{- if .Values.ingress.prefixWithBranch }}
+    - {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
+    {{- else }}
+    - {{ .Values.ingress.host }}
+    {{- end }}
+    secretName: app-all-hands-{{ .Values.tls.env }}-tls
+  {{- end }}
+  rules:
+  {{- if .Values.ingress.prefixWithBranch }}
+  - host: {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
+  {{- else }}
+  - host: {{ .Values.ingress.host }}
+  {{- end }}
+    http:
+      paths:
+      - path: /mcp/mcp
+        pathType: Prefix
+        backend:
+          service:
+            name: openhands-mcp-service
+            port:
+              number: 3000
+{{- end }}
