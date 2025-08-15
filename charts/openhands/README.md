@@ -106,6 +106,9 @@ kubectl create secret generic langfuse-nextauth -n openhands \
 kubectl create secret generic clickhouse-password -n openhands \
   --from-literal=password=$GLOBAL_SECRET
 
+kubectl create secret generic admin-password -n openhands \
+  --from-literal=admin-password=$GLOBAL_SECRET
+
 # NOTE: these need to be the same value
 # TODO: merge these two secrets
 kubectl create secret generic default-api-key -n openhands \
