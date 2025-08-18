@@ -5,6 +5,10 @@
 {{- end }}
 - name: RUNTIME_DEAD_SECONDS
   value: {{ printf "%.0f" .Values.cleanup.dead_seconds | quote }}
+{{- if .Values.runtimeInSameCluster }}
+- name: RUNTIME_IN_SAME_CLUSTER
+  value: "true"
+{{- end }}
 {{- if .Values.ingressBase.enabled }}
 - name: INGRESS_BASE
   value: "/ingress-base/base-ingress.yaml"

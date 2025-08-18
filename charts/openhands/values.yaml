@@ -505,6 +505,7 @@ runtime-api:
   monitoring:
     enabled: false
   runtimeInSameCluster: true
+  createRBAC: true
   image:
     tag: sha-44338a3
   imagePullSecrets: []
