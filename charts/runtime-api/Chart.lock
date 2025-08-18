@@ -1,9 +1,9 @@
 dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
-  version: 15.5.32
+  version: 15.5.38
 - name: helm-release-pruner
   repository: https://charts.fairwinds.com/stable
   version: 3.3.0
-digest: sha256:2624e849f4565a8eb318f74efecedb84037f025f80796663db9c78f4bcdd80a8
-generated: "2024-09-18T17:44:55.142745222-04:00"
+digest: sha256:9f911cd2f97b7cbaa03b13b538f1ee44e0fb589f40c797c71ccc032e3a669ba5
+generated: "2025-08-12T22:14:25.137674542-04:00"

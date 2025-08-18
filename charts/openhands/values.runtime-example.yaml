@@ -1,0 +1,28 @@
+# Example values file for a runtime environment with wildcard certificate
+ingress:
+  enabled: true
+  host: "example.prod-runtime.all-hands.dev"
+  class: traefik
+  annotations:
+    # No need for cert-manager annotation as we're using the wildcard certificate
+    # that's already created and managed by the infrastructure
+
+# Enable the wildcard certificate
+certificate:
+  enabled: true
+  name: runtime-wildcard
+  secretName: runtime-wildcard-tls
+  issuer: google-clouddns
+  domains:
+    - "*.prod-runtime.all-hands.dev"
+  commonName: "*.prod-runtime.all-hands.dev"
+
+# Enable the TLSStore for Traefik to use the wildcard certificate as default
+tlsStore:
+  enabled: true
+  name: default
+  secretName: runtime-wildcard-tls
+
+# No need to enable TLS separately as it's handled by the certificate
+tls:
+  enabled: false

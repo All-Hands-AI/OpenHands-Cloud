@@ -51,8 +51,10 @@
 {{- end }}
 - name: SANDBOX_USER_ID
   value: '0'
+{{- if not .Values.env.RUN_AS_OPENHANDS }}
 - name: RUN_AS_OPENHANDS
-  value: 'false'
+  value: 'true'
+{{- end }}
 - name: NO_SETUP
   value: 'true'
 - name: SANDBOX_RUNTIME_CONTAINER_IMAGE
@@ -186,6 +188,13 @@
     secretKeyRef:
       name: {{ .Values.litellm.auth.existingSecret }}
       key: lite-llm-api-key
+{{- end }}
+{{- if index .Values "litellm-helm" "enabled" }}
+- name: LITE_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ index .Values "litellm-helm" "masterkeySecretName" }}
+      key: {{ index .Values "litellm-helm" "masterkeySecretKey" }}
 {{- end }}
 {{- if .Values.stripe.enabled }}
 - name: STRIPE_API_KEY

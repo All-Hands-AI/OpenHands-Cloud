@@ -129,10 +129,30 @@ ingress:
   # REQUIRED: Update to a hostname in a DNS domain you own
   # host: "app.example.com"
   class: traefik
+  # Legacy annotations field - kept for backward compatibility
   annotations:
     {}
     # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
     # cert-manager.io/cluster-issuer: letsencrypt-production
+  
+  # Separate annotations for each ingress
+  root:
+    annotations:
+      {}
+      # Example: Add specific annotations for the root ingress
+      # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  
+  integrations:
+    annotations:
+      {}
+      # Example: Add specific annotations for integrations ingress
+      # nginx.ingress.kubernetes.io/rate-limit: "100"
+  
+  mcp:
+    annotations:
+      {}
+      # Example: Add specific annotations for MCP ingress
+      # nginx.ingress.kubernetes.io/auth-type: basic
 
 integrationEvents:
   deployment:
@@ -241,6 +261,22 @@ tavily:
 
 tls:
   enabled: false
+
+certificate:
+  enabled: false
+  name: runtime-wildcard
+  secretName: runtime-wildcard-tls
+  issuer: google-clouddns
+  domains: []
+  # Example domains configuration:
+  # domains:
+  #   - "*.prod-runtime.all-hands.dev"
+  # commonName: "*.prod-runtime.all-hands.dev"
+
+tlsStore:
+  enabled: false
+  name: default
+  secretName: runtime-wildcard-tls
 
 uvicorn:
   workers: 3
@@ -472,6 +508,12 @@ runtime-api:
   image:
     tag: sha-44338a3
   imagePullSecrets: []
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    fsGroupChangePolicy: Always
+    runAsNonRoot: true
   resources:
     requests:
       cpu: 500m
@@ -484,7 +526,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:cda29107f1c1dcf6c71e38c50809b53a97e47214-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:26abb81a866ee6bff90ee103e0f8f5a7aee4ea7a-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -536,7 +578,7 @@ runtime-api:
     # REQUIRED: Update to match the host set in the ingress section above
     # RUNTIME_BASE_URL: "runtime.example.com"
     RUNTIME_DISABLE_SSL: "true"
-    MEMORY_REQUEST: "1024Mi"
-    MEMORY_LIMIT: "2048Mi"
+    MEMORY_REQUEST: "3072Mi"
+    MEMORY_LIMIT: "3072Mi"
     CPU_REQUEST: "500m"
     EPHEMERAL_STORAGE_SIZE: "10Gi"
