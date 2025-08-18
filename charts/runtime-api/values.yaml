@@ -15,9 +15,9 @@ serviceAccount:
   create: true
   name: runtime-api-sa
   annotations: {}
+  createRBAC: true
 
 runtimeInSameCluster: false
-createRBAC: true
 defaultAPIKeySecretName: default-api-key
 
 service:
