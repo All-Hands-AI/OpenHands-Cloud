@@ -38,6 +38,11 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.datadog.enabled }}
+          command: ["/bin/sh", "-c", "ddtrace-run python -m flask run --host=0.0.0.0"]
+          {{- else }}
+          command: ["/bin/sh", "-c", "python -m flask run --host=0.0.0.0"]
+          {{- end }}
           ports:
             - name: http
               containerPort: 5000
