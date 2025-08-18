@@ -23,6 +23,12 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.ingressBase.enabled }}
+          volumes:
+            - name: ingress-base-config
+              configMap:
+                name: {{ include "runtime-api.fullname" . }}-ingress-base
+          {{- end }}
           containers:
           - name: db-cleanup
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -36,5 +42,10 @@ spec:
               value: {{ .Values.database.poolSize.cronjobs | default 2 | quote }}
             - name: DB_MAX_OVERFLOW
               value: {{ .Values.database.maxOverflow.cronjobs | default 5 | quote }}
+            {{- if .Values.ingressBase.enabled }}
+            volumeMounts:
+              - name: ingress-base-config
+                mountPath: /ingress-base
+            {{- end }}
           restartPolicy: OnFailure
 {{- end }}

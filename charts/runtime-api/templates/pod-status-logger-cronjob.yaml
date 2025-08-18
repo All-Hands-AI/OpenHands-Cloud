@@ -21,6 +21,12 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.ingressBase.enabled }}
+          volumes:
+            - name: ingress-base-config
+              configMap:
+                name: {{ include "runtime-api.fullname" . }}-ingress-base
+          {{- end }}
           containers:
           - name: pod-status-logger
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -28,5 +34,10 @@ spec:
             command: ["python", "pod_status_logger.py"]
             env:
             {{- include "runtime-api.env" . | nindent 12 }}
+            {{- if .Values.ingressBase.enabled }}
+            volumeMounts:
+              - name: ingress-base-config
+                mountPath: /ingress-base
+            {{- end }}
           restartPolicy: OnFailure
 {{- end }}

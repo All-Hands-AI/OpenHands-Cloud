@@ -29,9 +29,20 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.ingressBase.enabled }}
+      volumes:
+        - name: ingress-base-config
+          configMap:
+            name: {{ include "runtime-api.fullname" . }}-ingress-base
+      {{- end }}
       containers:
         - name: migrate-db
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           command: ["alembic", "upgrade", "head"]
           env:
             {{- include "runtime-api.env" . | nindent 12 }}
+          {{- if .Values.ingressBase.enabled }}
+          volumeMounts:
+            - name: ingress-base-config
+              mountPath: /ingress-base
+          {{- end }}
