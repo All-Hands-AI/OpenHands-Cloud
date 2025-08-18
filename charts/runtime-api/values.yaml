@@ -180,4 +180,5 @@ monitoring:
   enabled: true
 
 datadog:
+  enabled: true
   env: "dev"

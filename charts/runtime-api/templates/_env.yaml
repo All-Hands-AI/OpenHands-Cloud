@@ -9,6 +9,7 @@
 - name: INGRESS_BASE
   value: "/ingress-base/base-ingress.yaml"
 {{- end }}
+{{- if .Values.datadog.enabled }}
 # Datadog environment variables
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
@@ -26,6 +27,7 @@
   value: "true"
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"resource": "GET /health", "sample_rate": 0.0}, {"resource": "GET /internal/metrics", "sample_rate": 0.0}]'
+{{- end }}
 {{- if .Values.postgresql.enabled }}
 - name: DB_HOST
   value: "{{ .Release.Name }}-postgresql"
