@@ -15,7 +15,7 @@ spec:
       {{- end }}
       containers:
       - name: create-user
-        image: postgres:14
+        image: {{ .Values.database.createJob.image | default "postgres:14" | quote }}
         env:
         - name: PGPASSWORD
           valueFrom:
