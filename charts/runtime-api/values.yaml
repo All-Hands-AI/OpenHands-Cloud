@@ -31,10 +31,10 @@ env:
   ARTIFACT_REGISTRY_REPOSITORY: "runtime-api-docker-repo"
   ARTIFACT_REGISTRY_LOCATION: "us-central1"
   GCP_REGION: "us-central1"
-  STORAGE_CLASS: "standard-rwo"
   INCLUDE_START_PROBE: "true"
   INCLUDE_LIVENESS_PROBE: "true"
-  RUNTIME_CLASS: ""
+  STORAGE_CLASS: ""  # Storage class for PVCs, e.g. standard-rwo
+  RUNTIME_CLASS: ""  # Node class for runtimes, e.g. sysbox-runc 
 
 resources:
   limits:
