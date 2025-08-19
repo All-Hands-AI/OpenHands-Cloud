@@ -34,7 +34,7 @@ env:
   STORAGE_CLASS: "standard-rwo"
   INCLUDE_START_PROBE: "true"
   INCLUDE_LIVENESS_PROBE: "true"
-  RUNTIME_CLASS: "sysbox-runc"
+  RUNTIME_CLASS: ""
 
 resources:
   limits:
