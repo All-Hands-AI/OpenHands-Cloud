@@ -129,10 +129,30 @@ ingress:
   # REQUIRED: Update to a hostname in a DNS domain you own
   # host: "app.example.com"
   class: traefik
+  # Legacy annotations field - kept for backward compatibility
   annotations:
     {}
     # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
     # cert-manager.io/cluster-issuer: letsencrypt-production
+  
+  # Separate annotations for each ingress
+  root:
+    annotations:
+      {}
+      # Example: Add specific annotations for the root ingress
+      # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  
+  integrations:
+    annotations:
+      {}
+      # Example: Add specific annotations for integrations ingress
+      # nginx.ingress.kubernetes.io/rate-limit: "100"
+  
+  mcp:
+    annotations:
+      {}
+      # Example: Add specific annotations for MCP ingress
+      # nginx.ingress.kubernetes.io/auth-type: basic
 
 integrationEvents:
   deployment:

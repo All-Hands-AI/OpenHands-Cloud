@@ -2,9 +2,13 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: openhands-ingress
+  name: openhands-integrations-ingress
   annotations:
+    {{- if .Values.ingress.integrations.annotations }}
+    {{ .Values.ingress.integrations.annotations | toYaml | nindent 4 }}
+    {{- else }}
     {{ .Values.ingress.annotations | toYaml | nindent 4 }}
+    {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.class }}
   {{- if .Values.tls.enabled }}
@@ -44,20 +48,6 @@ spec:
         backend:
           service:
             name: openhands-integrations-service
-            port:
-              number: 3000
-      - path: /mcp/mcp
-        pathType: Prefix
-        backend:
-          service:
-            name: openhands-mcp-service
-            port:
-              number: 3000
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: openhands-service
             port:
               number: 3000
 {{- end }}

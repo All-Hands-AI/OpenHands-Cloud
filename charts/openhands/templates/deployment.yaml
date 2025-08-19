@@ -34,6 +34,22 @@ spec:
           configMap:
             name: user-waitlist
         {{- end }}
+        - name: keycloak-config-script
+          configMap:
+            name: keycloak-config-script
+            defaultMode: 0755
+      initContainers:
+      - name: keycloak-config
+        imagePullPolicy: Always
+        image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
+        env:
+        {{- include "openhands.env" . | nindent 8 }}
+        volumeMounts:
+        - name: keycloak-config-script
+          mountPath: /scripts
+        command:
+          - sh
+          - /scripts/keycloak-config.sh
       containers:
       - name: openhands
         imagePullPolicy: Always

@@ -35,8 +35,17 @@ spec:
               volumeMounts:
                 - name: warm-runtimes-config
                   mountPath: /config
+                {{- if .Values.ingressBase.enabled }}
+                - name: ingress-base-config
+                  mountPath: /ingress-base
+                {{- end }}
           volumes:
             - name: warm-runtimes-config
               configMap:
                 name: {{ .Values.warmRuntimes.configMapName }}
+            {{- if .Values.ingressBase.enabled }}
+            - name: ingress-base-config
+              configMap:
+                name: {{ include "runtime-api.fullname" . }}-ingress-base
+            {{- end }}
 {{- end }}

@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/all-hands-ai/runtime-api
-  tag: sha-77dd418
+  tag: sha-07c8732
   pullPolicy: Always
 
 imagePullSecrets:
@@ -15,6 +15,7 @@ serviceAccount:
   create: true
   name: runtime-api-sa
   annotations: {}
+  createRBAC: true
 
 runtimeInSameCluster: false
 defaultAPIKeySecretName: default-api-key
@@ -102,6 +103,23 @@ ingress:
   pathType: Prefix
   tls: true
 
+# Base ingress configuration for runtime ingress inheritance
+# Only metadata (labels and annotations) will be inherited, not the spec
+ingressBase:
+  enabled: false
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: base-ingress
+    labels:
+      app: runtime-api
+      environment: production
+      team: platform
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
 autoscaling:
   enabled: true
   minReplicas: 3
@@ -163,4 +181,5 @@ monitoring:
   enabled: true
 
 datadog:
+  enabled: false
   env: "dev"
