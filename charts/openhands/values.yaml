@@ -122,7 +122,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/all-hands-ai/deploy
-  tag: 0.47.0
+  tag: sha-38b515f
 
 ingress:
   enabled: false
