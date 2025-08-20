@@ -13,6 +13,10 @@
 - name: INGRESS_BASE
   value: "/ingress-base/base-ingress.yaml"
 {{- end }}
+{{- if .Values.certificate.enabled }}
+- name: RUNTIME_CERT_SECRET
+  value: {{ .Values.certificate.secretName }}
+{{- end }}
 {{- if .Values.datadog.enabled }}
 # Datadog environment variables
 - name: DD_AGENT_HOST
