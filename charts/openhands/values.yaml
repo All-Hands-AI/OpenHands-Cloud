@@ -231,6 +231,9 @@ runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
     tag: 7a168b9b5f33e63746456779032c0caa623e23f4-nikolaik
+  # If true, sets SANDBOX_USER_ID=0 and RUN_AS_OPENHANDS=false
+  # If false, sets SANDBOX_USER_ID=1000 and RUN_AS_OPENHANDS=true
+  runAsRoot: false
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
