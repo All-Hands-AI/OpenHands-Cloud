@@ -429,7 +429,7 @@ minio:
   replicas: 1
   mode: standalone
   persistence:
-    enabled: false
+    enabled: true
   buckets:
     - name: openhands-sessions
       policy: none
@@ -456,7 +456,7 @@ postgresql:
     initdb:
       scriptsConfigMap: oh-psql-scripts-configmap
     persistence:
-      enabled: false
+      enabled: true
     # Add the following if using Karpenter with persistence
     # podAnnotations:
     #   karpenter.sh/do-not-evict: "true"
