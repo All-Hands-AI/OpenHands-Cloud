@@ -231,6 +231,7 @@ runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
     tag: 81ba4399fa87518fe4af152250035f4d1c9b18ee-nikolaik
+  runAsRoot: true
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
