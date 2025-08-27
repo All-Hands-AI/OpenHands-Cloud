@@ -63,7 +63,7 @@ postgresql:
       enabled: false
   auth:
     username: postgres
-    password: ""  # This should be set externally for security reasons
+    password: "" # This should be set externally for security reasons
     existingSecret: postgres-password
     database: runtime_api_db
   service:
@@ -73,13 +73,13 @@ postgresql:
 # External database configuration (used when postgresql.enabled=false)
 database:
   create: false # Will only be true for AWS as it can't create the DB in terraform
-  secretName: runtime-api-db-credentials  # Secret containing external database credentials
+  secretName: runtime-api-db-credentials # Secret containing external database credentials
   poolSize:
-    api: 5  # Pool size for API deployment (default)
-    cronjobs: 2  # Pool size for cronjobs (default)
+    api: 5 # Pool size for API deployment (default)
+    cronjobs: 2 # Pool size for cronjobs (default)
   maxOverflow:
-    api: 10  # Max overflow for API deployment (default)
-    cronjobs: 5  # Max overflow for cronjobs (default)
+    api: 10 # Max overflow for API deployment (default)
+    cronjobs: 5 # Max overflow for cronjobs (default)
 
 helm-release-pruner:
   enabled: false
@@ -87,11 +87,13 @@ helm-release-pruner:
     schedule: "0 */4 * * *"
     dryRun: False
   pruneProfiles:
-  - olderThan: "1 days ago"
-    helmReleaseFilter: "^runtime-api-.*$"
-    namespaceFilter: "^runtime-api-.*$"
-    maxReleasesToKeep: 10
+    - olderThan: "1 days ago"
+      helmReleaseFilter: "^runtime-api-.*$"
+      namespaceFilter: "^runtime-api-.*$"
+      maxReleasesToKeep: 10
 
+certificate:
+  enabled: false
 
 ingress:
   enabled: false
@@ -129,8 +131,8 @@ autoscaling:
 cleanup:
   enabled: true
   schedule: "*/5 * * * *"
-  idle_seconds: 1800  # Default to 30 minutes
-  dead_seconds: 86400  # Default to 1 day
+  idle_seconds: 1800 # Default to 30 minutes
+  dead_seconds: 86400 # Default to 1 day
 
 warmRuntimes:
   enabled: false
@@ -167,15 +169,15 @@ warmRuntimes:
 # Database cleanup CronJob configuration
 dbCleanup:
   enabled: true
-  schedule: "0 0 * * *"  # Run daily at midnight
-  retentionDays: 90  # Number of days to retain runtime objects
+  schedule: "0 0 * * *" # Run daily at midnight
+  retentionDays: 90 # Number of days to retain runtime objects
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
 
 # Pod Status Logger configuration
 podStatusLogger:
   enabled: true
-  schedule: "*/5 * * * *"  # Run every 5 minutes
+  schedule: "*/5 * * * *" # Run every 5 minutes
 
 monitoring:
   enabled: true
