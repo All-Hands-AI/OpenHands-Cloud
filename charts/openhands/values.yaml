@@ -68,6 +68,7 @@ securityContext:
 env:
   DISABLE_WAITLIST: "true"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
+  RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.chuck-test.aws.all-hands.dev"
   # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
@@ -134,20 +135,20 @@ ingress:
     {}
     # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
     # cert-manager.io/cluster-issuer: letsencrypt-production
-  
+
   # Separate annotations for each ingress
   root:
     annotations:
       {}
       # Example: Add specific annotations for the root ingress
       # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
-  
+
   integrations:
     annotations:
       {}
       # Example: Add specific annotations for integrations ingress
       # nginx.ingress.kubernetes.io/rate-limit: "100"
-  
+
   mcp:
     annotations:
       {}
@@ -526,7 +527,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:26abb81a866ee6bff90ee103e0f8f5a7aee4ea7a-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:c0bb84dfa20b4973effbe938d19ed7342e42d4be-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -551,10 +552,6 @@ runtime-api:
           - root
           - --user-id
           - "0"
-          - --git-user-name
-          - openhands
-          - --git-user-email
-          - "openhands@all-hands.dev"
   postgresql:
     postMigrate: true
     auth:
@@ -572,7 +569,6 @@ runtime-api:
     DB_HOST: oh-main-postgresql
     DB_USER: postgres
     DB_NAME: runtime_api_db
-    RUNTIME_IN_SAME_CLUSTER: "true"
     K8S_NAMESPACE: "openhands"
     RUNTIME_CLASS: ""
     # REQUIRED: Update to match the host set in the ingress section above
