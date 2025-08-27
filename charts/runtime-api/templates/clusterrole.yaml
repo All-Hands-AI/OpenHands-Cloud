@@ -25,4 +25,7 @@ rules:
   - apiGroups: ["traefik.io"]
     resources: ["middlewares"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes", "gateways"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 {{- end }}
