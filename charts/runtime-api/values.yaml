@@ -69,6 +69,8 @@ postgresql:
   service:
     ports:
       postgresql: 5432
+  image:
+    repository: bitnamilegacy/postgresql
 
 # External database configuration (used when postgresql.enabled=false)
 database:

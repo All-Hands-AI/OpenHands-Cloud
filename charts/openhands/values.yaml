@@ -295,6 +295,8 @@ clickhouse:
     username: default
     existingSecret: clickhouse-password
     existingSecretKey: password
+  image:
+    repository: bitnamilegacy/clickhouse
 
 keycloak:
   enabled: false
@@ -332,6 +334,8 @@ keycloak:
   extraEnvVars:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
+  image:
+    repository: bitnamilegacy/keycloak
 
 langfuse:
   # Enable this if you want to use langfuse for tracing
@@ -465,6 +469,8 @@ postgresql:
   service:
     ports:
       postgresql: 5432
+  image:
+    repository: bitnamilegacy/postgresql
 
 redis:
   enabled: true
@@ -484,6 +490,8 @@ redis:
     limits:
       memory: 512Mi
       cpu: 100m
+  image:
+    repository: bitnamilegacy/redis
 
 maintenanceTasks:
   enabled: true
