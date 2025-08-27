@@ -49,9 +49,14 @@
 - name: FILE_STORE
   value: {{ .Values.filestore.type }}
 {{- end }}
+{{- if .Values.runtime.runAsRoot }}
 - name: SANDBOX_USER_ID
   value: '0'
-{{- if not .Values.env.RUN_AS_OPENHANDS }}
+- name: RUN_AS_OPENHANDS
+  value: 'false'
+{{- else }}
+- name: SANDBOX_USER_ID
+  value: '1000'
 - name: RUN_AS_OPENHANDS
   value: 'true'
 {{- end }}

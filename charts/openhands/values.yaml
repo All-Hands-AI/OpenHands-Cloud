@@ -123,7 +123,6 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/all-hands-ai/deploy
-  tag: 0.47.0
 
 ingress:
   enabled: false
@@ -232,7 +231,8 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
-    tag: 7a168b9b5f33e63746456779032c0caa623e23f4-nikolaik
+    tag: 81ba4399fa87518fe4af152250035f4d1c9b18ee-nikolaik
+  runAsRoot: true
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
