@@ -187,3 +187,9 @@ monitoring:
 datadog:
   enabled: false
   env: "dev"
+
+global:
+  security:
+    # This allows using the bitnamilegacy image repo.
+    # See: https://github.com/bitnami/containers/issues/83267
+    allowInsecureImages: true

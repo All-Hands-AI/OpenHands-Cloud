@@ -586,3 +586,9 @@ runtime-api:
     MEMORY_LIMIT: "3072Mi"
     CPU_REQUEST: "500m"
     EPHEMERAL_STORAGE_SIZE: "10Gi"
+
+global:
+  security:
+    # This allows using the bitnamilegacy image repo.
+    # See: https://github.com/bitnami/containers/issues/83267
+    allowInsecureImages: true
