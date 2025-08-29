@@ -207,8 +207,11 @@
     secretKeyRef:
       name: {{ .Values.stripe.auth.existingSecret }}
       key: stripe-api-key
-- name: STRIPE_PUBLISHABLE_KEY
-  value: {{ .Values.stripe.publishableKey }}
+- name: STRIPE_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.stripe.auth.existingSecret }}
+      key: stripe-webhook-secret
 - name: REQUIRE_PAYMENT
   value: "{{ .Values.stripe.requirePayment | default false }}"
 {{- end }}
