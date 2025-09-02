@@ -68,6 +68,7 @@ securityContext:
 env:
   DISABLE_WAITLIST: "true"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
+  RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.chuck-test.aws.all-hands.dev"
   # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
@@ -290,6 +291,8 @@ clickhouse:
     username: default
     existingSecret: clickhouse-password
     existingSecretKey: password
+  image:
+    repository: bitnamilegacy/clickhouse
 
 keycloak:
   enabled: false
@@ -326,6 +329,8 @@ keycloak:
   extraEnvVars:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
+  image:
+    repository: bitnamilegacy/keycloak
 
 langfuse:
   # Enable this if you want to use langfuse for tracing
@@ -459,6 +464,8 @@ postgresql:
   service:
     ports:
       postgresql: 5432
+  image:
+    repository: bitnamilegacy/postgresql
 
 redis:
   enabled: true
@@ -478,6 +485,8 @@ redis:
     limits:
       memory: 512Mi
       cpu: 100m
+  image:
+    repository: bitnamilegacy/redis
 
 maintenanceTasks:
   enabled: true
@@ -521,7 +530,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:81ba4399fa87518fe4af152250035f4d1c9b18ee-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:c0bb84dfa20b4973effbe938d19ed7342e42d4be-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -546,10 +555,6 @@ runtime-api:
           - root
           - --user-id
           - "0"
-          - --git-user-name
-          - openhands
-          - --git-user-email
-          - "openhands@all-hands.dev"
   postgresql:
     postMigrate: true
     auth:
@@ -567,7 +572,6 @@ runtime-api:
     DB_HOST: oh-main-postgresql
     DB_USER: postgres
     DB_NAME: runtime_api_db
-    RUNTIME_IN_SAME_CLUSTER: "true"
     K8S_NAMESPACE: "openhands"
     RUNTIME_CLASS: ""
     # REQUIRED: Update to match the host set in the ingress section above
@@ -587,3 +591,9 @@ jiraDc:
 
 linear:
   enabled: false
+
+global:
+  security:
+    # This allows using the bitnamilegacy image repo.
+    # See: https://github.com/bitnami/containers/issues/83267
+    allowInsecureImages: true
