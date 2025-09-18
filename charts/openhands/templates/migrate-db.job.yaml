@@ -53,25 +53,23 @@ spec:
             - |
               echo "Waiting for RDS PostgreSQL at $DB_HOST to be ready..."
               export PGPASSWORD=$DB_ADMIN_PASSWORD
-              echo "psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c '\q'"
               until psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c '\q' > /dev/null 2>&1; do
                 echo "PostgreSQL is unavailable - sleeping for 2 seconds"
                 sleep 2
               done
               echo "PostgreSQL is up and running!"
 
+              echo "Checking if the keycloak DB \"$KEYCLOAK_DB_NAME\" and keycloak user \"$KEYCLOAK_DB_USER\" exist..."
               # Create the keylcloak database if it doesn't exist
-              echo "psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname='$KEYCLOAK_DB_NAME'\""
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$KEYCLOAK_DB_NAME'" | grep -q 1 || \
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $KEYCLOAK_DB_NAME;"
 
               # Create the keycloak user if it doesn't exist
-              echo "psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -c \"CREATE USER $KEYCLOAK_DB_USER WITH PASSWORD '$KEYCLOAK_DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $KEYCLOAK_DB_NAME TO $KEYCLOAK_DB_USER;\""
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$KEYCLOAK_DB_USER'" | grep -q 1 || \
               (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -c "CREATE USER $KEYCLOAK_DB_USER WITH PASSWORD '$KEYCLOAK_DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $KEYCLOAK_DB_NAME TO $KEYCLOAK_DB_USER;")
 
+              echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
               # Create the database if it doesn't exist
-              echo "psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname='$DB_NAME'\""
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
 
