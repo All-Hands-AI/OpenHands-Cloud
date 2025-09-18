@@ -472,6 +472,10 @@ postgresql:
   image:
     repository: bitnamilegacy/postgresql
 
+externalDatabase:
+  enabled: false
+  existingSecret: postgres-password
+
 redis:
   enabled: true
   architecture: standalone
@@ -565,6 +569,9 @@ runtime-api:
     auth:
       username: postgres
       existingSecret: postgres-password
+  externalDatabase:
+    enabled: false
+    existingSecret: postgres-password
   ingress:
     enabled: false
     # REQUIRED: Update to a hostname in a DNS domain you own
