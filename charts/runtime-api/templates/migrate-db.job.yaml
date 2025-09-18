@@ -42,9 +42,9 @@ spec:
           command: ['sh', '-c']
           args:
             - |
+              echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
               export PGPASSWORD=$DB_ADMIN_PASSWORD
               # Create the database if it doesn't exist
-              echo "psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname='$DB_NAME'\""
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
               psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
 
