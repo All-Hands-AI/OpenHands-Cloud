@@ -316,4 +316,53 @@
     secretKeyRef:
       name: {{ .Values.postgresql.auth.existingSecret }}
       key: password
+{{- if .Values.jira.enabled }}
+- name: ENABLE_JIRA
+  value: "true"
+- name: JIRA_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: jira-app
+      key: client-id
+- name: JIRA_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: jira-app
+      key: client-secret
+{{- end }}
+
+{{- if .Values.jiraDc.enabled }}
+- name: ENABLE_JIRA_DC
+  value: "true"
+- name: JIRA_DC_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: jira-dc-app
+      key: client-id
+- name: JIRA_DC_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: jira-dc-app
+      key: client-secret
+- name: JIRA_DC_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: jira-dc-app
+      key: base-url
+{{- end }}
+
+{{- if .Values.linear.enabled }}
+- name: ENABLE_LINEAR
+  value: "true"
+- name: LINEAR_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: linear-app
+      key: client-id
+- name: LINEAR_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: linear-app
+      key: client-secret
+{{- end }}
 {{- end }}
