@@ -123,6 +123,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/all-hands-ai/enterprise-server
+  tag: sha-bd51673
 
 ingress:
   enabled: false
@@ -231,7 +232,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
-    tag: 81ba4399fa87518fe4af152250035f4d1c9b18ee-nikolaik
+    tag: 135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -519,7 +520,7 @@ runtime-api:
     enabled: false
   runtimeInSameCluster: true
   image:
-    tag: sha-44338a3
+    tag: sha-f3c679d
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -539,7 +540,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:c0bb84dfa20b4973effbe938d19ed7342e42d4be-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
