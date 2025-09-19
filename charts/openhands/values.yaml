@@ -122,7 +122,7 @@ gitlabWebhookInstallation:
       cpu: 200m
 
 image:
-  repository: ghcr.io/all-hands-ai/deploy
+  repository: ghcr.io/all-hands-ai/enterprise-server
 
 ingress:
   enabled: false
