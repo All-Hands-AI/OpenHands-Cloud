@@ -65,13 +65,15 @@ This replaces the current system of tracking component versions via Git SHAs in
 workflow files with a clear, automated process where all components share the
 same version number for each release.
 
-### 1.3 Additional Context: Enterprise Customer Change Management
+### 1.3 Additional Context
+
+#### 1.3.1 Enterprise Customer Change Management
 
 Enterprise customers operate under different constraints than SaaS users, and
 understanding these patterns is critical for designing an effective release
 strategy.
 
-#### Two Classes of Enterprise Customers
+**Two Classes of Enterprise Customers**:
 
 **Traditional/Slow-Moving Enterprises**:
 
@@ -94,7 +96,7 @@ strategy.
   releases
 - **Risk Profile**: Accept faster pace if release quality is consistently high
 
-#### Current Customer Reality
+#### 1.3.2 Current Customer Reality
 
 **Important Note**: Our current Enterprise customers are in **early evaluation
 and piloting phases**, not stable production deployments. However, as they
@@ -108,9 +110,13 @@ transition to production systems, they will either:
 **We must establish our release and support policy now** to avoid future support
 burden and set proper expectations before customers reach production scale.
 
-#### Two Release Delivery Models
+#### 1.3.3 Two Delivery Models
 
-#### Model 1 - Customer-Managed Installations
+We have currently been assuming model 1, but model 2 has precident for
+enterprise customers streching back well over a decade. We need to decide which
+to offer--not both!
+
+**Model 1 - Customer-Managed Installations:**
 
 - Customer controls their own upgrade timeline and process
 - **Recommended Strategy**:
@@ -121,14 +127,14 @@ burden and set proper expectations before customers reach production scale.
 - **Success Factor**: Consistent, stable, high-quality releases that build
   customer confidence
 
-#### Model 2 - Vendor-Managed Appliance Approach
+**Model 2 - Vendor-Managed Appliance Approach:**
 
 - On-premises deployment but vendor-controlled update process
 - Pre-agreed change processes with standard cadences
 - Enables weekly standing change windows
 - Reduces customer change management overhead
 
-#### Critical Success Factor
+**Critical Success Factor:**
 
 **The key to keeping customers current is delivering stable, high-quality
 releases consistently.** If we fail to maintain release quality:
@@ -282,3 +288,4 @@ customers receive proven, stable releases.
    and prospective customers
 5. **Monitoring and Adjustment**: Track adoption patterns and adjust policy as
    needed based on real-world usage
+
