@@ -36,6 +36,10 @@ OpenHands Enterprise currently lacks:
 
 **Recommended Policy**:
 
+Over the next year the product will be evolving rapidly and customers will
+largely be in evaluation, pilot and early production phases. During this period
+we propose:
+
 - **Enterprise releases weekly, staggered 1 week behind SaaS** to allow
   validation
 - **Support current release + previous 2 releases** (3 total supported versions)
@@ -51,12 +55,12 @@ for technical implementation details.
 
 **Unified Versioning Strategy**:
 
-- **All components use identical semantic version numbers** (e.g., v1.2.3)
+- **All components use identical semantic version numbers** (e.g., 0.73.0)
 - **Synchronized releases** across all repositories and artifacts:
-  - OpenHands Enterprise Helm chart: v1.2.3
-  - Runtime API container & chart: v1.2.3
-  - Image Loader container & chart: v1.2.3
-  - Runtimes container: v1.2.3
+  - OpenHands Enterprise Helm chart: 0.73.0
+  - Runtime API container & chart: 0.73.0
+  - Image Loader container & chart: 0.73.0
+  - Runtimes container: 0.73.0
 - **Automated coordination** eliminates manual Git SHA tracking in workflow
   files
 - **Single source of truth** for version compatibility
@@ -180,112 +184,113 @@ customers receive proven, stable releases.
 - Enterprise releases weekly, staggered by 1 week behind SaaS
 - Provides validation period while maintaining rapid delivery
 
-#### Option 2 - Current Cadence with Limited Support
+#### Option 2 - Current Cadence no Stagger
 
 - Enterprise releases match SaaS cadence
-- Support limited to releases no more than 2 weeks old
-- Encourages customers to stay current
+- Simpler implementation but higher risk to enterprise client stability
 
-### 2.3 Version Support Policy
+#### Option 3 - Quarterly LTS Release
 
-#### Initial Policy (inspired by GitLab's approach)
+We propose deferring this until custoers are have shifted to traditional
+production change management and ask us for additional support options, but we
+could start here.
+
+- **Monthly Release Cadence**: Transition to monthly Enterprise releases with
+  continuous SaaS beta
+- **Quarterly LTS Option**: Long-term support releases with security-only fixes
+
+Support:
 
 - **Current Release**: Full bug fix and security support
 - **Previous 2 Releases**: Security fixes only
 - **Older Releases**: No support (customers must upgrade)
 
-#### Future Considerations
-
-- **Quarterly LTS Option**: Long-term support releases with security-only fixes
-- **Monthly Release Cadence**: Transition to monthly Enterprise releases with
-  continuous SaaS beta
+This follows [GitLab's model](https://docs.gitlab.com/policy/maintenance/).
 
 ## 3. Technical Solution
 
-### 3.1 Version Numbering Strategy
+### 3.1 Release Process: Synchronized Versions, Staggered Enterprise Release
 
-#### Semantic Versioning: `MAJOR.MINOR.PATCH`
+**Process Overview:**
 
-- **Component Coordination**: All related components (Runtime API, Image Loader,
-  Runtimes) use consistent versioning based matching OpenHands code repo tag.
-- **Containers and Charts Tagged to Match**: Containers and Charts pushed to
-  package repo are tagged to match as part of the release process.
+- OSS Release 0.73.0 triggers immediate SaaS release
+- Enterprise Release 0.73.0 follows 1 week later (no beta distinction)
+- Release automation creates charts for the prior OSS version to maintain compatibility
 
-### 3.2 Release Automation
+**Technical Implementation:**
 
-#### Automated Release Pipeline
+**Release Automation:**
 
-1. **Trigger**: Based on release completion (for staggered approach) or
-   concurrent with SaaS
-2. **Component Coordination**: Automatically determine and tag compatible
-   versions of:
-   - Runtime API
-   - Image Loader
-   - Runtimes container
-3. **Helm Chart Generation**: Generate coordinated Helm charts with proper
-   version tags
-4. **Release Notes**: Automated generation linking Enterprise changes to core
-   OpenHands features
+When OSS 0.73.0 is tagged, three release processes are triggered:
 
-### 3.3 Release Artifacts
+1. **OSS Release**:
+   - `ghcr.io/all-hands-ai/openhands` container tagged and published with 0.73.0
+   - `ghcr.io/all-hands-ai/runtime` container built and tagged with 0.73.0
 
-#### Standardized Release Package
+2. **SaaS Release**:
+   - `ghcr.io/all-hands-ai/enterprise-server` container built and published with 0.73.0
+   - `ghcr.io/all-hands-ai/runtime-api` container built and published with 0.73.0
 
-- **Helm Charts**: Versioned charts for all components
-- **Container Images**: Tagged with semantic versions (not just Git SHAs)
-- **Release Notes**: Clear documentation of changes, security updates, and
-  upgrade instructions
-- **Compatibility Matrix**: Clear documentation of component version
-  compatibility
+3. **Enterprise Release**:
+   - **Publishes prior week's charts**: Charts for 0.72.0 (previous version) are published to `ghcr.io/all-hands-ai/helm-charts`
+   - **Prepares next week's charts**: Chart.yaml files updated to version 0.73.0 and appVersion to 0.73.0
+   - **Schedules for next week**: Charts for 0.73.0 will be published in 1 week after SaaS validation
 
-#### Backporting Process
+#### 3.1.1 Scenario: Issue Found in SaaS Release During Stagger Period
 
-- **Automated Tooling**: Scripts to facilitate backporting critical fixes
-- **Clear Criteria**: Defined standards for what qualifies for backporting
-- **Limited Scope**: Restrict backports to security fixes and critical bugs only
+1. Release SaaS with new patch number: 0.73.1
+2. Run Enterprise chart staging so that that unpublished Enterprise Charts will
+   release 0.73.1 instead of 0.73.0.
 
-### 3.5 Implementation Phases
+#### 3.1.2 Scenario: Faster than Weekly OSS / SaaS Release Cadance
 
-#### Phase 1: Foundation
+1. OSS and SaaS Release 0.73.0 and 0.74.0 in the same week
+2. Run Enterprise chart staging so that that unpublished Enterprise Charts will
+   release 0.74.0 instead of 0.73.0.
 
-- Implement semantic versioning for all components
-- Create automated release coordination pipeline
-- Establish basic support policy (current + 2 releases)
+#### 3.1.3 Scenario: Fix For Helm Charts, Not Code
 
-#### Phase 2: Enhanced Support
+1. OSS and SaaS Release 0.73.0
+2. A week later Helm Charts are published
+3. Bug found in Helm Chart, not containers.
+4. Release helm chart as 0.73.0-fix1
 
-- Add LTS release option (if needed based on customer feedback)
-- Implement automated security update notifications
-- Create customer-facing supported versions dashboard
+### 3.2 Repository Structure
 
-#### Phase 3: Optimization
+#### 3.2.1 Current State
 
-- Evaluate and potentially adjust release cadence based on customer adoption
-  patterns
-- Implement advanced backporting automation
-- Consider transition to monthly release model if appropriate
+Containers:
 
-## 4. Success Metrics
+**All-Hands-AI/OpenHands (OSS):**
 
-- **Customer Satisfaction**: Reduced support tickets related to version
-  confusion
-- **Engineering Efficiency**: Decreased time spent on ad-hoc backporting and
-  version management
-- **Security Posture**: Faster adoption of security updates by Enterprise
-  customers
-- **Release Quality**: Reduced critical issues in Enterprise releases through
-  SaaS validation period
+- `ghcr.io/all-hands-ai/openhands` (OSS)
+- `ghcr.io/all-hands-ai/runtime` (OSS)
+- `ghcr.io/all-hands-ai/enterprise-server` (OHE, SaaS)
 
-## 5. Next Steps
+**All-Hands-AI/runtime-api:**
 
-1. **Stakeholder Review**: Gather feedback from engineering, customer success,
-   and sales teams
-2. **Customer Input**: Survey existing Enterprise customers on preferred release
-   cadence and support expectations
-3. **Technical Implementation**: Begin Phase 1 implementation with automated
-   versioning and release coordination
-4. **Policy Communication**: Clearly communicate new support policy to existing
-   and prospective customers
-5. **Monitoring and Adjustment**: Track adoption patterns and adjust policy as
-   needed based on real-world usage
+- `ghcr.io/all-hands-ai/runtime-api` (OHE, SaaS)
 
+Charts:
+
+**All-Hands-AI/OpenHands-Cloud (OHE):**
+
+- `enterprise-server` - Main OpenHands Enterprise chart
+- `runtime-api` - Runtime API service chart  
+- `image-loader` - Image loading daemonset chart (uses `ghcr.io/all-hands-ai/runtime` from OSS)
+
+**All-Hands-AI/deploy (SaaS):**
+
+- `data-platform` - Data platform service chart
+- `error-page` - Error page service chart
+- `image-loader` - Image loading daemonset chart (uses `ghcr.io/all-hands-ai/runtime` from OSS)
+- `keycloak` - Keycloak identity service chart
+- `openhands` - OpenHands SaaS chart
+
+#### 3.2.2 Future State
+
+TBD
+
+### 3.3 Automation
+
+TBD
