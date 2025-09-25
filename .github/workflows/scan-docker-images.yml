@@ -1,8 +1,7 @@
 name: Scan Docker Images
-
+// ghcr.io/all-hands-ai/enterprise-server:pr-11114
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: all-hands-ai/runtime-api
 on:
   pull_request:
 jobs:
@@ -14,29 +13,36 @@ jobs:
       packages: write
       security-events: write
       actions: read
+    strategy:
+      matrix:
+        IMAGE:
+          - 'all-hands-ai/runtime-api:sha-f1c75a7'
+          - 'all-hands-ai/enterprise-server:pr-11114'
     steps:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         # This only reports, does not fail the build on CVE.
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-f1c75a7
+          image-ref: ${{ env.REGISTRY }}/${{ matrix.IMAGE }}
           # trixie: sha-f1c75a7
           # default: sha-07c8732
           format: 'sarif'
-          output: 'trivy-results-raw.sarif'
+          output: 'trivy-results.sarif'
           timeout: '10m'
           scanners: 'vuln'  # Only scan vulnerabilities, not secrets/config
           severity: 'CRITICAL,HIGH'  # Skip LOW and MEDIUM severity
-      - name: Customize SARIF with image flavor
-        run: |
-          # Modify the tool name to include the image flavor
-          jq --arg flavor "${{ env.IMAGE_NAME }}" \
-            '.runs[0].tool.driver.name = "Trivy (" + $flavor + ")"' \
-            trivy-results-raw.sarif > trivy-results.sarif
-          echo "Modified tool name to: $(jq -r '.runs[0].tool.driver.name' trivy-results.sarif)"
+      # - name: Customize SARIF with image flavor
+      #   shell: bash
+      #   run: |
+      #     IMAGE_WITH_TAG="all-hands-ai/enterprise-server:pr-11114"
+      #     IMAGE_WITHOUT_TAG="${IMAGE_WITH_TAG%%:*}"
+      #     # Modify the tool name to include the image flavor
+      #     jq --arg flavor "${{ env.IMAGE_WITHOUT_TAG }}" \
+      #       '.runs[0].tool.driver.name = "Trivy (" + $flavor + ")"' \
+      #       trivy-results-raw.sarif > trivy-results.sarif
+      #     echo "Modified tool name to: $(jq -r '.runs[0].tool.driver.name' trivy-results.sarif)"
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
-          category: 'security/container-${{ env.IMAGE_NAME }}'
