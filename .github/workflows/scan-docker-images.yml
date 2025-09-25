@@ -20,7 +20,9 @@ jobs:
         uses: aquasecurity/trivy-action@master
         # This only reports, does not fail the build on CVE.
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-07c8732
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-e52f4e0
+          # trixie: sha-e52f4e0
+          # default: sha-07c8732
           format: 'sarif'
           output: 'trivy-results-raw.sarif'
           timeout: '10m'
