@@ -1,5 +1,5 @@
 name: Scan Docker Images
-// ghcr.io/all-hands-ai/enterprise-server:pr-11114
+
 env:
   REGISTRY: ghcr.io
 on:
