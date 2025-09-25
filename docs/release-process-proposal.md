@@ -1,5 +1,52 @@
 # OpenHands Enterprise Release Process Proposal
 
+## Executive Summary
+
+OpenHands Enterprise currently lacks a structured release process, creating
+challenges in version management, customer support, and technical coordination
+across multiple components. This proposal establishes a comprehensive release
+strategy that balances rapid innovation with enterprise stability requirements.
+
+**Key Recommendations:**
+
+- **Weekly Enterprise releases staggered 1 week behind SaaS** for validation and
+  stability
+- **Support current + previous 2 releases** (3 total supported versions) during
+  the rapid evolution phase
+- **Unified versioning strategy** with synchronized version numbers across all
+  components
+- **Automated release coordination** to eliminate manual Git SHA tracking
+
+**Expected Benefits:**
+
+- Predictable release schedule for enterprise customers
+- Reduced support burden through limited version support
+- Improved quality assurance via SaaS validation period
+- Streamlined technical coordination across repositories
+
+This approach is designed for our current customer reality—early evaluation and
+pilot phases—while establishing proper expectations for future production
+deployments.
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+   - 1.1 [Problem Statement](#11-problem-statement)
+   - 1.2 [Proposed Solution](#12-proposed-solution)
+   - 1.3 [Additional Context](#13-additional-context)
+     - 1.3.1 [Enterprise Customer Change
+       Management](#131-enterprise-customer-change-management)
+     - 1.3.2 [Current Customer Reality](#132-current-customer-reality)
+     - 1.3.3 [Two Delivery Models](#133-two-delivery-models)
+2. [Envisioned Future State](#2-envisioned-future-state)
+   - 2.1 [Customer Experience](#21-customer-experience)
+   - 2.2 [Release Cadence Options](#22-release-cadence-options)
+3. [Technical Solution](#3-technical-solution)
+   - 3.1 [Release Process: Synchronized Versions, Staggered Enterprise
+     Release](#31-release-process-synchronized-versions-staggered-enterprise-release)
+   - 3.2 [Repository Structure](#32-repository-structure)
+   - 3.3 [Automation](#33-automation)
+
 ## 1. Introduction
 
 This document proposes a structured release process and support policy for
@@ -100,6 +147,19 @@ strategy.
   releases
 - **Risk Profile**: Accept faster pace if release quality is consistently high
 
+**Note on Regulated Fast-Moving Enterprises**: Even highly regulated
+organizations (financial services, healthcare, government contractors) can adopt
+weekly release cadences when they have:
+
+- **Standing weekly change windows** with pre-approved deployment processes
+- **Automated image quarantine and scanning** in private container registries
+- **Proven track record of stable releases** with minimal disruptive bugs
+- **Rollback capabilities** and comprehensive monitoring
+
+These organizations prioritize security and stability but recognize that staying
+current with frequent, stable updates often provides better security posture
+than running outdated versions with accumulated vulnerabilities.
+
 #### 1.3.2 Current Customer Reality
 
 **Important Note**: Our current Enterprise customers are in **early evaluation
@@ -119,6 +179,12 @@ burden and set proper expectations before customers reach production scale.
 We have currently been assuming model 1, but model 2 has precident for
 enterprise customers streching back well over a decade. We need to decide which
 to offer--not both!
+
+**Note**: The remainder of this document assumes we continue with **Model 1 -
+Customer-Managed Installations**, potentially streamlined with tools like
+Replicated for easier deployment and update management. However, the **Model 2 -
+Vendor-Managed Appliance Approach** is presented here as a viable alternative
+that could fundamentally change our release strategy and support model.
 
 **Model 1 - Customer-Managed Installations:**
 
@@ -215,7 +281,8 @@ This follows [GitLab's model](https://docs.gitlab.com/policy/maintenance/).
 
 - OSS Release 0.73.0 triggers immediate SaaS release
 - Enterprise Release 0.73.0 follows 1 week later (no beta distinction)
-- Release automation creates charts for the prior OSS version to maintain compatibility
+- Release automation creates charts for the prior OSS version to maintain
+  compatibility
 
 **Technical Implementation:**
 
@@ -228,13 +295,18 @@ When OSS 0.73.0 is tagged, three release processes are triggered:
    - `ghcr.io/all-hands-ai/runtime` container built and tagged with 0.73.0
 
 2. **SaaS Release**:
-   - `ghcr.io/all-hands-ai/enterprise-server` container built and published with 0.73.0
-   - `ghcr.io/all-hands-ai/runtime-api` container built and published with 0.73.0
+   - `ghcr.io/all-hands-ai/enterprise-server` container built and published with
+     0.73.0
+   - `ghcr.io/all-hands-ai/runtime-api` container built and published with
+     0.73.0
 
 3. **Enterprise Release**:
-   - **Publishes prior week's charts**: Charts for 0.72.0 (previous version) are published to `ghcr.io/all-hands-ai/helm-charts`
-   - **Prepares next week's charts**: Chart.yaml files updated to version 0.73.0 and appVersion to 0.73.0
-   - **Schedules for next week**: Charts for 0.73.0 will be published in 1 week after SaaS validation
+   - **Publishes prior week's charts**: Charts for 0.72.0 (previous version) are
+     published to `ghcr.io/all-hands-ai/helm-charts`
+   - **Prepares next week's charts**: Chart.yaml files updated to version 0.73.0
+     and appVersion to 0.73.0
+   - **Schedules for next week**: Charts for 0.73.0 will be published in 1 week
+     after SaaS validation
 
 #### 3.1.1 Scenario: Issue Found in SaaS Release During Stagger Period
 
@@ -277,13 +349,15 @@ Charts:
 
 - `enterprise-server` - Main OpenHands Enterprise chart
 - `runtime-api` - Runtime API service chart  
-- `image-loader` - Image loading daemonset chart (uses `ghcr.io/all-hands-ai/runtime` from OSS)
+- `image-loader` - Image loading daemonset chart (uses
+  `ghcr.io/all-hands-ai/runtime` from OSS)
 
 **All-Hands-AI/deploy (SaaS):**
 
 - `data-platform` - Data platform service chart
 - `error-page` - Error page service chart
-- `image-loader` - Image loading daemonset chart (uses `ghcr.io/all-hands-ai/runtime` from OSS)
+- `image-loader` - Image loading daemonset chart (uses
+  `ghcr.io/all-hands-ai/runtime` from OSS)
 - `keycloak` - Keycloak identity service chart
 - `openhands` - OpenHands SaaS chart
 
