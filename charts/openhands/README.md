@@ -260,6 +260,12 @@ This installation won't complete successfully the first time because we need to 
 
 > [!NOTE]
 > This process will be automated in the near future.
+>
+> [!IMPORTANT]
+> We recommend using the provided LiteLLM instance rather than bringing your
+> own. The provided LiteLLM instance uses an admin key for automated user
+> management, which is the most extensively tested scenario. Our automation
+> relies on this admin key to create and delete users automatically.
 
 To set up LiteLLM, first use port-forward to connect:
 
@@ -269,7 +275,7 @@ kubectl port-forward svc/openhands-litellm 4000:4000 -n openhands
 
 Next, create a new Team in LiteLLM:
 
-- Navigate to http://localhost:4000/ui in your browser.
+- Navigate to <http://localhost:4000/ui> in your browser.
 - login using the username `admin` password $GLOBAL_SECRET (set above).
 - go to Teams -> Create New Team.
 - Name it whatever you want.

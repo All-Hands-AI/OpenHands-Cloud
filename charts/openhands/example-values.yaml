@@ -45,12 +45,20 @@ postgresql:
   enabled: true
 
 litellm:
-  # Set this to true if you are using your own litellm instance
+  # Set this to true if you are using your own litellm instance 
+  #
+  # NOTE: We recommend using the provided LiteLLM instance for simplicity and
+  # because it is the most extensively tested scenario. Our automation uses an
+  # admin key to do user management for the LiteLLM instance.
   enabled: false
   url: "https://llm-proxy.example.com"
 
 litellm-helm:
-  # Set this to false if you are using your own litellm instance
+  # Set this to false if you are using your own litellm instance 
+  #
+  # NOTE: We recommend using the provided LiteLLM instance (enabled: true) for
+  # simplicity and because it is the most extensively tested scenario. Our
+  # automation uses an admin key to do user management for the LiteLLM instance.
   enabled: true
   ingress:
     enabled: false
@@ -69,7 +77,12 @@ litellm-helm:
         "OR_APP_NAME": "OpenHands",
         "OR_SITE_URL": "https://docs.all-hands.dev",
       }
-    # Needs to be updated with your models. If you bring your own litellm, then just point at that!
+    # Needs to be updated with your models. If you bring your own litellm, then
+    # just point at that!
+    #
+    # NOTE: We recommend using the provided LiteLLM instance for simplicity and
+    # because it is the most extensively tested scenario.
+    #
     # model_list:
     # - model_name: "prod/claude-3-5-sonnet-20241022"
     #   litellm_params:

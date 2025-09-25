@@ -374,6 +374,9 @@ langfuse:
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
+  # NOTE: We recommend using the provided LiteLLM instance (enabled: true) for simplicity
+  # and because it is the most extensively tested scenario. Our automation uses an admin key
+  # to do user management for the LiteLLM instance.
   enabled: false
   masterkeySecretName: lite-llm-api-key
   masterkeySecretKey: lite-llm-api-key
