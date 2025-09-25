@@ -368,3 +368,62 @@ TBD
 ### 3.3 Automation
 
 TBD
+
+## 4. Immediate Decisions
+
+This section outlines the key decision points that need to be resolved to move
+forward with the proposed release process.
+
+### 4.1 Product Classification
+
+**Decision Required**: Agree that OpenHands Enterprise (OHE) is a product and
+needs to be treated as a first-class product in our release approach.
+
+**Rationale**: This establishes the foundation for all subsequent decisions
+about versioning, automation, and support policies. Treating OHE as a
+first-class product ensures it receives appropriate engineering resources and
+process attention.
+
+### 4.2 Version Synchronization
+
+**Decision Required**: Agree that version numbers need to line up across all
+components and that we need to put work into automation to achieve that
+synchronization.
+
+**Timing Consideration**: This work could be implemented after some upcoming
+repository migrations or after v1 lands, depending on current engineering
+priorities.
+
+**Technical Scope**: 
+- All components use identical semantic version numbers (e.g., 0.73.0)
+- Automated coordination eliminates manual Git SHA tracking in workflow files
+- Single source of truth for version compatibility
+
+### 4.3 Release Relationship and Staggering
+
+**Decision Required**: Agree about the OpenHands Enterprise relationship to SaaS
+releases and the stagger approach.
+
+**Proposed Approach**:
+- Enterprise releases weekly, staggered 1 week behind SaaS releases
+- Provides validation period for enterprise stability
+- Maintains rapid delivery while reducing risk
+
+### 4.4 Release Support & Maintenance Policy
+
+**Decision Required**: Introduce the need for a support policy, even if we don't
+fully define all details immediately.
+
+**Key Questions to Address**:
+- What versions are considered supported?
+- What updates do we continue to make to each supported version?
+- How long are versions supported before requiring customer upgrades?
+
+**Proposed Initial Framework**:
+- **Current release**: Full bug fixes and security updates
+- **Previous 2 releases**: Security fixes only  
+- **Older releases**: No support - customers must upgrade
+- **Total supported versions**: 3 (current + 2 previous)
+
+**Note**: This policy can be refined based on customer feedback and operational
+experience, but establishing the framework now sets proper expectations.
