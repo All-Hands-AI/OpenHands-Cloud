@@ -18,6 +18,7 @@ jobs:
         IMAGE:
           - 'all-hands-ai/runtime-api:sha-f1c75a7'
           - 'all-hands-ai/enterprise-server:pr-11114'
+          - 'all-hands-ai/runtime:aa60329-trixie'
     steps:
 
       - name: Run Trivy vulnerability scanner
