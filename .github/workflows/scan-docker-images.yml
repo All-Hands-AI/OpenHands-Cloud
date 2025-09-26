@@ -32,7 +32,6 @@ jobs:
           output: 'trivy-results.sarif'
           timeout: '10m'
           scanners: 'vuln'  # Only scan vulnerabilities, not secrets/config
-          severity: 'CRITICAL,HIGH'  # Skip LOW and MEDIUM severity
       # - name: Customize SARIF with image flavor
       #   shell: bash
       #   run: |
