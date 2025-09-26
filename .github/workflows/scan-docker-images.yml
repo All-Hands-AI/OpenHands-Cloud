@@ -17,7 +17,7 @@ jobs:
       matrix:
         IMAGE:
           - 'all-hands-ai/runtime-api:sha-f1c75a7'
-          - 'all-hands-ai/enterprise-server:sha-aa60329'
+          - 'all-hands-ai/enterprise-server:sha-3590497'
           - 'all-hands-ai/runtime:aa60329-trixie'
     steps:
 
