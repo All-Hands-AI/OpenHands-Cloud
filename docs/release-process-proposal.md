@@ -46,6 +46,11 @@ deployments.
      Release](#31-release-process-synchronized-versions-staggered-enterprise-release)
    - 3.2 [Repository Structure](#32-repository-structure)
    - 3.3 [Automation](#33-automation)
+4. [Immediate Decisions](#4-immediate-decisions)
+   - 4.1 [Product Classification](#41-product-classification)
+   - 4.2 [Version Synchronization](#42-version-synchronization)
+   - 4.3 [Release Relationship and Staggering](#43-release-relationship-and-staggering)
+   - 4.4 [Release Support & Maintenance Policy](#44-release-support--maintenance-policy)
 
 ## 1. Introduction
 
