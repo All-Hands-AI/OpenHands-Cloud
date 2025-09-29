@@ -122,7 +122,8 @@ gitlabWebhookInstallation:
       cpu: 200m
 
 image:
-  repository: ghcr.io/all-hands-ai/deploy
+  repository: ghcr.io/all-hands-ai/enterprise-server
+  tag: sha-bd51673
 
 ingress:
   enabled: false
@@ -227,7 +228,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/all-hands-ai/runtime
-    tag: 81ba4399fa87518fe4af152250035f4d1c9b18ee-nikolaik
+    tag: 135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -368,6 +369,9 @@ langfuse:
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
+  # NOTE: We recommend using the provided LiteLLM instance (enabled: true) for simplicity
+  # and because it is the most extensively tested scenario. Our automation uses an admin key
+  # to do user management for the LiteLLM instance.
   enabled: false
   masterkeySecretName: lite-llm-api-key
   masterkeySecretKey: lite-llm-api-key
@@ -467,6 +471,10 @@ postgresql:
   image:
     repository: bitnamilegacy/postgresql
 
+externalDatabase:
+  enabled: false
+  existingSecret: postgres-password
+
 redis:
   enabled: true
   architecture: standalone
@@ -510,7 +518,7 @@ runtime-api:
     enabled: false
   runtimeInSameCluster: true
   image:
-    tag: sha-44338a3
+    tag: sha-f3c679d
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -530,7 +538,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:c0bb84dfa20b4973effbe938d19ed7342e42d4be-nikolaik"
+        image: "ghcr.io/all-hands-ai/runtime:135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -560,6 +568,9 @@ runtime-api:
     auth:
       username: postgres
       existingSecret: postgres-password
+  externalDatabase:
+    enabled: false
+    existingSecret: postgres-password
   ingress:
     enabled: false
     # REQUIRED: Update to a hostname in a DNS domain you own

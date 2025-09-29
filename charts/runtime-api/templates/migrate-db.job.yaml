@@ -35,6 +35,30 @@ spec:
           configMap:
             name: {{ include "runtime-api.fullname" . }}-ingress-base
       {{- end }}
+      {{- if .Values.externalDatabase.enabled }}
+      initContainers:
+        - name: check-db-exists
+          image: "bitnamilegacy/postgresql:latest"
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
+              export PGPASSWORD=$DB_ADMIN_PASSWORD
+              # Create the database if it doesn't exist
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
+
+              # Create the user if it doesn't exist
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
+              (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;")
+          env:
+            - name: DB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: admin_password
+            {{- include "runtime-api.env" . | nindent 12 }}
+      {{- end }}
       containers:
         - name: migrate-db
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"

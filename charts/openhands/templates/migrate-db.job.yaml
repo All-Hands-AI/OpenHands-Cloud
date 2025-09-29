@@ -4,9 +4,11 @@ kind: Job
 metadata:
   name: migrate-db
   annotations:
+    {{- if not .Values.externalDatabase.enabled }}
     "helm.sh/hook": "post-install,post-upgrade"
     "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": "before-hook-creation"
+    {{- end }}
 spec:
   ttlSecondsAfterFinished: 3600
   backoffLimit: 0
@@ -26,31 +28,87 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- if .Values.migrationJob.initContainer.enabled }}
+      {{- if .Values.postgresql.enabled }}
       initContainers:
         - name: wait-for-postgres
-          image: "bitnami/postgresql:latest"
+          image: "bitnamilegacy/postgresql:latest"
           command: ['sh', '-c']
           args:
             - |
-              PG_HOST="oh-main-postgresql"
-              {{- if .Values.externalDatabase }}
-              {{- if .Values.externalDatabase.host }}
-              PG_HOST="{{ .Values.externalDatabase.host }}"
-              {{- end }}
-              {{- end }}
-
-              echo "Waiting for PostgreSQL at $PG_HOST to be ready..."
-              until PGPASSWORD=$POSTGRES_PASSWORD psql -h $PG_HOST -p 5432 -U postgres -c '\q' > /dev/null 2>&1; do
+              DB_HOST="oh-main-postgresql"
+              echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
+              until PGPASSWORD=$DB_PASS psql -h $DB_HOST -p 5432 -U postgres -c '\q' > /dev/null 2>&1; do
                 echo "PostgreSQL is unavailable - sleeping for 2 seconds"
                 sleep 2
               done
               echo "PostgreSQL is up and running!"
           env:
-            - name: POSTGRES_PASSWORD
+            {{- include "openhands.env" . | nindent 12 }}
+      {{- else if .Values.externalDatabase.enabled }}
+      initContainers:
+        - name: check-db-exists
+          image: "bitnamilegacy/postgresql:latest"
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Waiting for RDS PostgreSQL at $DB_HOST to be ready..."
+              export PGPASSWORD=$DB_ADMIN_PASSWORD
+              until psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c '\q' > /dev/null 2>&1; do
+                echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+                sleep 2
+              done
+              echo "PostgreSQL is up and running!"
+
+              echo "Checking if the keycloak DB \"$KEYCLOAK_DB_NAME\" and keycloak user \"$KEYCLOAK_DB_USER\" exist..."
+              # Create the keylcloak database if it doesn't exist
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$KEYCLOAK_DB_NAME'" | grep -q 1 || \
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $KEYCLOAK_DB_NAME;"
+
+              # Create the keycloak user if it doesn't exist
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$KEYCLOAK_DB_USER'" | grep -q 1 || \
+              (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -c "CREATE USER $KEYCLOAK_DB_USER WITH PASSWORD '$KEYCLOAK_DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $KEYCLOAK_DB_NAME TO $KEYCLOAK_DB_USER;")
+
+              echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
+              # Create the database if it doesn't exist
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
+
+              # Create the user if it doesn't exist
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
+              (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;")
+          env:
+            - name: DB_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.postgresql.auth.existingSecret }}
-                  key: password
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: admin_password
+            - name: KEYCLOAK_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+                  key: db-user
+            - name: KEYCLOAK_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+                  key: db-password
+            - name: KEYCLOAK_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+                  key: db-name
+            - name: KEYCLOAK_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+                  key: db-host
+            - name: KEYCLOAK_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+                  key: db-port
+            {{- include "openhands.env" . | nindent 12 }}
+      {{- end }}
       {{- end }}
       containers:
         - name: migrate-db
