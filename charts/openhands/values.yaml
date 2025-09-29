@@ -598,7 +598,6 @@ jira:
 
 jiraDc:
   enabled: false
-  enableOAuth: false
 
 linear:
   enabled: false
