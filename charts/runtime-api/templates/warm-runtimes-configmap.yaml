@@ -7,22 +7,5 @@ metadata:
     {{- include "runtime-api.labels" . | nindent 4 }}
 data:
   warm-runtimes.json: |
-    {
-      "count": {{ .Values.warmRuntimes.count }},
-      "configs": [
-        {{- range $index, $config := .Values.warmRuntimes.configs }}
-        {{- if $index }},{{ end }}
-        {
-          "name": {{ $config.name | quote }},
-          "image": {{ $config.image | quote }},
-          "working_dir": {{ $config.working_dir | quote }},
-          {{- with $config.count }}
-          "count": {{ $config.count }},
-          {{- end }}
-          "command": {{ $config.command | toJson }},
-          "environment": {{ $config.environment | toJson }}
-        }
-        {{- end }}
-      ]
-    }
+    {{- dict "count" .Values.warmRuntimes.count "configs" .Values.warmRuntimes.configs | toJson | nindent 4 }}
 {{- end }}
