@@ -88,7 +88,7 @@
 {{- end }}
 {{- if .Values.redis.enabled }}
 - name: REDIS_HOST
-  value: {{ .Release.Name }}-redis-master
+  value: {{ .Release.Name }}-redis-master.{{ .Release.Namespace }}.svc
 - name: REDIS_PORT
   value: "6379"
 - name: REDIS_PASSWORD
