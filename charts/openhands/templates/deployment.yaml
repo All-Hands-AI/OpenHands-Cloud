@@ -93,6 +93,4 @@ spec:
           - name: prometheus-multiproc
             mountPath: /tmp/prometheus-multiproc
         env:
-        - name: PROMETHEUS_MULTIPROC_DIR
-          value: /tmp/prometheus-multiproc
         {{- include "openhands.env" . | nindent 8 }}

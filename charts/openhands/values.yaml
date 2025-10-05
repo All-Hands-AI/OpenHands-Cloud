@@ -69,6 +69,7 @@ env:
   DISABLE_WAITLIST: "true"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
   RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.chuck-test.aws.all-hands.dev"
+  PROMETHEUS_MULTIPROC_DIR: "/tmp/prometheus-multiproc"
   # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
