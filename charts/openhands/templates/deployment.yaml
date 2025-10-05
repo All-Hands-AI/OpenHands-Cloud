@@ -60,7 +60,7 @@ spec:
         command: ["/bin/sh"]
         args:
           - "-c"
-          - "rm -rf /tmp/prometheus-multiproc/* && mkdir -p /tmp/prometheus-multiproc && {{- if .Values.datadog.enabled }} ddtrace-run {{- end }} uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.uvicorn.workers }}"
+          - "{{- if .Values.datadog.enabled }} ddtrace-run {{- end }} uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.uvicorn.workers }}"
         ports:
         - containerPort: 3000
         resources:
