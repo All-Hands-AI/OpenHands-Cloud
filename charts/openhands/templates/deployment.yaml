@@ -38,6 +38,9 @@ spec:
           configMap:
             name: keycloak-config-script
             defaultMode: 0755
+        - name: prometheus-multiproc
+          emptyDir:
+            medium: Memory
       initContainers:
       - name: keycloak-config
         imagePullPolicy: Always
@@ -57,7 +60,7 @@ spec:
         command: ["/bin/sh"]
         args:
           - "-c"
-          - "exec {{- if .Values.datadog.enabled }} ddtrace-run {{- end }} uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.uvicorn.workers }}"
+          - "/app/start.sh {{- if .Values.datadog.enabled }} ddtrace-run {{- end }} uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.uvicorn.workers }}"
         ports:
         - containerPort: 3000
         resources:
@@ -87,5 +90,9 @@ spec:
           - name: user-waitlist
             mountPath: /app/user-waitlist
           {{- end }}
+          - name: prometheus-multiproc
+            mountPath: /tmp/prometheus-multiproc
         env:
+        - name: PROMETHEUS_MULTIPROC_DIR
+          value: /tmp/prometheus-multiproc
         {{- include "openhands.env" . | nindent 8 }}
