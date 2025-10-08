@@ -41,7 +41,7 @@ spec:
         command: ["/bin/sh"]
         args: 
           - "-c"
-          - "exec ddtrace-run uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.mcpEvents.uvicorn.workers | default 2 }}"
+          - "exec {{- if .Values.datadog.enabled }} ddtrace-run {{- end }} uvicorn saas_server:app --host 0.0.0.0 --port 3000 --workers {{ .Values.mcpEvents.uvicorn.workers | default 2 }}"
         ports:
         - containerPort: 3000
         resources:
