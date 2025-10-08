@@ -10,11 +10,11 @@ in your own Kubernetes cluster. These charts are also used to drive
 the official, public version of OpenHands Cloud at
 [app.all-hands.dev](https://app.all-hands.dev).
 
-You may also want to check out the MIT-licensed [OpenHands](https://github.com/All-Hands-AI/OpenHands)
+You may also want to check out the MIT-licensed [OpenHands](https://github.com/OpenHands/OpenHands)
 
 Issues in this repository are for the OpenHands Cloud app and
 for the Helm charts here. Issues with OpenHands itself should be
-opened in the [core OpenHands repository](github.com/All-Hands-AI/OpenHands).
+opened in the [core OpenHands repository](github.com/OpenHands/OpenHands).
 
 # Installation
 

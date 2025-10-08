@@ -21,7 +21,7 @@ dependencies:
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 20.3.0
 - name: runtime-api
-  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  repository: oci://ghcr.io/openhands/helm-charts
   version: 0.1.9
 digest: sha256:0eb3fcb98ec8a1aa3d6c2ba5e317942cbc2030a35440836ad6aec63de0dfb11e
 generated: "2025-08-21T14:15:03.196589052Z"

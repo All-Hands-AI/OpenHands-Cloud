@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/all-hands-ai/runtime
+  repository: ghcr.io/openhands/runtime
   tag: 0.9.6-nikolaik
   pullPolicy: Always
 

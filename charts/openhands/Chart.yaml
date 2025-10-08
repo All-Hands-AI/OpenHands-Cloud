@@ -37,6 +37,6 @@ dependencies:
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: redis.enabled
   - name: runtime-api
-    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    repository: oci://ghcr.io/openhands/helm-charts
     version: 0.1.15
     condition: runtime-api.enabled
