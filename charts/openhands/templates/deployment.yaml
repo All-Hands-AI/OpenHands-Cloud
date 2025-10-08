@@ -38,9 +38,6 @@ spec:
           configMap:
             name: keycloak-config-script
             defaultMode: 0755
-        - name: prometheus-multiproc
-          emptyDir:
-            medium: Memory
       initContainers:
       - name: keycloak-config
         imagePullPolicy: Always
@@ -90,7 +87,5 @@ spec:
           - name: user-waitlist
             mountPath: /app/user-waitlist
           {{- end }}
-          - name: prometheus-multiproc
-            mountPath: /tmp/prometheus-multiproc
         env:
         {{- include "openhands.env" . | nindent 8 }}
