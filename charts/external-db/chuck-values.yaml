@@ -1,0 +1,18 @@
+host: applicationdb.cncccu0eg498.us-east-1.rds.amazonaws.com
+
+admin:
+  user: db_admin
+
+runtimeApi:
+  enabled: true
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::941377112440:role/openhands_sa_role
+
+securityContext:
+  runAsUser: 999 # postgres user
+  runAsGroup: 999
+  fsGroup: 999
+  fsGroupChangePolicy: Always
+  runAsNonRoot: true

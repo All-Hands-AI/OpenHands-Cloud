@@ -1,0 +1,9 @@
+apiVersion: v2
+description: Create databases and resources in an external DB.
+name: create-db
+appVersion: 0.0.1
+version: 0.0.1
+maintainers:
+  - name: cbutkus
+  - name: rbren
+  - name: tofarr

@@ -1,0 +1,171 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Values.serviceAccount.namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-db
+  namespace: {{ .Values.namespace }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      name: create-db
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      restartPolicy: Never
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: create-db
+          image: "bitnamilegacy/postgresql:latest"
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Waiting for RDS PostgreSQL at $DB_HOST to be ready..."
+              export PGPASSWORD="$DB_ADMIN_PASSWORD"
+              psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c '\q'
+              until psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c '\q' > /dev/null 2>&1; do
+                echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+                sleep 2
+              done
+              echo "PostgreSQL is up!"
+
+              create_db_and_user() {
+                local db_name=$1
+                local db_user=$2
+                local db_pass=$3
+
+                # Create DB if it doesn't exist
+                if ! psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db_name'" | grep -q 1; then
+                  echo "Creating database $db_name..."
+                  psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $db_name;"
+                else
+                  echo "Database $db_name already exists."
+                fi
+
+                # Create user if it doesn't exist
+                if ! psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$db_user'" | grep -q 1; then
+                  echo "Creating user $db_user..."
+                  if [ "$USER_TYPE" = "rds-iam" ]; then
+                    psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -c "CREATE USER $db_user WITH LOGIN;"
+                    psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -c "GRANT rds_iam TO $db_user;"
+                  else
+                    psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -c "CREATE USER $db_user WITH PASSWORD '$db_pass';"
+                  fi
+                  psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE $db_name TO $db_user;"
+                  psql -h $DB_HOST -U $DB_ADMIN_USER -d postgres -c "ALTER DATABASE $db_name OWNER TO $db_user;"
+                  psql -h $DB_HOST -U $DB_ADMIN_USER -d $db_name -c "CREATE SCHEMA IF NOT EXISTS main;"
+                  psql -h $DB_HOST -U $DB_ADMIN_USER -d $db_name -c "ALTER SCHEMA main OWNER TO $db_user;"
+                  psql -h $DB_HOST -U $DB_ADMIN_USER -d $db_name -c "ALTER DEFAULT PRIVILEGES IN SCHEMA main GRANT ALL ON TABLES TO $db_user;"
+                else
+                  echo "User $db_user already exists."
+                fi
+              }
+
+              # Keycloak DB and user
+              create_db_and_user "$KEYCLOAK_DB_NAME" "$KEYCLOAK_DB_USER" "$KEYCLOAK_DB_PASS"
+
+              # OpenHands DB and user
+              create_db_and_user "$OH_DB_NAME" "$OH_DB_USER" "$OH_DB_PASS"
+
+              # Runtime API DB and user (conditional)
+              if [ ! -z "$RUNAPI_DB_NAME" ]; then
+                create_db_and_user "$RUNAPI_DB_NAME" "$RUNAPI_DB_USER" "$RUNAPI_DB_PASS"
+              fi
+
+              # LiteLLM DB and user (conditional)
+              if [ ! -z "$LITELLM_DB_NAME" ]; then
+                create_db_and_user "$LITELLM_DB_NAME" "$LITELLM_DB_USER" "$LITELLM_DB_PASS"
+              fi
+
+              # Langfuse DB and user (conditional)
+              if [ ! -z "$LANGFUSE_DB_NAME" ]; then
+                create_db_and_user "$LANGFUSE_DB_NAME" "$LANGFUSE_DB_USER" "$LANGFUSE_DB_PASS"
+              fi
+          env:
+            - name: USER_TYPE
+              value: {{ .Values.userType }}
+            - name: DB_HOST
+              value: {{ .Values.host }}
+            - name: DB_PORT
+              value: "{{ .Values.port }}"
+            - name: DB_ADMIN_USER
+              value: {{ .Values.admin.user }}
+            - name: DB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret }}
+                  key: admin-password
+            - name: OH_DB_NAME
+              value: {{ .Values.openhands.name }}
+            - name: OH_DB_USER
+              value: {{ .Values.openhands.user }}
+            - name: OH_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret }}
+                  key: oh-db-pass
+            - name: KEYCLOAK_DB_NAME
+              value: {{ .Values.keycloak.name }}
+            - name: KEYCLOAK_DB_USER
+              value: {{ .Values.keycloak.user }}
+            - name: KEYCLOAK_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret }}
+                  key: keycloak-db-pass
+            {{- if .Values.runtimeApi.enabled }}
+            - name: RUNAPI_DB_NAME
+              value: {{ .Values.runtimeApi.name }}
+            - name: RUNAPI_DB_USER
+              value: {{ .Values.runtimeApi.user }}
+            - name: RUNAPI_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret }}
+                  key: runapi-db-pass
+            {{- end }}
+            {{- if .Values.litellm.enabled }}
+            - name: LITELLM_DB_NAME
+              value: {{ .Values.litellm.name }}
+            - name: LITELLM_DB_USER
+              value: {{ .Values.litellm.user }}
+            - name: LITELLM_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret }}
+                  key: litellm-db-pass
+            {{- end }}
+            {{- if .Values.langfuse.enabled }}
+            - name: LANGFUSE_DB_NAME
+              value: {{ .Values.langfuse.name }}
+            - name: LANGFUSE_DB_USER
+              value: {{ .Values.langfuse.user }}
+            - name: LANGFUSE_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret }}
+                  key: langfuse-db-pass
+            {{- end }}
+---

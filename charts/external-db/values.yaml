@@ -1,0 +1,45 @@
+host: localhost
+port: 5432
+secret: create-db-secret
+
+namespace: openhands
+userType: password
+
+admin:
+  user: postgres
+
+openhands:
+  name: openhands
+  user: openhands_user
+
+keycloak:
+  name: keycloak
+  user: keycloak_user
+
+runtimeApi:
+  enabled: false
+  name: runtime_api
+  user: runtime_api_user
+
+litellm:
+  enabled: false
+  name: litellm
+  user: litellm_user
+
+langfuse:
+  enabled: false
+  name: langfuse
+  user: langfuse_user
+
+serviceAccount:
+  name: openhands-sa
+  namespace: openhands
+  # annotations:
+  #   annotation
+
+securityContext:
+  runAsUser: 999 # postgres user
+  runAsGroup: 999
+  fsGroup: 999
+  fsGroupChangePolicy: Always
+  runAsNonRoot: true
