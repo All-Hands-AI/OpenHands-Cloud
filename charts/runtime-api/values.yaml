@@ -186,7 +186,7 @@ podStatusLogger:
   schedule: "*/5 * * * *" # Run every 5 minutes
 
 monitoring:
-  enabled: true
+  enabled: false  # Disabled to reduce unnecessary monitoring overhead
 
 datadog:
   enabled: false
