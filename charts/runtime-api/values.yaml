@@ -44,6 +44,22 @@ resources:
     cpu: 1
     memory: 4Gi
 
+# Unified job settings for both jobs and cronjobs
+jobSettings:
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 1
+      memory: 1Gi
+  # Timeout settings (30 minutes)
+  activeDeadlineSeconds: 1800
+  # History limits
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+
 # Security context settings for all pods
 securityContext:
   runAsUser: 1000
@@ -177,8 +193,6 @@ dbCleanup:
   enabled: true
   schedule: "0 0 * * *" # Run daily at midnight
   retentionDays: 90 # Number of days to retain runtime objects
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 1
 
 # Pod Status Logger configuration
 podStatusLogger:

@@ -8,10 +8,11 @@ metadata:
 spec:
   schedule: {{ .Values.dbCleanup.schedule | quote }}
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: {{ .Values.dbCleanup.successfulJobsHistoryLimit }}
-  failedJobsHistoryLimit: {{ .Values.dbCleanup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
         spec:
           {{- with .Values.securityContext }}
@@ -42,6 +43,8 @@ spec:
               value: {{ .Values.database.poolSize.cronjobs | default 2 | quote }}
             - name: DB_MAX_OVERFLOW
               value: {{ .Values.database.maxOverflow.cronjobs | default 5 | quote }}
+            resources:
+              {{- toYaml .Values.jobSettings.resources | nindent 14 }}
             {{- if .Values.ingressBase.enabled }}
             volumeMounts:
               - name: ingress-base-config

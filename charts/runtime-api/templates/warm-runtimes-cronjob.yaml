@@ -8,8 +8,11 @@ metadata:
 spec:
   schedule: "* * * * *"  # Run every minute
   concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
         metadata:
           labels:
@@ -32,6 +35,8 @@ spec:
               command: ["python", "/app/warm_runtimes.py"]
               env:
                 {{- include "runtime-api.env" . | nindent 16 }}
+              resources:
+                {{- toYaml .Values.jobSettings.resources | nindent 16 }}
               volumeMounts:
                 - name: warm-runtimes-config
                   mountPath: /config
