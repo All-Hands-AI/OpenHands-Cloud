@@ -44,10 +44,49 @@ resources:
     cpu: 1
     memory: 4Gi
 
+# Health check probes configuration
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
 # Security context settings for all pods
 securityContext:
   runAsUser: 1000
-  runAsNonRoot: true
+
+# Additional annotations for deployment
+deploymentAnnotations: {}
+
+# Additional annotations for pods
+podAnnotations: {}
+
+# Topology spread constraints for better pod distribution
+topologySpreadConstraints: []
+# Example:
+# - maxSkew: 1
+#   topologyKey: kubernetes.io/hostname
+#   whenUnsatisfiable: DoNotSchedule
+#   labelSelector:
+#     matchLabels:
+#       app.kubernetes.io/name: runtime-api
 
 nodeSelector: {}
 
@@ -134,6 +173,12 @@ autoscaling:
   maxReplicas: 6
   targetCPUUtilizationPercentage: 75
 
+# Pod Disruption Budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1  # Alternative to minAvailable
+
 cleanup:
   enabled: true
   schedule: "*/5 * * * *"
@@ -187,6 +232,16 @@ podStatusLogger:
 
 monitoring:
   enabled: true
+  # ServiceMonitor for Prometheus Operator
+  serviceMonitor:
+    enabled: true
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+    annotations: {}
+    metricRelabelings: []
+    relabelings: []
 
 datadog:
   enabled: false
