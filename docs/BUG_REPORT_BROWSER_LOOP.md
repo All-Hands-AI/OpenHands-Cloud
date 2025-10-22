@@ -13,14 +13,18 @@ OpenHands agent gets stuck in an infinite loop when attempting to interact with 
 **Conversation ID**: `d8cd83132ad143f58c0b57ccb4b423a2`
 
 ## Description
-The OpenHands agent enters an infinite loop when attempting to click on dropdown menu options during browser automation. The agent repeatedly attempts the same click action without recognizing that the action is failing or not producing the expected result.
+The OpenHands agent enters an infinite loop when attempting to click on dropdown menu options during browser automation. The agent repeatedly attempts the same click action without recognizing that the action is failing or not producing the expected result. This issue has been observed across multiple dropdown types (limit dropdown, draft status dropdown), indicating a systemic problem with dropdown interaction handling.
 
 ## Steps to Reproduce
 1. Start OpenHands agent with browser automation capabilities
-2. Navigate to a page with a dropdown menu (in this case, a "limit" dropdown for PR display)
-3. Open the dropdown menu successfully
-4. Attempt to click on a specific dropdown option (e.g., "12 PRs")
+2. Navigate to a page with dropdown menus (observed on PR management interface)
+3. Open any dropdown menu successfully (e.g., "limit" dropdown or "draft status" dropdown)
+4. Attempt to click on a specific dropdown option (e.g., "12 PRs" or "Only Drafts")
 5. Observe the agent getting stuck in a loop
+
+**Confirmed Affected Dropdowns:**
+- Limit dropdown (attempting to select "12 PRs")
+- Draft Status dropdown (attempting to select "Only Drafts")
 
 ## Expected Behavior
 - Agent should successfully click on the dropdown option
@@ -36,6 +40,8 @@ The OpenHands agent enters an infinite loop when attempting to click on dropdown
 - No error handling or alternative strategies are employed
 
 ## Evidence
+
+### Instance 1: Limit Dropdown Loop
 ```
 Conversation log excerpt:
 > Perfect! I can see that the limit dropdown is now open and showing the options. Let me select "12 PRs" to test the automatic update functionality:
@@ -55,11 +61,44 @@ Conversation log excerpt:
 > *Pause button pressed. Agent is stopped. The action has not been executed.*
 ```
 
+### Instance 2: Draft Status Dropdown Loop
+```
+Conversation log excerpt:
+> Great! I can see the Draft Status dropdown is open and showing the three options:
+> • All PRs (currently selected)
+> • Only Drafts
+> • No Drafts (Final)
+> Now let me test selecting "Only Drafts" to see if it automatically updates the table:
+> *Browsing completed*
+> 
+> *CONDENSATION_REQUEST*
+> 
+> *Condensation*
+> 
+> I can see the Draft Status dropdown is open and showing the three options. Let me try clicking on "Only Drafts" option:
+> 
+> *Browsing completed*
+> 
+> *CONDENSATION_REQUEST*
+> 
+> *Condensation*
+> 
+> I can see the Draft Status dropdown is open and showing the three options. Let me try clicking on "Only Drafts" option:
+> *Browsing completed*
+> 
+> *CONDENSATION_REQUEST*
+> 
+> [Pattern repeats multiple times...]
+```
+
+**Pattern Analysis**: Both instances show identical behavior - the agent successfully opens dropdowns and can see the options, but gets stuck in infinite loops when attempting to click on specific dropdown options. This confirms the issue is systemic across different dropdown types, not isolated to a single UI element.
+
 ## Impact Assessment
 - **User Experience**: Severe - Users must manually intervene to stop the agent
 - **Resource Usage**: High - Continuous failed attempts consume computational resources
-- **Reliability**: Critical - Makes browser automation unreliable for dropdown interactions
+- **Reliability**: Critical - Makes browser automation unreliable for dropdown interactions across multiple UI elements
 - **Productivity**: High - Blocks task completion and requires manual intervention
+- **Scope**: Systemic - Affects multiple dropdown types, indicating widespread dropdown interaction issues
 
 ## Root Cause Analysis
 
