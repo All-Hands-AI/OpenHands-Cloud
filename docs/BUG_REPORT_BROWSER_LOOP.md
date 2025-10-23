@@ -10,14 +10,15 @@ OpenHands agent gets stuck in an infinite loop when attempting to interact with 
 **Severity**: High  
 **Priority**: High  
 **Status**: Open  
-**Conversation ID**: `d8cd83132ad143f58c0b57ccb4b423a2`
+**Conversation IDs**: `d8cd83132ad143f58c0b57ccb4b423a2`, `957cd187d5a24a09b1c5a70594b143bc`
 
 ## Description
-The OpenHands agent enters infinite loops during browser automation tasks, manifesting in multiple ways:
+The OpenHands agent enters infinite loops during operation, manifesting in multiple ways:
 1. **Action-level loops**: Repeatedly attempting the same click action on dropdown elements without recognizing failure
 2. **Task-level loops**: Resetting completed tasks back to "todo" status and attempting to redo entire task sequences
+3. **Conversation-level loops**: The conversation flow itself gets stuck in repetitive patterns
 
-This issue has been observed across multiple dropdown types (limit dropdown, draft status dropdown) and extends to broader state management problems where the agent loses track of completed work.
+This issue has been observed across multiple dropdown types (limit dropdown, draft status dropdown), task management systems, and conversation flows, indicating fundamental problems with state management and loop detection throughout the OpenHands system.
 
 ## Steps to Reproduce
 
@@ -35,10 +36,17 @@ This issue has been observed across multiple dropdown types (limit dropdown, dra
 4. Observe the agent resetting all completed tasks back to "todo" status
 5. Watch as agent attempts to redo all previously completed work
 
+### Conversation-Level Loops:
+1. Start a conversation with OpenHands agent
+2. Engage in complex task execution or browser automation
+3. Observe the conversation flow getting stuck in repetitive patterns
+4. Notice the agent repeating similar responses or actions cyclically
+
 **Confirmed Affected Elements:**
 - Limit dropdown (attempting to select "12 PRs")
 - Draft Status dropdown (attempting to select "Only Drafts")
 - Task tracking system (resetting completed tasks to todo)
+- Conversation flow (repetitive patterns in conversation ID: 957cd187d5a24a09b1c5a70594b143bc)
 
 ## Expected Behavior
 - Agent should successfully click on dropdown options
@@ -47,6 +55,8 @@ This issue has been observed across multiple dropdown types (limit dropdown, dra
 - Agent should provide meaningful error messages when actions fail repeatedly
 - Completed tasks should remain marked as "done" and not be reset to "todo"
 - Agent should maintain state consistency and not lose track of completed work
+- Conversation flow should progress logically without getting stuck in repetitive patterns
+- Agent should recognize when it's repeating the same responses or actions
 
 ## Actual Behavior
 - Agent repeatedly attempts the same click action without success
@@ -57,6 +67,8 @@ This issue has been observed across multiple dropdown types (limit dropdown, dra
 - Completed tasks are reset back to "todo" status unexpectedly
 - Agent loses track of previously completed work and attempts to redo tasks
 - State management fails across session continuations
+- Conversation flow gets stuck in repetitive patterns
+- Agent repeats similar responses or actions without recognizing the loop
 
 ## Evidence
 
@@ -134,20 +146,28 @@ then
 > ⏳ 5. todo - Make repo dropdown automatically update webpage and close dropdown when selected
 ```
 
+### Instance 4: Conversation Loop
+```
+Conversation ID: 957cd187d5a24a09b1c5a70594b143bc
+Evidence: Screenshot attached showing conversation getting stuck in a loop
+Description: The conversation itself began exhibiting loop behavior, with the agent getting stuck in repetitive patterns during the conversation flow.
+```
+
 **Pattern Analysis**: The evidence shows multiple types of loop behavior:
 1. **Action-level loops**: Agent gets stuck repeating the same click action on dropdown elements
 2. **Task-level loops**: Agent resets completed tasks back to "todo" status and attempts to redo entire task sequences
-3. **State management failure**: Agent loses track of completed work and reverts to initial state
+3. **Conversation-level loops**: The conversation flow itself gets stuck in repetitive patterns
+4. **State management failure**: Agent loses track of completed work and reverts to initial state
 
-This confirms the issue extends beyond individual browser actions to broader state management and task tracking problems.
+This confirms the issue extends beyond individual browser actions to fundamental problems with conversation flow, state management, and task tracking across the entire OpenHands system.
 
 ## Impact Assessment
-- **User Experience**: Severe - Users must manually intervene to stop loops and lose completed work
-- **Resource Usage**: High - Continuous failed attempts and redundant task execution consume computational resources
-- **Reliability**: Critical - Makes browser automation unreliable and causes loss of work progress
-- **Productivity**: High - Blocks task completion, requires manual intervention, and forces users to redo completed work
-- **Scope**: Systemic - Affects browser interactions, task management, and state persistence across the entire system
-- **Data Integrity**: High - Loss of task completion state leads to work duplication and confusion
+- **User Experience**: Severe - Users must manually intervene to stop loops, lose completed work, and experience frustrating conversation loops
+- **Resource Usage**: High - Continuous failed attempts, redundant task execution, and repetitive conversation patterns consume computational resources
+- **Reliability**: Critical - Makes browser automation, task management, and conversation flow unreliable
+- **Productivity**: High - Blocks task completion, requires manual intervention, forces users to redo completed work, and wastes time in repetitive conversations
+- **Scope**: Systemic - Affects browser interactions, task management, conversation flow, and state persistence across the entire OpenHands system
+- **Data Integrity**: High - Loss of task completion state and conversation context leads to work duplication and confusion
 
 ## Root Cause Analysis
 
@@ -182,6 +202,12 @@ This confirms the issue extends beyond individual browser actions to broader sta
    - State not properly restored after system events
    - Race conditions in state updates
 
+7. **Conversation Flow Management Issues**
+   - Lack of conversation context tracking and loop detection
+   - Insufficient conversation state management
+   - No mechanisms to prevent repetitive conversation patterns
+   - Poor conversation history analysis and pattern recognition
+
 ## Suggested Fixes
 
 ### Immediate (Short-term)
@@ -203,6 +229,11 @@ This confirms the issue extends beyond individual browser actions to broader sta
    - Implement robust task state persistence across sessions
    - Add state validation and recovery mechanisms
    - Ensure task completion status is properly saved and restored
+
+5. **Conversation Loop Detection**
+   - Add conversation pattern recognition to detect repetitive responses
+   - Implement conversation history analysis to prevent loops
+   - Add conversation flow monitoring and intervention mechanisms
 
 ### Long-term (Architectural)
 1. **Robust Action Framework**
@@ -226,12 +257,20 @@ This confirms the issue extends beyond individual browser actions to broader sta
    - Add comprehensive logging and monitoring for state changes
    - Develop state recovery mechanisms for system failures
 
+5. **Advanced Conversation Management**
+   - Design intelligent conversation flow management system
+   - Implement sophisticated loop detection across all conversation types
+   - Add conversation context preservation and analysis
+   - Develop adaptive conversation strategies to prevent repetitive patterns
+
 ## Workarounds
 1. **Manual Intervention**: Users can pause the agent and manually complete actions
 2. **Alternative UI Paths**: Use keyboard navigation or alternative UI elements when available
 3. **Task Restructuring**: Break down tasks to avoid problematic dropdown interactions
 4. **Session Management**: Regularly save task progress and be prepared to restore state manually
 5. **Frequent Monitoring**: Monitor agent behavior closely to catch loops early before significant resource waste
+6. **Conversation Reset**: Restart conversations when repetitive patterns are detected
+7. **Context Clarification**: Provide explicit context and instructions to break conversation loops
 
 ## Testing Recommendations
 1. Create automated tests for dropdown interactions
@@ -242,6 +281,9 @@ This confirms the issue extends beyond individual browser actions to broader sta
 6. Test session continuations and state persistence
 7. Create tests for task completion state across system events
 8. Implement loop detection testing and validation
+9. Develop conversation flow testing and loop detection
+10. Test conversation pattern recognition and intervention mechanisms
+11. Create automated tests for conversation context preservation
 
 ## Related Issues
 - Browser automation reliability
@@ -252,6 +294,9 @@ This confirms the issue extends beyond individual browser actions to broader sta
 - Session continuity and state recovery
 - Agent memory and state synchronization
 - Loop detection and prevention mechanisms
+- Conversation flow management and context preservation
+- Conversation pattern recognition and loop prevention
+- Agent conversation state tracking and analysis
 
 ## Next Steps
 1. Investigate browser automation framework configuration
@@ -262,6 +307,10 @@ This confirms the issue extends beyond individual browser actions to broader sta
 6. Add task completion state persistence mechanisms
 7. Implement loop detection and prevention systems
 8. Develop comprehensive state recovery procedures
+9. Design and implement conversation flow management system
+10. Add conversation pattern recognition and loop detection
+11. Develop conversation context preservation mechanisms
+12. Create comprehensive conversation testing and monitoring systems
 
 ---
 
