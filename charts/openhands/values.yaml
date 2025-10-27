@@ -122,7 +122,7 @@ gitlabWebhookInstallation:
       cpu: 200m
 
 image:
-  repository: ghcr.io/all-hands-ai/enterprise-server
+  repository: ghcr.io/openhands/enterprise-server
   tag: sha-bd51673
 
 ingress:
@@ -227,7 +227,7 @@ resendSync:
 
 runtime:
   image:
-    repository: ghcr.io/all-hands-ai/runtime
+    repository: ghcr.io/openhands/runtime
     tag: 135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik
   runAsRoot: true
 
@@ -538,7 +538,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik"
+        image: "ghcr.io/openhands/runtime:135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
