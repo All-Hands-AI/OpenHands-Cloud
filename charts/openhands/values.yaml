@@ -131,27 +131,23 @@ ingress:
   # host: "app.example.com"
   class: traefik
   # Legacy annotations field - kept for backward compatibility
-  annotations:
-    {}
+  annotations: {}
     # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
     # cert-manager.io/cluster-issuer: letsencrypt-production
 
   # Separate annotations for each ingress
   root:
-    annotations:
-      {}
+    annotations: {}
       # Example: Add specific annotations for the root ingress
       # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 
   integrations:
-    annotations:
-      {}
+    annotations: {}
       # Example: Add specific annotations for integrations ingress
       # nginx.ingress.kubernetes.io/rate-limit: "100"
 
   mcp:
-    annotations:
-      {}
+    annotations: {}
       # Example: Add specific annotations for MCP ingress
       # nginx.ingress.kubernetes.io/auth-type: basic
 
@@ -312,8 +308,7 @@ keycloak:
     # hostname: auth.app.example.com
     servicePort: 80
     tls: true
-    annotations:
-      {}
+    annotations: {}
       # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
       # cert-manager.io/cluster-issuer: letsencrypt-production
     ingressClassName: traefik
@@ -597,6 +592,15 @@ runtime-api:
     MEMORY_LIMIT: "3072Mi"
     CPU_REQUEST: "500m"
     EPHEMERAL_STORAGE_SIZE: "10Gi"
+
+jira:
+  enabled: false
+
+jiraDc:
+  enabled: false
+
+linear:
+  enabled: false
 
 global:
   security:
