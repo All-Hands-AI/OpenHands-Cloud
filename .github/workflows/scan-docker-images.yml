@@ -16,9 +16,9 @@ jobs:
     strategy:
       matrix:
         IMAGE:
-          - 'all-hands-ai/runtime-api:sha-f1c75a7'
-          - 'all-hands-ai/enterprise-server:sha-3590497'
-          - 'all-hands-ai/runtime:aa60329-trixie'
+          - 'openhands/runtime-api:sha-4eedee2'
+          - 'openhands/enterprise-server:sha-818f743'
+          - 'openhands/runtime:818f743dc7ca35ee219b95ee9878e07836aa831a-nikolaik'
     steps:
 
       - name: Run Trivy vulnerability scanner
