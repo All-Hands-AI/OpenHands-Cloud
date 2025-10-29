@@ -122,8 +122,8 @@ gitlabWebhookInstallation:
       cpu: 200m
 
 image:
-  repository: ghcr.io/all-hands-ai/enterprise-server
-  tag: sha-bd51673
+  repository: ghcr.io/openhands/enterprise-server
+  tag: sha-fccc6f3
 
 ingress:
   enabled: false
@@ -131,23 +131,27 @@ ingress:
   # host: "app.example.com"
   class: traefik
   # Legacy annotations field - kept for backward compatibility
-  annotations: {}
+  annotations:
+    {}
     # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
     # cert-manager.io/cluster-issuer: letsencrypt-production
 
   # Separate annotations for each ingress
   root:
-    annotations: {}
+    annotations:
+      {}
       # Example: Add specific annotations for the root ingress
       # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 
   integrations:
-    annotations: {}
+    annotations:
+      {}
       # Example: Add specific annotations for integrations ingress
       # nginx.ingress.kubernetes.io/rate-limit: "100"
 
   mcp:
-    annotations: {}
+    annotations:
+      {}
       # Example: Add specific annotations for MCP ingress
       # nginx.ingress.kubernetes.io/auth-type: basic
 
@@ -227,8 +231,8 @@ resendSync:
 
 runtime:
   image:
-    repository: ghcr.io/all-hands-ai/runtime
-    tag: 135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik
+    repository: ghcr.io/openhands/runtime
+    tag: fccc6f31961ef2792e1d08a1659b5ecaf4d44a37-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -308,7 +312,8 @@ keycloak:
     # hostname: auth.app.example.com
     servicePort: 80
     tls: true
-    annotations: {}
+    annotations:
+      {}
       # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
       # cert-manager.io/cluster-issuer: letsencrypt-production
     ingressClassName: traefik
