@@ -23,15 +23,17 @@ Runtime pods transition through different states based on user activity and syst
 
 | State | Description | Duration | Trigger |
 |-------|-------------|----------|---------|
+| **Warm** | Pre-started pod ready for user assignment | Indefinite | `warmRuntimes.count` setting in Helm values |
 | **Actively Performing Work** | Pod is processing user requests and executing tasks | Variable | User interaction, task execution |
-| **Idle** | Pod is running but not processing requests | Up to 30 minutes (configurable) | No user activity |
-| **Stopped** | Pod terminated but storage preserved for potential resumption | Until user resumes or cleanup | Idle timeout reached |
-| **Cleaned Up** | Pod and all associated resources permanently removed | N/A | 24 hours of inactivity (configurable) |
+| **Idle** | Pod is running but not processing requests | Up to timeout | No user activity |
+| **Stopped** | Pod terminated but storage preserved for potential resumption | Until user resumes or cleanup | `RUNTIME_IDLE_SECONDS` timeout reached (default 1800s) or `STOP_IDLE_RUNTIME=true` |
+| **Cleaned Up** | Pod and all associated resources permanently removed | N/A | `RUNTIME_DEAD_SECONDS` timeout reached (default 86400s) |
 
 #### Resource Consumption by State
 
 | State | CPU | Memory | Storage | Notes |
 |-------|-----|--------|---------|-------|
+| **Warm** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Full allocation, awaiting user assignment |
 | **Actively Performing Work** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Full resource allocation |
 | **Idle** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Same as active until timeout |
 | **Stopped** | 0m | 0 GiB | 35 GiB | Only storage preserved |
@@ -91,7 +93,7 @@ The Runtime API monitors pod activity by querying each runtime's `/server_info` 
 - **Dead Runtime Cleanup** (24 hours default): Long-inactive runtimes are completely removed, including storage
 
 **User Runtime Limits**
-Each user has a maximum number of concurrent runtime pods (`max_runtimes_per_user`). When exceeded, new requests are queued until resources become available through cleanup or manual termination.
+Each user has a maximum number of concurrent runtime pods (configured per API key via `max_runtimes` field, with system default `MAX_RUNTIMES_PER_API_KEY`). When exceeded, new requests are queued until resources become available through cleanup or manual termination.
 
 ### Resource Consumption Patterns
 
@@ -150,10 +152,10 @@ Each user has a maximum number of concurrent runtime pods (`max_runtimes_per_use
 - **Memory**: 3 GiB (runtime) + 0.2 GiB (overhead) = 3.2 GiB
 - **Storage**: 35 GiB (25 GiB ephemeral + 10 GiB persistent)
 
-**User with Multiple Runtimes** (if `max_runtimes_per_user` > 1):
-- **CPU**: `max_runtimes_per_user` × 1.1 vCPU
-- **Memory**: `max_runtimes_per_user` × 3.2 GiB
-- **Storage**: `max_runtimes_per_user` × 35 GiB
+**User with Multiple Runtimes** (if `max_runtimes` > 1):
+- **CPU**: `max_runtimes` × 1.1 vCPU
+- **Memory**: `max_runtimes` × 3.2 GiB
+- **Storage**: `max_runtimes` × 35 GiB
 
 ### Concurrent User Scaling
 
@@ -240,7 +242,7 @@ runtime-api:
 
 ## Max Runtimes Per User Impact
 
-The `max_runtimes_per_user` setting controls how many concurrent runtime pods a single user can have. This configuration has profound implications for both resource planning and user workflow capabilities.
+The `max_runtimes` setting (per API key) controls how many concurrent runtime pods a single user can have. This configuration has profound implications for both resource planning and user workflow capabilities.
 
 ### Understanding Multi-Runtime Workflows
 
@@ -271,24 +273,24 @@ When users exceed their maximum runtime limit, the system implements intelligent
 
 ### Setting Considerations
 
-**max_runtimes_per_user = 1:**
+**max_runtimes = 1:**
 - **Pros**: Predictable resource usage, lower costs, simpler management
 - **Cons**: Users can't work on multiple projects simultaneously
 - **Use Case**: Cost-conscious deployments, simple workflows
 
-**max_runtimes_per_user = 2-3:**
+**max_runtimes = 2-3:**
 - **Pros**: Allows multi-project work, good balance of flexibility and cost
 - **Cons**: 2-3x resource requirements per user
 - **Use Case**: Most production deployments
 
-**max_runtimes_per_user > 3:**
+**max_runtimes > 3:**
 - **Pros**: Maximum flexibility for power users
 - **Cons**: High resource requirements, potential for resource waste
 - **Use Case**: Research environments, unlimited resource scenarios
 
 ### Resource Impact Examples
 
-**100 concurrent users with different max_runtimes_per_user:**
+**100 concurrent users with different max_runtimes:**
 
 | Max Runtimes | Total CPU | Total Memory | Node Count (8 vCPU, 16 GiB) |
 |--------------|-----------|--------------|--------------------------|
@@ -374,7 +376,7 @@ When users exceed their maximum runtime limit, the system implements intelligent
 
 ### Right-Sizing Strategies
 
-1. **Start Conservative**: Begin with lower `max_runtimes_per_user` and fewer warm runtimes
+1. **Start Conservative**: Begin with lower `max_runtimes` and fewer warm runtimes
 2. **Monitor Usage Patterns**: Track actual vs. allocated resources
 3. **Implement Spot Instances**: Use spot instances for non-critical runtime workloads
 4. **Optimize Idle Timeouts**: Reduce idle timeout from 30 minutes to 15 minutes if appropriate
@@ -409,7 +411,7 @@ When users exceed their maximum runtime limit, the system implements intelligent
 **Symptoms**: Unexpected AWS bills, high resource utilization
 **Solutions**:
 - Reduce warm runtime count
-- Lower `max_runtimes_per_user`
+- Lower `max_runtimes`
 - Implement more aggressive cleanup policies
 - Use spot instances where appropriate
 
@@ -427,7 +429,7 @@ Node Pool: 6 × 8 vCPU, 16 GiB nodes
 Total: 48 vCPU, 96 GiB
 
 # Configuration
-max_runtimes_per_user: 2
+max_runtimes: 2
 warm_runtime_count: 5
 idle_timeout: 1800 # 30 minutes
 ```
@@ -445,7 +447,7 @@ Primary Pool: 30 × 8 vCPU, 16 GiB nodes
 Total: 240 vCPU, 480 GiB
 
 # Configuration
-max_runtimes_per_user: 2
+max_runtimes: 2
 warm_runtime_count: 15
 idle_timeout: 1800 # 30 minutes
 ```
@@ -464,7 +466,7 @@ High-Perf Pool: 10 × 36 vCPU, 72 GiB nodes
 Total: 1160 vCPU, 2320 GiB
 
 # Configuration
-max_runtimes_per_user: 3
+max_runtimes: 3
 warm_runtime_count: 25
 idle_timeout: 1200 # 20 minutes
 ```
