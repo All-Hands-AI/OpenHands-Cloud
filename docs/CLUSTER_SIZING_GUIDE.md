@@ -96,8 +96,34 @@ The Runtime API monitors pod activity by querying each runtime's `/server_info` 
 - **Idle Timeout** (30 minutes default): Idle pods are paused by default (scaled to 0 replicas), releasing CPU and memory while preserving storage. If `STOP_IDLE_RUNTIME=true`, pods are terminated instead.
 - **Dead Runtime Cleanup** (24 hours default): Long-inactive runtimes are completely removed, including storage
 
-**User Runtime Limits**
-Each user has a maximum number of concurrent RUNNING runtime pods (configured per API key via `max_runtimes` field, with system default `MAX_RUNTIMES_PER_API_KEY=1024`). When exceeded, new requests fail with a ValueError - no automatic queueing or pausing occurs.
+**User Runtime Limits Hierarchy**
+
+OpenHands has two levels of runtime limits:
+
+1. **Conversation-Level Limits** (Primary UI Limit):
+   - `MAX_CONCURRENT_CONVERSATIONS`: Controls concurrent sessions per user
+   - Default: 3, Production SaaS: 10, Enterprise: 10
+   - When exceeded: Automatically closes oldest conversation
+   - **Enforced**: Backend only (conversation managers)
+   - **This is the main limit users experience**
+
+2. **Runtime API Limits** (Backend Safety Net):
+   - `MAX_RUNTIMES_PER_API_KEY`: Controls concurrent RUNNING runtimes per API key
+   - Default: 1024, Production SaaS: 8192, Evaluation: 32
+   - When exceeded: Raises ValueError, blocks new runtime creation
+   - Only counts RUNNING status (paused runtimes don't count)
+   - **Enforced**: Runtime API backend only
+
+**Important**: Despite high runtime API limits (8192), users are limited by conversation limits (10 in production), so they can only have 10 concurrent runtimes through the UI.
+
+#### Enforcement Flow
+
+1. **Frontend** → **REST API** (`/api/conversations/{id}/start`)
+2. **REST API** → **ConversationManager.maybe_start_agent_loop()**
+3. **ConversationManager** → **ensure_num_conversations_below_limit()** ← `MAX_CONCURRENT_CONVERSATIONS` enforced here
+4. **ConversationManager** → **Runtime API** ← `MAX_RUNTIMES_PER_API_KEY` enforced here
+
+The frontend has no knowledge of these limits - all enforcement happens on the backend.
 
 ### Resource Consumption Patterns
 
@@ -156,19 +182,21 @@ Each user has a maximum number of concurrent RUNNING runtime pods (configured pe
 - **Memory**: 3 GiB (runtime) + 0.2 GiB (overhead) = 3.2 GiB
 - **Storage**: 35 GiB (25 GiB ephemeral + 10 GiB persistent)
 
-**User with Multiple Runtimes** (if `max_runtimes` > 1):
-- **CPU**: `max_runtimes` × 1.1 vCPU
-- **Memory**: `max_runtimes` × 3.2 GiB
-- **Storage**: `max_runtimes` × 35 GiB
+**User with Multiple Conversations** (up to `MAX_CONCURRENT_CONVERSATIONS`):
+- **CPU**: `concurrent_conversations` × 1.1 vCPU
+- **Memory**: `concurrent_conversations` × 3.2 GiB
+- **Storage**: `concurrent_conversations` × 35 GiB
 
 ### Concurrent User Scaling
 
 **Formula for Runtime Cluster Sizing:**
 ```
-Total CPU = (Concurrent Users × Max Runtimes per User × 1.1 vCPU) + (Warm Runtime Count × 1.1 vCPU)
-Total Memory = (Concurrent Users × Max Runtimes per User × 3.2 GiB) + (Warm Runtime Count × 3.2 GiB)
-Total Storage = (Total Users × Max Runtimes per User × 35 GiB)
+Total CPU = (Concurrent Users × MAX_CONCURRENT_CONVERSATIONS × 1.1 vCPU) + (Warm Runtime Count × 1.1 vCPU)
+Total Memory = (Concurrent Users × MAX_CONCURRENT_CONVERSATIONS × 3.2 GiB) + (Warm Runtime Count × 3.2 GiB)
+Total Storage = (Total Users × MAX_CONCURRENT_CONVERSATIONS × 35 GiB)
 ```
+
+**Note**: Use the actual `MAX_CONCURRENT_CONVERSATIONS` value for your deployment (3 default, 10 production/enterprise).
 
 **Example Calculations:**
 
