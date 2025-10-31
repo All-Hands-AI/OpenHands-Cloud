@@ -23,8 +23,9 @@ The core applications provide the main OpenHands functionality and have predicta
 | MCP Events | - | - | - | - | 2 | Model Context Protocol |
 | PostgreSQL | 2000m | 8Gi | - | - | 1 | Primary database |
 | Redis | 100m | 512Mi | 100m | 512Mi | 1 | Caching and sessions |
-| MinIO | 100m | 512Mi | 100m | 512Mi | 1 | Object storage (dev) |
+| MinIO (Optional) | 100m | 512Mi | 100m | 512Mi | 1 | Object storage (dev only) |
 | Keycloak | - | - | - | - | 1 | Authentication |
+| ClickHouse (Optional) | - | - | - | - | 1 | Analytics database |
 
 ### Core Application Cluster Sizing
 
@@ -38,10 +39,11 @@ The core applications provide the main OpenHands functionality and have predicta
 - **Node Count**: 3-9 nodes (across 3 availability zones)
 - **Total Resources**: 48-144 vCPU, 96-288 GiB RAM
 
-**High-Memory Workloads** (Analytics, ClickHouse):
+**High-Memory Workloads** (Optional - Analytics, ClickHouse):
 - **Additional Node Pool**: 8 vCPU, 64 GiB RAM per node (e.g., AWS `r5.2xlarge`, GCP `n2-highmem-8`, Azure `Standard_E8s_v4`)
 - **Node Count**: 0-3 nodes (scale from zero)
 - **Taints**: `workload-type=memory-intensive:NoSchedule`
+- **Note**: Only required if deploying optional analytics components like ClickHouse
 
 ## Runtime Pod Sizing
 
@@ -230,12 +232,13 @@ The `max_runtimes_per_user` setting controls how many concurrent runtime pods a 
 - **Scaling**: 3-25 nodes per availability zone
 - **Storage**: 50-100 GiB SSD per node
 
-**Memory-Intensive Pool:**
+**Memory-Intensive Pool** (Optional):
 - **Node Specs**: 8 vCPU, 64 GiB RAM per node
   - AWS: `r5.2xlarge`, GCP: `n2-highmem-8`, Azure: `Standard_E8s_v4`
 - **Use Case**: Analytics, ClickHouse, large databases
 - **Scaling**: 0-3 nodes per availability zone (scale from zero)
 - **Taints**: `workload-type=memory-intensive:NoSchedule`
+- **Note**: Only required if deploying optional analytics components
 
 ## Monitoring and Alerting
 
@@ -334,7 +337,7 @@ idle_timeout: 1800 # 30 minutes
 ```yaml
 # Core Application Cluster
 Primary Pool: 6 × 8 vCPU, 16 GiB nodes
-Memory Pool: 2 × 8 vCPU, 64 GiB nodes
+Memory Pool: 2 × 8 vCPU, 64 GiB nodes (optional - for analytics)
 Total: 64 vCPU, 224 GiB
 
 # Runtime Cluster
@@ -352,7 +355,7 @@ idle_timeout: 1800 # 30 minutes
 ```yaml
 # Core Application Cluster
 Primary Pool: 12 × 16 vCPU, 32 GiB nodes
-Memory Pool: 6 × 16 vCPU, 128 GiB nodes
+Memory Pool: 6 × 16 vCPU, 128 GiB nodes (optional - for analytics)
 Total: 288 vCPU, 1152 GiB
 
 # Runtime Cluster
