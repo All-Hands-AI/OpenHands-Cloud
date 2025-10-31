@@ -1,6 +1,6 @@
-# EKS Cluster Sizing Guide for OpenHands Enterprise
+# Kubernetes Cluster Sizing Guide for OpenHands Enterprise
 
-This document provides comprehensive guidance for sizing Amazon EKS clusters to run OpenHands Enterprise effectively. The sizing recommendations are based on the OpenHands architecture, which consists of core applications and runtime pods that handle user workloads.
+This document provides comprehensive guidance for sizing Kubernetes clusters to run OpenHands Enterprise effectively. The sizing recommendations are based on the OpenHands architecture, which consists of core applications and runtime pods that handle user workloads.
 
 ## Architecture Overview
 
@@ -29,17 +29,17 @@ The core applications provide the main OpenHands functionality and have predicta
 ### Core Application Cluster Sizing
 
 **Minimum Production Configuration:**
-- **Node Type**: `c5.2xlarge` (8 vCPU, 16 GiB RAM) or equivalent
-- **Node Count**: 3-6 nodes (across 3 AZs)
+- **Node Specs**: 8 vCPU, 16 GiB RAM per node (e.g., AWS `c5.2xlarge`, GCP `c2-standard-8`, Azure `Standard_F8s_v2`)
+- **Node Count**: 3-6 nodes (across 3 availability zones)
 - **Total Resources**: 24-48 vCPU, 48-96 GiB RAM
 
 **Recommended Production Configuration:**
-- **Node Type**: `c5.4xlarge` (16 vCPU, 32 GiB RAM) or equivalent
-- **Node Count**: 3-9 nodes (across 3 AZs)
+- **Node Specs**: 16 vCPU, 32 GiB RAM per node (e.g., AWS `c5.4xlarge`, GCP `c2-standard-16`, Azure `Standard_F16s_v2`)
+- **Node Count**: 3-9 nodes (across 3 availability zones)
 - **Total Resources**: 48-144 vCPU, 96-288 GiB RAM
 
 **High-Memory Workloads** (Analytics, ClickHouse):
-- **Additional Node Pool**: `r5.2xlarge` (8 vCPU, 64 GiB RAM)
+- **Additional Node Pool**: 8 vCPU, 64 GiB RAM per node (e.g., AWS `r5.2xlarge`, GCP `n2-highmem-8`, Azure `Standard_E8s_v4`)
 - **Node Count**: 0-3 nodes (scale from zero)
 - **Taints**: `workload-type=memory-intensive:NoSchedule`
 
@@ -113,21 +113,21 @@ Total Storage = (Total Users × Max Runtimes per User × 35 GiB)
 - Warm runtimes: 5
 - **CPU**: (50 × 2 × 1.1) + (5 × 1.1) = 115.5 vCPU
 - **Memory**: (50 × 2 × 3.2) + (5 × 3.2) = 336 GiB
-- **Recommended Nodes**: 15 × `c5.xlarge` (4 vCPU, 8 GiB) across 3 AZs
+- **Recommended Nodes**: 15 × 4 vCPU, 8 GiB nodes (e.g., AWS `c5.xlarge`, GCP `c2-standard-4`, Azure `Standard_F4s_v2`) across 3 AZs
 
 *Medium Deployment (200 concurrent users):*
 - Max runtimes per user: 3
 - Warm runtimes: 10
 - **CPU**: (200 × 3 × 1.1) + (10 × 1.1) = 671 vCPU
 - **Memory**: (200 × 3 × 3.2) + (10 × 3.2) = 1952 GiB
-- **Recommended Nodes**: 45 × `c5.2xlarge` (8 vCPU, 16 GiB) across 3 AZs
+- **Recommended Nodes**: 45 × 8 vCPU, 16 GiB nodes (e.g., AWS `c5.2xlarge`, GCP `c2-standard-8`, Azure `Standard_F8s_v2`) across 3 AZs
 
 *Large Deployment (1000 concurrent users):*
 - Max runtimes per user: 2
 - Warm runtimes: 20
 - **CPU**: (1000 × 2 × 1.1) + (20 × 1.1) = 2222 vCPU
 - **Memory**: (1000 × 2 × 3.2) + (20 × 3.2) = 6464 GiB
-- **Recommended Nodes**: 140 × `c5.2xlarge` (8 vCPU, 16 GiB) across 3 AZs
+- **Recommended Nodes**: 140 × 8 vCPU, 16 GiB nodes (e.g., AWS `c5.2xlarge`, GCP `c2-standard-8`, Azure `Standard_F8s_v2`) across 3 AZs
 
 ## Warm Runtime Configuration Impact
 
@@ -188,7 +188,7 @@ The `max_runtimes_per_user` setting controls how many concurrent runtime pods a 
 
 **100 concurrent users with different max_runtimes_per_user:**
 
-| Max Runtimes | Total CPU | Total Memory | Node Count (c5.2xlarge) |
+| Max Runtimes | Total CPU | Total Memory | Node Count (8 vCPU, 16 GiB) |
 |--------------|-----------|--------------|--------------------------|
 | 1 | 110 vCPU | 320 GiB | 14 nodes |
 | 2 | 220 vCPU | 640 GiB | 28 nodes |
@@ -200,34 +200,41 @@ The `max_runtimes_per_user` setting controls how many concurrent runtime pods a 
 ### Runtime Cluster Node Pools
 
 **Primary Runtime Pool:**
-- **Instance Type**: `c5.2xlarge` (8 vCPU, 16 GiB) or `c5.4xlarge` (16 vCPU, 32 GiB)
-- **Scaling**: Auto Scaling Group with 1-150 nodes per AZ
-- **Storage**: 300-500 GiB GP3 EBS per node
+- **Node Specs**: 8-16 vCPU, 16-32 GiB RAM per node
+  - AWS: `c5.2xlarge` (8 vCPU, 16 GiB) or `c5.4xlarge` (16 vCPU, 32 GiB)
+  - GCP: `c2-standard-8` (8 vCPU, 32 GiB) or `c2-standard-16` (16 vCPU, 64 GiB)
+  - Azure: `Standard_F8s_v2` (8 vCPU, 16 GiB) or `Standard_F16s_v2` (16 vCPU, 32 GiB)
+- **Scaling**: Auto-scaling with 1-150 nodes per availability zone
+- **Storage**: 300-500 GiB SSD per node
 - **Runtime Class**: `sysbox-runc` (for container security)
 
 **High-Performance Pool** (optional):
-- **Instance Type**: `c5.9xlarge` (36 vCPU, 72 GiB)
+- **Node Specs**: 36 vCPU, 72 GiB RAM per node
+  - AWS: `c5.9xlarge`, GCP: `c2-standard-30`, Azure: `Standard_F32s_v2`
 - **Use Case**: CPU-intensive workloads, large codebases
-- **Scaling**: 0-10 nodes per AZ (scale from zero)
+- **Scaling**: 0-10 nodes per availability zone (scale from zero)
 - **Taints**: `workload-type=high-performance:NoSchedule`
 
 **GPU Pool** (optional):
-- **Instance Type**: `p3.2xlarge` (8 vCPU, 61 GiB, 1 V100 GPU)
+- **Node Specs**: 8+ vCPU, 60+ GiB RAM, 1+ GPU per node
+  - AWS: `p3.2xlarge` (8 vCPU, 61 GiB, 1 V100), GCP: `n1-standard-8` + GPU, Azure: `Standard_NC6s_v3`
 - **Use Case**: ML/AI workloads requiring GPU acceleration
-- **Scaling**: 0-5 nodes per AZ (scale from zero)
+- **Scaling**: 0-5 nodes per availability zone (scale from zero)
 - **Taints**: `nvidia.com/gpu=true:NoSchedule`
 
 ### Core Application Cluster Node Pools
 
 **Primary Application Pool:**
-- **Instance Type**: `c5.2xlarge` (8 vCPU, 16 GiB)
-- **Scaling**: 3-25 nodes per AZ
-- **Storage**: 50-100 GiB GP3 EBS per node
+- **Node Specs**: 8 vCPU, 16 GiB RAM per node
+  - AWS: `c5.2xlarge`, GCP: `c2-standard-8`, Azure: `Standard_F8s_v2`
+- **Scaling**: 3-25 nodes per availability zone
+- **Storage**: 50-100 GiB SSD per node
 
 **Memory-Intensive Pool:**
-- **Instance Type**: `r5.2xlarge` (8 vCPU, 64 GiB)
+- **Node Specs**: 8 vCPU, 64 GiB RAM per node
+  - AWS: `r5.2xlarge`, GCP: `n2-highmem-8`, Azure: `Standard_E8s_v4`
 - **Use Case**: Analytics, ClickHouse, large databases
-- **Scaling**: 0-3 nodes per AZ (scale from zero)
+- **Scaling**: 0-3 nodes per availability zone (scale from zero)
 - **Taints**: `workload-type=memory-intensive:NoSchedule`
 
 ## Monitoring and Alerting
@@ -309,11 +316,11 @@ The `max_runtimes_per_user` setting controls how many concurrent runtime pods a 
 
 ```yaml
 # Core Application Cluster
-Node Pool: 3 × c5.2xlarge (8 vCPU, 16 GiB)
+Node Pool: 3 × 8 vCPU, 16 GiB nodes
 Total: 24 vCPU, 48 GiB
 
 # Runtime Cluster  
-Node Pool: 6 × c5.2xlarge (8 vCPU, 16 GiB)
+Node Pool: 6 × 8 vCPU, 16 GiB nodes
 Total: 48 vCPU, 96 GiB
 
 # Configuration
@@ -326,12 +333,12 @@ idle_timeout: 1800 # 30 minutes
 
 ```yaml
 # Core Application Cluster
-Primary Pool: 6 × c5.2xlarge (8 vCPU, 16 GiB)
-Memory Pool: 2 × r5.2xlarge (8 vCPU, 64 GiB)
+Primary Pool: 6 × 8 vCPU, 16 GiB nodes
+Memory Pool: 2 × 8 vCPU, 64 GiB nodes
 Total: 64 vCPU, 224 GiB
 
 # Runtime Cluster
-Primary Pool: 30 × c5.2xlarge (8 vCPU, 16 GiB)
+Primary Pool: 30 × 8 vCPU, 16 GiB nodes
 Total: 240 vCPU, 480 GiB
 
 # Configuration
@@ -344,13 +351,13 @@ idle_timeout: 1800 # 30 minutes
 
 ```yaml
 # Core Application Cluster
-Primary Pool: 12 × c5.4xlarge (16 vCPU, 32 GiB)
-Memory Pool: 6 × r5.4xlarge (16 vCPU, 128 GiB)
+Primary Pool: 12 × 16 vCPU, 32 GiB nodes
+Memory Pool: 6 × 16 vCPU, 128 GiB nodes
 Total: 288 vCPU, 1152 GiB
 
 # Runtime Cluster
-Primary Pool: 100 × c5.2xlarge (8 vCPU, 16 GiB)
-High-Perf Pool: 10 × c5.9xlarge (36 vCPU, 72 GiB)
+Primary Pool: 100 × 8 vCPU, 16 GiB nodes
+High-Perf Pool: 10 × 36 vCPU, 72 GiB nodes
 Total: 1160 vCPU, 2320 GiB
 
 # Configuration
@@ -370,7 +377,7 @@ This sizing guide references the following configuration files in this repositor
 
 ## Conclusion
 
-Proper EKS cluster sizing for OpenHands Enterprise requires careful consideration of both core application needs and runtime pod scaling patterns. Start with conservative estimates based on your expected user load, implement comprehensive monitoring, and adjust based on actual usage patterns.
+Proper Kubernetes cluster sizing for OpenHands Enterprise requires careful consideration of both core application needs and runtime pod scaling patterns. Start with conservative estimates based on your expected user load, implement comprehensive monitoring, and adjust based on actual usage patterns.
 
 Key takeaways:
 - Core applications have predictable resource requirements
@@ -379,4 +386,4 @@ Key takeaways:
 - Monitor actual usage to optimize resource allocation and costs
 - Plan for growth with auto-scaling node pools and appropriate instance types
 
-For additional support with sizing your OpenHands Enterprise deployment, consult with the OpenHands team or your AWS solutions architect.
+For additional support with sizing your OpenHands Enterprise deployment, consult with the OpenHands team or your cloud provider's solutions architect.
