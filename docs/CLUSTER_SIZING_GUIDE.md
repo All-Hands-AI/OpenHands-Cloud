@@ -15,9 +15,27 @@ OpenHands Enterprise can be deployed in two configurations:
 
 **Runtime Pods** are the dynamic execution environments where AI agents perform their work. Unlike core applications, runtime pods have a lifecycle tied directly to user activity and system configuration. Each runtime pod is essentially a sandboxed container environment that can execute code, interact with APIs, browse the web, and perform other tasks as directed by AI agents.
 
-The runtime pod lifecycle follows a predictable state machine with five primary states: **STARTING** (pod creation and initialization), **RUNNING** (actively processing user requests), **PAUSED** (idle but preserving state and storage), **STOPPED** (terminated with storage cleanup), and **ERROR** (failed state requiring intervention). State transitions are controlled by user actions, idle timeouts, and system policies.
+### Runtime Pod States
 
-Resource consumption varies significantly across these states. During **RUNNING** state, pods consume their full CPU allocation (1000m), memory allocation (2-3 GiB), and maintain active storage access. In **PAUSED** state, pods release CPU resources but retain memory allocation and persistent storage, allowing for quick resumption. The **STOPPED** state releases all resources including persistent storage. This state-based resource management allows the system to optimize cluster utilization while maintaining user experience.
+Runtime pods transition through different states based on user activity and system policies. Understanding these states is essential for accurate resource planning.
+
+#### State Definitions
+
+| State | Description | Duration | Trigger |
+|-------|-------------|----------|---------|
+| **Actively Performing Work** | Pod is processing user requests and executing tasks | Variable | User interaction, task execution |
+| **Idle** | Pod is running but not processing requests | Up to 30 minutes (configurable) | No user activity |
+| **Stopped** | Pod terminated but storage preserved for potential resumption | Until user resumes or cleanup | Idle timeout reached |
+| **Cleaned Up** | Pod and all associated resources permanently removed | N/A | 24 hours of inactivity (configurable) |
+
+#### Resource Consumption by State
+
+| State | CPU | Memory | Storage | Notes |
+|-------|-----|--------|---------|-------|
+| **Actively Performing Work** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Full resource allocation |
+| **Idle** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Same as active until timeout |
+| **Stopped** | 0m | 0 GiB | 35 GiB | Only storage preserved |
+| **Cleaned Up** | 0m | 0 GiB | 0 GiB | All resources released |
 
 The Runtime API serves as the orchestrator between core applications and runtime pods, managing pod creation, task assignment, resource monitoring, and cleanup operations. This separation allows for independent scaling of compute resources based on actual user demand while maintaining system stability.
 
@@ -61,53 +79,19 @@ The core applications provide the main OpenHands functionality and have predicta
 
 Runtime pods are the execution environments where AI agents perform tasks. Understanding their lifecycle and resource consumption patterns is crucial for proper cluster sizing.
 
-### Runtime Pod Lifecycle and Behavior
+### Runtime Pod Behavior
 
-**Pod Creation and Assignment**
-When a user initiates a task, the Runtime API determines whether to assign it to an existing idle runtime pod or create a new one. The system maintains a pool of "warm" runtime pods (pre-started containers) to provide instant availability for users. If no warm pods are available and the user hasn't exceeded their maximum runtime limit, a new pod is created on-demand.
+**Pod Assignment and Creation**
+When a user initiates a task, the Runtime API assigns them to an available warm runtime pod for instant access, or creates a new pod if none are available (subject to user limits). Warm runtimes provide immediate availability but consume resources continuously.
 
-**Active State Resource Consumption**
-During active use, runtime pods consume their full allocated resources:
-- **CPU**: 1000m (1 vCPU) for code execution, API calls, and task processing
-- **Memory**: 3 GiB for application state, temporary files, and execution context
-- **Storage**: 35 GiB total (30 GiB workspace + 5 GiB system) for code repositories, generated files, and runtime dependencies
+**Idle Detection and Cleanup**
+The Runtime API monitors pod activity by querying each runtime's `/server_info` endpoint. Two cleanup timelines operate:
 
-The actual resource utilization varies significantly based on workload complexity. Simple tasks like text processing may use minimal CPU, while complex operations like large codebase analysis or data processing can fully utilize allocated resources.
+- **Idle Timeout** (30 minutes default): Idle pods are stopped, releasing CPU and memory while preserving storage
+- **Dead Runtime Cleanup** (24 hours default): Long-inactive runtimes are completely removed, including storage
 
-**Idle State and Resource Optimization**
-When a user stops interacting with a runtime pod, it continues running and consuming full resources until the idle timeout is reached. The Runtime API tracks idle time by monitoring the last activity timestamp reported by each runtime's internal server:
-
-- **Idle Detection**: The Runtime API queries each runtime's `/server_info` endpoint to retrieve the current `idle_time` value
-- **Timeout Threshold**: Default idle timeout is 1800 seconds (30 minutes), configurable via `RUNTIME_IDLE_SECONDS`
-- **State Transition**: Upon reaching the timeout, runtimes transition to **PAUSED** state (default) or **STOPPED** state (if `STOP_IDLE_RUNTIME=true`)
-- **Resource Impact**: **PAUSED** runtimes release CPU allocation but retain memory and storage; **STOPPED** runtimes release all resources
-
-**Cleanup and Resource Reclamation**
-The cleanup process operates on two distinct timelines with different behaviors:
-
-1. **Idle Timeout Processing** (default 30 minutes): The Runtime API continuously monitors pod activity by querying each runtime's `/server_info` endpoint. When a pod exceeds the idle timeout (`RUNTIME_IDLE_SECONDS`), it transitions to **PAUSED** state by default, releasing CPU resources while preserving memory and storage. If `STOP_IDLE_RUNTIME` is enabled, pods transition directly to **STOPPED** state, releasing all resources.
-
-2. **Dead Runtime Cleanup** (default 24 hours): A separate process identifies runtimes that have been inactive for extended periods (`RUNTIME_DEAD_SECONDS`) and forcibly removes them, including their persistent storage. This prevents resource leaks from abandoned or orphaned runtimes.
-
-3. **Warm Runtime Exemption**: Runtimes with no assigned `api_key_name` (warm runtimes) are exempt from idle timeout processing but subject to dead runtime cleanup.
-
-4. **Error State Handling**: Runtimes that fail health checks or become unresponsive are automatically transitioned to **ERROR** state and may be forcibly removed to prevent resource waste.
-
-**Maximum Runtime Limits and Overflow Behavior**
-Each user has a configurable maximum number of concurrent runtime pods (`max_runtimes_per_user`). When this limit is reached:
-
-- **New Task Requests**: Additional task requests are queued until a runtime becomes available
-- **User Experience**: Users see a "waiting for available runtime" message
-- **Resource Protection**: This prevents individual users from consuming excessive cluster resources
-- **Automatic Cleanup**: The system prioritizes cleaning up the user's oldest idle runtimes to make room for new requests
-
-**Warm Runtime Pool Management**
-The system maintains a pool of pre-started "warm" runtime pods to improve user experience:
-
-- **Instant Availability**: Users get immediate access without waiting for pod startup (typically 30-60 seconds)
-- **Continuous Resource Consumption**: Warm pods consume full resources even when unused
-- **Dynamic Sizing**: The warm pool size is configurable and should be balanced against resource costs
-- **User Assignment**: When a user requests a runtime, they're assigned the next available warm pod
+**User Runtime Limits**
+Each user has a maximum number of concurrent runtime pods (`max_runtimes_per_user`). When exceeded, new requests are queued until resources become available through cleanup or manual termination.
 
 ### Resource Consumption Patterns
 
