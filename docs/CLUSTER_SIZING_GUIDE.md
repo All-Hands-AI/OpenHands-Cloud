@@ -97,7 +97,7 @@ The Runtime API monitors pod activity by querying each runtime's `/server_info` 
 - **Dead Runtime Cleanup** (24 hours default): Long-inactive runtimes are completely removed, including storage
 
 **User Runtime Limits**
-Each user has a maximum number of concurrent runtime pods (configured per API key via `max_runtimes` field, with system default `MAX_RUNTIMES_PER_API_KEY=1024`). When exceeded, new requests are queued until resources become available through cleanup or manual termination.
+Each user has a maximum number of concurrent RUNNING runtime pods (configured per API key via `max_runtimes` field, with system default `MAX_RUNTIMES_PER_API_KEY=1024`). When exceeded, new requests fail with a ValueError - no automatic queueing or pausing occurs.
 
 ### Resource Consumption Patterns
 
@@ -268,12 +268,12 @@ In practice, users rarely utilize all their allocated runtimes simultaneously at
 
 ### Configuration Impact on Resource Planning
 
-**Overflow and Queueing Behavior**
-When users exceed their maximum runtime limit, the system implements intelligent queueing:
-1. **Request Queuing**: New runtime requests are placed in a user-specific queue
-2. **Automatic Cleanup**: The system attempts to clean up idle runtimes to free slots
-3. **Priority Assignment**: Newer requests may trigger cleanup of older idle runtimes
-4. **User Notification**: Users receive clear feedback about runtime availability and wait times
+**Runtime Limit Enforcement**
+When users exceed their maximum RUNNING runtime limit, the system enforces strict limits:
+1. **Immediate Rejection**: New runtime requests fail with a ValueError
+2. **No Automatic Management**: The system does not automatically pause or terminate existing runtimes
+3. **Manual Intervention Required**: Users must manually terminate existing runtimes to create new ones
+4. **PAUSED Runtimes Don't Count**: Only RUNNING status runtimes count toward the limit
 
 ### Setting Considerations
 
@@ -291,6 +291,23 @@ When users exceed their maximum runtime limit, the system implements intelligent
 - **Pros**: Maximum flexibility for power users
 - **Cons**: High resource requirements, potential for resource waste
 - **Use Case**: Research environments, unlimited resource scenarios
+
+### Production Environment Values
+
+Based on actual OpenHands deployment configurations:
+
+| Environment | MAX_RUNTIMES_PER_API_KEY | Warm Runtimes | Use Case |
+|-------------|--------------------------|---------------|----------|
+| **Production** | 8192 | 20 | High-scale SaaS deployment |
+| **Staging** | 1024 (default) | 5 | Testing and validation |
+| **Evaluation** | 32 | 0 (disabled) | Research and benchmarking |
+| **Default** | 1024 | 5 | Standard enterprise deployment |
+
+**Notes:**
+- Production uses a very high limit (8192) to avoid blocking power users
+- Staging uses the default to match typical enterprise deployments  
+- Evaluation uses a lower limit (32) to control resource usage during benchmarking
+- Individual API keys can have custom `max_runtimes` values set via the management API
 
 ### Resource Impact Examples
 
