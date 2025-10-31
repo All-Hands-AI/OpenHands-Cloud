@@ -6,8 +6,16 @@ This document provides comprehensive guidance for sizing Kubernetes clusters to 
 
 OpenHands Enterprise can be deployed in two configurations:
 
-1. **Single-Cluster Deployment**: Core applications and runtime pods in the same cluster with namespace isolation
+1. **Single-Cluster Deployment**: Core applications and runtime pods in the same cluster (with or without namespace isolation)
 2. **Multi-Cluster Deployment**: Core applications in one cluster, runtime pods in a dedicated cluster (recommended for production)
+
+### Architecture Deep Dive
+
+**Core Applications** form the persistent backbone of OpenHands Enterprise. These include the main OpenHands server, Runtime API, databases (PostgreSQL, Redis), authentication services (Keycloak), and optional analytics components (ClickHouse). These applications run continuously and have predictable resource consumption patterns. They handle user authentication, session management, task orchestration, and data persistence.
+
+**Runtime Pods** are the dynamic execution environments where AI agents perform their work. Unlike core applications, runtime pods have a complex lifecycle tied directly to user activity and system configuration. Each runtime pod is essentially a sandboxed container environment that can execute code, interact with APIs, browse the web, and perform other tasks as directed by AI agents.
+
+The Runtime API serves as the orchestrator between core applications and runtime pods, managing pod creation, task assignment, resource monitoring, and cleanup operations. This separation allows for independent scaling of compute resources based on actual user demand while maintaining system stability.
 
 ## Core Application Sizing
 
@@ -47,7 +55,63 @@ The core applications provide the main OpenHands functionality and have predicta
 
 ## Runtime Pod Sizing
 
-Runtime pods are the execution environments where AI agents perform tasks. Their resource consumption varies based on workload complexity.
+Runtime pods are the execution environments where AI agents perform tasks. Understanding their lifecycle and resource consumption patterns is crucial for proper cluster sizing.
+
+### Runtime Pod Lifecycle and Behavior
+
+**Pod Creation and Assignment**
+When a user initiates a task, the Runtime API determines whether to assign it to an existing idle runtime pod or create a new one. The system maintains a pool of "warm" runtime pods (pre-started containers) to provide instant availability for users. If no warm pods are available and the user hasn't exceeded their maximum runtime limit, a new pod is created on-demand.
+
+**Active State Resource Consumption**
+During active use, runtime pods consume their full allocated resources:
+- **CPU**: 1000m (1 vCPU) for code execution, API calls, and task processing
+- **Memory**: 3 GiB for application state, temporary files, and execution context
+- **Storage**: 35 GiB total (30 GiB workspace + 5 GiB system) for code repositories, generated files, and runtime dependencies
+
+The actual resource utilization varies significantly based on workload complexity. Simple tasks like text processing may use minimal CPU, while complex operations like large codebase analysis or data processing can fully utilize allocated resources.
+
+**Idle State and Resource Optimization**
+When a user stops interacting with a runtime pod, it enters an idle state but continues consuming allocated resources. The system implements several optimization strategies:
+
+- **Idle Timeout**: After 30 minutes of inactivity (configurable via `idle_timeout`), the pod is marked for cleanup
+- **Resource Monitoring**: The Runtime API continuously monitors pod activity and resource usage
+- **Graceful Degradation**: Idle pods may have their CPU priority reduced but memory allocation remains constant
+
+**Cleanup and Resource Reclamation**
+The cleanup process follows a multi-stage approach:
+
+1. **Idle Detection**: Runtime API identifies pods that have exceeded the idle timeout
+2. **Graceful Shutdown**: Pods are given time to save state and clean up temporary resources
+3. **Resource Reclamation**: CPU, memory, and storage are released back to the cluster
+4. **Node Optimization**: If a node becomes underutilized, Kubernetes may reschedule remaining pods to optimize resource usage
+
+**Maximum Runtime Limits and Overflow Behavior**
+Each user has a configurable maximum number of concurrent runtime pods (`max_runtimes_per_user`). When this limit is reached:
+
+- **New Task Requests**: Additional task requests are queued until a runtime becomes available
+- **User Experience**: Users see a "waiting for available runtime" message
+- **Resource Protection**: This prevents individual users from consuming excessive cluster resources
+- **Automatic Cleanup**: The system prioritizes cleaning up the user's oldest idle runtimes to make room for new requests
+
+**Warm Runtime Pool Management**
+The system maintains a pool of pre-started "warm" runtime pods to improve user experience:
+
+- **Instant Availability**: Users get immediate access without waiting for pod startup (typically 30-60 seconds)
+- **Continuous Resource Consumption**: Warm pods consume full resources even when unused
+- **Dynamic Sizing**: The warm pool size is configurable and should be balanced against resource costs
+- **User Assignment**: When a user requests a runtime, they're assigned the next available warm pod
+
+### Resource Consumption Patterns
+
+**Peak Usage Scenarios**
+- **Business Hours**: Highest demand typically occurs during business hours in your primary user timezone
+- **Batch Operations**: Large-scale code analysis or data processing tasks can spike resource usage
+- **New User Onboarding**: Initial setup and exploration phases often involve higher resource consumption
+
+**Resource Efficiency Considerations**
+- **Overcommitment**: Kubernetes can overcommit CPU resources since not all pods use their full allocation simultaneously
+- **Memory Constraints**: Memory cannot be overcommitted, making it the primary limiting factor for pod density
+- **Storage Patterns**: Workspace storage persists across idle periods but is cleaned up when pods are terminated
 
 ### Default Runtime Pod Resources
 
@@ -133,7 +197,24 @@ Total Storage = (Total Users × Max Runtimes per User × 35 GiB)
 
 ## Warm Runtime Configuration Impact
 
-Warm runtimes are pre-started pods that provide instant availability for users but consume resources continuously.
+Warm runtimes are pre-started pods that provide instant availability for users but consume resources continuously. Understanding their impact is crucial for balancing user experience against resource costs.
+
+### The Warm Runtime Trade-off
+
+**User Experience Benefits**
+Warm runtimes eliminate the 30-60 second pod startup delay that users would otherwise experience when beginning a new task. This creates a more responsive, desktop-like experience where users can immediately start working without waiting for container initialization, image pulls, and runtime environment setup.
+
+**Resource Cost Implications**
+Each warm runtime pod consumes its full resource allocation (1 vCPU, 3 GiB RAM, 35 GiB storage) continuously, regardless of whether it's being used. This represents a baseline resource commitment that scales linearly with the number of warm runtimes configured.
+
+**Sizing Strategy**
+The optimal number of warm runtimes depends on your user patterns:
+- **Conservative Approach**: Set warm runtimes to 10-20% of expected concurrent users
+- **Responsive Approach**: Set warm runtimes to 50-80% of expected concurrent users  
+- **Cost-Optimized Approach**: Set warm runtimes to 5-10% and accept occasional startup delays
+
+**Dynamic Behavior**
+When a user is assigned a warm runtime pod, the system immediately starts preparing a replacement warm pod to maintain the configured pool size. This ensures consistent availability but can create temporary resource spikes during high-demand periods.
 
 ### Warm Runtime Benefits
 - **Instant Start**: Users get immediate access without waiting for pod startup
@@ -167,7 +248,34 @@ runtime-api:
 
 ## Max Runtimes Per User Impact
 
-The `max_runtimes_per_user` setting controls how many concurrent runtime pods a single user can have.
+The `max_runtimes_per_user` setting controls how many concurrent runtime pods a single user can have. This configuration has profound implications for both resource planning and user workflow capabilities.
+
+### Understanding Multi-Runtime Workflows
+
+**Why Users Need Multiple Runtimes**
+Users often benefit from multiple concurrent runtime environments for different types of work:
+- **Parallel Development**: Working on multiple features or projects simultaneously
+- **Environment Isolation**: Separating development, testing, and experimentation environments
+- **Task Switching**: Maintaining context across different tasks without losing work state
+- **Collaborative Work**: Managing different runtime environments for different team collaborations
+
+**Resource Multiplication Effect**
+Each additional runtime per user multiplies the resource requirements linearly. A user with 3 concurrent runtimes consumes 3 vCPU, 9 GiB RAM, and 105 GiB storage when all runtimes are active. This multiplication effect is the primary driver of cluster resource requirements.
+
+**User Behavior Patterns**
+In practice, users rarely utilize all their allocated runtimes simultaneously at full capacity. Common patterns include:
+- **Primary + Secondary**: One active runtime for current work, one idle runtime maintaining context for previous work
+- **Development + Testing**: Separate runtimes for development and testing environments
+- **Context Switching**: Multiple runtimes allowing quick switching between different projects or tasks
+
+### Configuration Impact on Resource Planning
+
+**Overflow and Queueing Behavior**
+When users exceed their maximum runtime limit, the system implements intelligent queueing:
+1. **Request Queuing**: New runtime requests are placed in a user-specific queue
+2. **Automatic Cleanup**: The system attempts to clean up idle runtimes to free slots
+3. **Priority Assignment**: Newer requests may trigger cleanup of older idle runtimes
+4. **User Notification**: Users receive clear feedback about runtime availability and wait times
 
 ### Setting Considerations
 
