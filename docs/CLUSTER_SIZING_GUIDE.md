@@ -26,8 +26,11 @@ Runtime pods transition through different states based on user activity and syst
 | **Warm** | Pre-started pod ready for user assignment | Indefinite | `warmRuntimes.count` setting in Helm values |
 | **Actively Performing Work** | Pod is processing user requests and executing tasks | Variable | User interaction, task execution |
 | **Idle** | Pod is running but not processing requests | Up to timeout | No user activity |
-| **Stopped** | Pod terminated but storage preserved for potential resumption | Until user resumes or cleanup | `RUNTIME_IDLE_SECONDS` timeout reached (default 1800s) or `STOP_IDLE_RUNTIME=true` |
+| **Paused** | Pod deployment scaled to 0 replicas, storage preserved | Until user resumes or cleanup | `RUNTIME_IDLE_SECONDS` timeout reached (default 1800s) |
+| **Stopped** | Pod terminated but storage preserved for potential resumption | Until user resumes or cleanup | `RUNTIME_IDLE_SECONDS` timeout + `STOP_IDLE_RUNTIME=true` |
 | **Cleaned Up** | Pod and all associated resources permanently removed | N/A | `RUNTIME_DEAD_SECONDS` timeout reached (default 86400s) |
+
+**SaaS Production Reference**: The OpenHands SaaS deployment uses `warmRuntimes.count: 5` and default timeout values (30 minutes idle, 24 hours dead cleanup).
 
 #### Resource Consumption by State
 
@@ -36,7 +39,8 @@ Runtime pods transition through different states based on user activity and syst
 | **Warm** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Full allocation, awaiting user assignment |
 | **Actively Performing Work** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Full resource allocation |
 | **Idle** | 1000m (1 vCPU) | 2-3 GiB | 35 GiB | Same as active until timeout |
-| **Stopped** | 0m | 0 GiB | 35 GiB | Only storage preserved |
+| **Paused** | 0m | 0 GiB | 35 GiB | Deployment scaled to 0, storage preserved |
+| **Stopped** | 0m | 0 GiB | 35 GiB | Pod terminated, storage preserved |
 | **Cleaned Up** | 0m | 0 GiB | 0 GiB | All resources released |
 
 The Runtime API serves as the orchestrator between core applications and runtime pods, managing pod creation, task assignment, resource monitoring, and cleanup operations. This separation allows for independent scaling of compute resources based on actual user demand while maintaining system stability.
@@ -89,11 +93,11 @@ When a user initiates a task, the Runtime API assigns them to an available warm 
 **Idle Detection and Cleanup**
 The Runtime API monitors pod activity by querying each runtime's `/server_info` endpoint. Two cleanup timelines operate:
 
-- **Idle Timeout** (30 minutes default): Idle pods are stopped, releasing CPU and memory while preserving storage
+- **Idle Timeout** (30 minutes default): Idle pods are paused by default (scaled to 0 replicas), releasing CPU and memory while preserving storage. If `STOP_IDLE_RUNTIME=true`, pods are terminated instead.
 - **Dead Runtime Cleanup** (24 hours default): Long-inactive runtimes are completely removed, including storage
 
 **User Runtime Limits**
-Each user has a maximum number of concurrent runtime pods (configured per API key via `max_runtimes` field, with system default `MAX_RUNTIMES_PER_API_KEY`). When exceeded, new requests are queued until resources become available through cleanup or manual termination.
+Each user has a maximum number of concurrent runtime pods (configured per API key via `max_runtimes` field, with system default `MAX_RUNTIMES_PER_API_KEY=1024`). When exceeded, new requests are queued until resources become available through cleanup or manual termination.
 
 ### Resource Consumption Patterns
 
