@@ -13,7 +13,11 @@ OpenHands Enterprise can be deployed in two configurations:
 
 **Core Applications** form the persistent backbone of OpenHands Enterprise. These include the main OpenHands server, Runtime API, databases (PostgreSQL, Redis), authentication services (Keycloak), and optional analytics components (ClickHouse). These applications run continuously and have predictable resource consumption patterns. They handle user authentication, session management, task orchestration, and data persistence.
 
-**Runtime Pods** are the dynamic execution environments where AI agents perform their work. Unlike core applications, runtime pods have a complex lifecycle tied directly to user activity and system configuration. Each runtime pod is essentially a sandboxed container environment that can execute code, interact with APIs, browse the web, and perform other tasks as directed by AI agents.
+**Runtime Pods** are the dynamic execution environments where AI agents perform their work. Unlike core applications, runtime pods have a lifecycle tied directly to user activity and system configuration. Each runtime pod is essentially a sandboxed container environment that can execute code, interact with APIs, browse the web, and perform other tasks as directed by AI agents.
+
+The runtime pod lifecycle follows a predictable state machine with five primary states: **STARTING** (pod creation and initialization), **RUNNING** (actively processing user requests), **PAUSED** (idle but preserving state and storage), **STOPPED** (terminated with storage cleanup), and **ERROR** (failed state requiring intervention). State transitions are controlled by user actions, idle timeouts, and system policies.
+
+Resource consumption varies significantly across these states. During **RUNNING** state, pods consume their full CPU allocation (1000m), memory allocation (2-3 GiB), and maintain active storage access. In **PAUSED** state, pods release CPU resources but retain memory allocation and persistent storage, allowing for quick resumption. The **STOPPED** state releases all resources including persistent storage. This state-based resource management allows the system to optimize cluster utilization while maintaining user experience.
 
 The Runtime API serves as the orchestrator between core applications and runtime pods, managing pod creation, task assignment, resource monitoring, and cleanup operations. This separation allows for independent scaling of compute resources based on actual user demand while maintaining system stability.
 
@@ -71,19 +75,23 @@ During active use, runtime pods consume their full allocated resources:
 The actual resource utilization varies significantly based on workload complexity. Simple tasks like text processing may use minimal CPU, while complex operations like large codebase analysis or data processing can fully utilize allocated resources.
 
 **Idle State and Resource Optimization**
-When a user stops interacting with a runtime pod, it enters an idle state but continues consuming allocated resources. The system implements several optimization strategies:
+When a user stops interacting with a runtime pod, it continues running and consuming full resources until the idle timeout is reached. The Runtime API tracks idle time by monitoring the last activity timestamp reported by each runtime's internal server:
 
-- **Idle Timeout**: After 30 minutes of inactivity (configurable via `idle_timeout`), the pod is marked for cleanup
-- **Resource Monitoring**: The Runtime API continuously monitors pod activity and resource usage
-- **Graceful Degradation**: Idle pods may have their CPU priority reduced but memory allocation remains constant
+- **Idle Detection**: The Runtime API queries each runtime's `/server_info` endpoint to retrieve the current `idle_time` value
+- **Timeout Threshold**: Default idle timeout is 1800 seconds (30 minutes), configurable via `RUNTIME_IDLE_SECONDS`
+- **State Transition**: Upon reaching the timeout, runtimes transition to **PAUSED** state (default) or **STOPPED** state (if `STOP_IDLE_RUNTIME=true`)
+- **Resource Impact**: **PAUSED** runtimes release CPU allocation but retain memory and storage; **STOPPED** runtimes release all resources
 
 **Cleanup and Resource Reclamation**
-The cleanup process follows a multi-stage approach:
+The cleanup process operates on two distinct timelines with different behaviors:
 
-1. **Idle Detection**: Runtime API identifies pods that have exceeded the idle timeout
-2. **Graceful Shutdown**: Pods are given time to save state and clean up temporary resources
-3. **Resource Reclamation**: CPU, memory, and storage are released back to the cluster
-4. **Node Optimization**: If a node becomes underutilized, Kubernetes may reschedule remaining pods to optimize resource usage
+1. **Idle Timeout Processing** (default 30 minutes): The Runtime API continuously monitors pod activity by querying each runtime's `/server_info` endpoint. When a pod exceeds the idle timeout (`RUNTIME_IDLE_SECONDS`), it transitions to **PAUSED** state by default, releasing CPU resources while preserving memory and storage. If `STOP_IDLE_RUNTIME` is enabled, pods transition directly to **STOPPED** state, releasing all resources.
+
+2. **Dead Runtime Cleanup** (default 24 hours): A separate process identifies runtimes that have been inactive for extended periods (`RUNTIME_DEAD_SECONDS`) and forcibly removes them, including their persistent storage. This prevents resource leaks from abandoned or orphaned runtimes.
+
+3. **Warm Runtime Exemption**: Runtimes with no assigned `api_key_name` (warm runtimes) are exempt from idle timeout processing but subject to dead runtime cleanup.
+
+4. **Error State Handling**: Runtimes that fail health checks or become unresponsive are automatically transitioned to **ERROR** state and may be forcibly removed to prevent resource waste.
 
 **Maximum Runtime Limits and Overflow Behavior**
 Each user has a configurable maximum number of concurrent runtime pods (`max_runtimes_per_user`). When this limit is reached:
