@@ -8,8 +8,11 @@ metadata:
 spec:
   schedule: {{ .Values.podStatusLogger.schedule | quote }}
   concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
         spec:
           {{- with .Values.securityContext }}
@@ -34,6 +37,8 @@ spec:
             command: ["python", "pod_status_logger.py"]
             env:
             {{- include "runtime-api.env" . | nindent 12 }}
+            resources:
+              {{- toYaml .Values.jobSettings.resources | nindent 14 }}
             {{- if .Values.ingressBase.enabled }}
             volumeMounts:
               - name: ingress-base-config
