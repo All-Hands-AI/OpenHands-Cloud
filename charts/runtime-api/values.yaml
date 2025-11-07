@@ -185,9 +185,6 @@ podStatusLogger:
   enabled: true
   schedule: "*/5 * * * *" # Run every 5 minutes
 
-monitoring:
-  enabled: true
-
 datadog:
   enabled: false
   env: "dev"

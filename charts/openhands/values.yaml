@@ -122,8 +122,8 @@ gitlabWebhookInstallation:
       cpu: 200m
 
 image:
-  repository: ghcr.io/all-hands-ai/enterprise-server
-  tag: sha-bd51673
+  repository: ghcr.io/openhands/enterprise-server
+  tag: sha-fccc6f3
 
 ingress:
   enabled: false
@@ -185,9 +185,6 @@ migrationJob:
   initContainer:
     enabled: true
 
-gcpMonitoring:
-  enabled: false
-
 proactiveConvoClean:
   enabled: false
   schedule: "0 2 * * *" # Daily at 2 AM
@@ -227,8 +224,8 @@ resendSync:
 
 runtime:
   image:
-    repository: ghcr.io/all-hands-ai/runtime
-    tag: 135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik
+    repository: ghcr.io/openhands/runtime
+    tag: fccc6f31961ef2792e1d08a1659b5ecaf4d44a37-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -514,8 +511,6 @@ maintenanceTasks:
 runtime-api:
   enabled: true
   replicaCount: 1
-  monitoring:
-    enabled: false
   runtimeInSameCluster: true
   image:
     tag: sha-f3c679d
