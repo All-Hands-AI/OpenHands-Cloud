@@ -225,7 +225,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: "4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik
+    tag: 4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik
   runAsRoot: true
 
 sandbox:
