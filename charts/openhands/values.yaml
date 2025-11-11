@@ -68,7 +68,8 @@ securityContext:
 env:
   DISABLE_WAITLIST: "true"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
-  RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.chuck-test.aws.all-hands.dev"
+  RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.app.example.com"
+  # TODO: Uncomment this when we have a LLM model
   # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
@@ -123,7 +124,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-fccc6f3
+  tag: sha-4ea3e4b
 
 ingress:
   enabled: false
@@ -225,7 +226,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: fccc6f31961ef2792e1d08a1659b5ecaf4d44a37-nikolaik
+    tag: "4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -513,7 +514,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-f3c679d
+    tag: sha-0c907c9
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -533,7 +534,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/all-hands-ai/runtime:135d3aea09780748db552d0c73f1f1c795191ed8-nikolaik"
+        image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
