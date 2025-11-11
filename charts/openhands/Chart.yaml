@@ -38,5 +38,5 @@ dependencies:
     condition: redis.enabled
   - name: runtime-api
     repository: oci://ghcr.io/openhands/helm-charts
-    version: 0.1.19
+    version: 0.1.20
     condition: runtime-api.enabled
