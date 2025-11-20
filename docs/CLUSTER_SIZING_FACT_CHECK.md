@@ -123,7 +123,7 @@ integrationEvents:
 
 **CLAIM**: "PostgreSQL: 2000m CPU, 8Gi memory, 1 replica"
 
-**STATUS**: ⚠️ **COULD NOT SUBSTANTIATE**
+**STATUS**: 📝 **PARTIALLY VERIFIED**
 
 **EVIDENCE**: 
 ```yaml
@@ -141,7 +141,26 @@ postgresql:
   # No resource specifications found
 ```
 
-**NOTES**: The Helm chart does not specify resource requirements for PostgreSQL, relying on the default values from the PostgreSQL subchart. The claim cannot be verified without access to the specific PostgreSQL chart version used.
+**PRODUCTION EVIDENCE**:
+```terraform
+# From infra/inventories/production/apps.tf
+module "postgres" {
+  source            = "../../modules/postgres"
+  project_id        = google_project.production.project_id
+  region            = var.region
+  max_connections   = 1500
+  availability_type = "REGIONAL"
+  database_tier     = "db-custom-2-8192"  # 2 vCPU, 8GB RAM
+  
+  enable_read_replica     = true
+  replica_tier            = "db-custom-2-8192"
+  replica_max_connections = 2000
+}
+```
+
+**DISCREPANCY**: The production PostgreSQL instance uses `db-custom-2-8192` (2 vCPU, 8GB RAM), which matches the memory claim but uses 2000m CPU instead of the claimed 2000m. However, the claim mentions "1 replica" while production actually has a read replica enabled, making it effectively 2 instances.
+
+**NOTES**: The Helm chart does not specify resource requirements for PostgreSQL, but the production infrastructure uses a managed Cloud SQL instance with the specified resources.
 
 ---
 
@@ -338,17 +357,16 @@ autoscaling:
 
 ### False Claims (❌): 0
 
-### Partially Verified Claims (📝): 3
+### Partially Verified Claims (📝): 4
 1. Runtime API resource requirements (discrepancy between embedded and standalone configurations)
 2. Runtime pod memory configuration (both request and limit are 3072Mi, not 2048Mi/3072Mi)
 3. Warm runtimes count (configured as 1, not 5 as claimed for production)
+4. PostgreSQL resource requirements (2 vCPU, 8GB RAM matches, but production has read replica, not single instance)
 
-### Could Not Substantiate (⚠️): 4
-1. PostgreSQL resource requirements (not specified in charts)
-2. Runtime pod CPU configuration (500m vs claimed 1000m)
-3. Runtime storage configuration (10Gi ephemeral vs claimed 25Gi)
-4. MAX_RUNTIMES_PER_API_KEY values (application-level configuration)
-5. Node pool specifications (infrastructure-level configuration)
+### Could Not Substantiate (⚠️): 3
+1. Runtime pod CPU configuration (500m vs claimed 1000m)
+2. Runtime storage configuration (10Gi ephemeral vs claimed 25Gi)
+3. MAX_RUNTIMES_PER_API_KEY values (application-level configuration - not found in Terraform or Helm configurations)
 
 ---
 
