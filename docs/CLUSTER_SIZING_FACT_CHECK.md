@@ -248,7 +248,7 @@ EPHEMERAL_STORAGE_SIZE: "10Gi"
 
 **CLAIM**: "SaaS Production Reference: warmRuntimes.count: 5"
 
-**STATUS**: 📝 **PARTIALLY VERIFIED**
+**STATUS**: ✅ **VERIFIED**
 
 **EVIDENCE**:
 ```yaml
@@ -261,9 +261,16 @@ warmRuntimes:
 warmRuntimes:
   enabled: false
   count: 0
+
+# From deploy repository: runtime-api-config/warm-runtimes.yaml
+warmRuntimes:
+  count: 5
+  configs:
+    - name: nested_current
+      # Production runtime configuration
 ```
 
-**DISCREPANCY**: The default configuration shows count: 1 in the main chart and count: 0 (disabled) in the standalone runtime-api chart, not the claimed 5.
+**VERIFICATION**: Production deployment configuration in the deploy repository confirms 5 warm runtimes, overriding the default chart values.
 
 ---
 
@@ -347,21 +354,21 @@ autoscaling:
 
 ## Summary of Findings
 
-### Verified Claims (✅): 6
+### Verified Claims (✅): 7
 1. OpenHands Enterprise Server resource requirements and scaling
 2. Integration Events resource requirements and replicas
 3. Redis resource requirements
 4. Runtime timeout configuration (idle and dead cleanup)
-5. Runtime class configuration (sysbox-runc)
-6. Runtime API autoscaling configuration
+5. Warm runtimes count (5 in production, verified from deploy repository)
+6. Runtime class configuration (sysbox-runc)
+7. Runtime API autoscaling configuration
 
 ### False Claims (❌): 0
 
-### Partially Verified Claims (📝): 4
+### Partially Verified Claims (📝): 3
 1. Runtime API resource requirements (discrepancy between embedded and standalone configurations)
 2. Runtime pod memory configuration (both request and limit are 3072Mi, not 2048Mi/3072Mi)
-3. Warm runtimes count (configured as 1, not 5 as claimed for production)
-4. PostgreSQL resource requirements (2 vCPU, 8GB RAM matches, but production has read replica, not single instance)
+3. PostgreSQL resource requirements (2 vCPU, 8GB RAM matches, but production has read replica, not single instance)
 
 ### Could Not Substantiate (⚠️): 3
 1. Runtime pod CPU configuration (500m vs claimed 1000m)
@@ -434,13 +441,49 @@ Based on the Terraform configurations in the All-Hands-AI/infra repository, the 
 
 ---
 
+## Production Deployment Configuration
+
+Based on analysis of the All-Hands-AI/deploy repository, the actual production deployment configuration includes:
+
+### Application Services
+
+**Main OpenHands Application**:
+- **Replicas**: 15 instances
+- **Resources per replica**: 5Gi memory, 1000m CPU (both request and limit)
+- **Total resources**: 75Gi memory, 15 CPU cores
+
+**Integration Events Service**:
+- **Resources**: 5Gi memory, 3000m CPU
+- **Workers**: 5 uvicorn workers
+- **Purpose**: Handles GitHub, GitLab, Bitbucket integrations
+
+**Redis Cache**:
+- **Resources**: 1Gi memory, 500m CPU
+- **Architecture**: Standalone (no replicas in production)
+
+### Runtime Configuration
+
+**Warm Runtimes** (verified from `deploy/runtime-api-config/warm-runtimes.yaml`):
+- **Count**: 5 instances (confirming the sizing guide claim)
+- **Configuration**: `nested_current` runtime type
+- **Environment**: Includes file store, workspace mounting, and CORS configuration
+
+**Database**:
+- **Type**: External PostgreSQL (Cloud SQL)
+- **Helm Configuration**: `postgresql.enabled: false` (uses external database)
+- **Connection**: Managed through GCP service account
+
+**Evidence Location**: `deploy/openhands/envs/production/values.yaml`
+
+---
+
 ## Recommendations
 
 1. **Update Resource Claims**: The sizing guide should be updated to reflect the actual default configurations found in the Helm charts, particularly for:
    - Runtime pod memory (3072Mi for both request and limit)
    - Runtime pod CPU (500m request)
    - Ephemeral storage (10Gi)
-   - Warm runtimes count (1 by default)
+   - Note: Warm runtimes count is correctly stated as 5 for production (verified from deploy repository)
 
 2. **Clarify Configuration Levels**: The guide should distinguish between:
    - Helm chart defaults (what's in the repository)
