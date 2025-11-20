@@ -280,9 +280,12 @@ warmRuntimes:
 
 **STATUS**: ⚠️ **COULD NOT SUBSTANTIATE**
 
-**EVIDENCE**: No MAX_RUNTIMES_PER_API_KEY configuration found in the Helm charts.
+**EVIDENCE**: 
+- No MAX_RUNTIMES_PER_API_KEY configuration found in the Helm charts
+- No MAX_RUNTIMES_PER_API_KEY configuration found in deploy repository production configurations
+- Found related setting: `MAX_CONCURRENT_CONVERSATIONS: "10"` in production deployment
 
-**NOTES**: This appears to be an application-level configuration that may be set via environment variables or application configuration files not present in the Helm charts.
+**NOTES**: This appears to be an application-level configuration that may be set via environment variables or application configuration files not present in the Helm charts or deployment configurations.
 
 ---
 
@@ -461,6 +464,17 @@ Based on analysis of the All-Hands-AI/deploy repository, the actual production d
 - **Resources**: 1Gi memory, 500m CPU
 - **Architecture**: Standalone (no replicas in production)
 
+### Supporting Services
+
+**Proactive Conversation Cleanup**:
+- **Resources**: 256Mi memory, 100m CPU (both request and limit)
+- **Schedule**: Every 15 minutes
+- **Purpose**: Automated conversation cleanup
+
+**GitLab Webhook Installation**:
+- **Resources**: 512Mi memory (request), 200m CPU (request)
+- **Purpose**: GitLab integration setup
+
 ### Runtime Configuration
 
 **Warm Runtimes** (verified from `deploy/runtime-api-config/warm-runtimes.yaml`):
@@ -472,6 +486,13 @@ Based on analysis of the All-Hands-AI/deploy repository, the actual production d
 - **Type**: External PostgreSQL (Cloud SQL)
 - **Helm Configuration**: `postgresql.enabled: false` (uses external database)
 - **Connection**: Managed through GCP service account
+
+### Environment Variables
+
+**Concurrency and Limits**:
+- `MAX_CONCURRENT_CONVERSATIONS: "10"`
+- `DB_POOL_SIZE: "25"`
+- `DB_MAX_OVERFLOW: "30"`
 
 **Evidence Location**: `deploy/openhands/envs/production/values.yaml`
 
