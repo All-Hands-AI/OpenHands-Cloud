@@ -64,4 +64,11 @@ spec:
             name: openhands-integrations-service
             port:
               number: 3000
+      - path: /oauth/device
+        pathType: Prefix
+        backend:
+          service:
+            name: openhands-integrations-service
+            port:
+              number: 3000
 {{- end }}
