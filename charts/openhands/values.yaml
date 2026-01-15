@@ -72,6 +72,38 @@ env:
   # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
 
+# V1 Conversation API Settings
+# OpenHands supports two conversation APIs: V0 (legacy) and V1 (new).
+# These settings control the availability and default behavior of V1 conversations.
+v1Conversations:
+  # ENABLE_V1: Server-level switch that controls whether V1 API routes (/api/v1/*) are mounted.
+  # When "true", the V1 API endpoints are available for clients that want to use them.
+  # When "false", V1 API routes are completely disabled at the server level.
+  # Default: "true" (V1 routes are available)
+  enableV1Routes: "true"
+
+  # V1_ENABLED: Default setting for new users that determines if their conversations use V1 API.
+  # This sets the initial value of v1_enabled in user settings for new users.
+  # When "1", new users will have V1 conversations enabled by default.
+  # When "0" or unset, new users will use V0 (legacy) conversations by default.
+  # Note: For SaaS deployments, this can be overridden per-user in the database.
+  # Default: "0" (new users start with V0 conversations)
+  defaultV1Enabled: "0"
+
+  # ENABLE_V1_GITHUB_RESOLVER: Controls whether GitHub integration uses V1 conversations.
+  # When "true", GitHub issues/PRs resolved by OpenHands will use V1 conversation API.
+  # When "false", GitHub resolver uses V0 (legacy) conversation API.
+  # Requires both this flag AND the user's v1_enabled setting to be true.
+  # Default: "false" (GitHub resolver uses V0)
+  enableV1GithubResolver: "false"
+
+  # ENABLE_V1_SLACK_RESOLVER: Controls whether Slack integration uses V1 conversations.
+  # When "true", Slack messages handled by OpenHands will use V1 conversation API.
+  # When "false", Slack resolver uses V0 (legacy) conversation API.
+  # Requires both this flag AND the user's v1_enabled setting to be true.
+  # Default: "false" (Slack resolver uses V0)
+  enableV1SlackResolver: "false"
+
 filestore:
   ephemeral: false
   bucket: openhands-sessions
