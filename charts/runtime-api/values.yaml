@@ -4,8 +4,8 @@ fullnameOverride: ""
 replicaCount: 1
 
 image:
-  repository: ghcr.io/all-hands-ai/runtime-api
-  tag: sha-07c8732
+  repository: ghcr.io/openhands/runtime-api
+  tag: sha-0c907c9
   pullPolicy: Always
 
 imagePullSecrets:
@@ -146,7 +146,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/all-hands-ai/runtime:3c39b93f7e151f88e7b4274b80aafa604fcae092-nikolaik"
+      image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:
@@ -184,9 +184,6 @@ dbCleanup:
 podStatusLogger:
   enabled: true
   schedule: "*/5 * * * *" # Run every 5 minutes
-
-monitoring:
-  enabled: true
 
 datadog:
   enabled: false
