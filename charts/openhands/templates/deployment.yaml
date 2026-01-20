@@ -14,6 +14,10 @@ spec:
       labels:
         app: openhands
       annotations:
+        checksum/keycloak-config: {{ include (print $.Template.BasePath "/keycloak-config-script.yaml") . | sha256sum }}
+        {{- if .Values.litellm.enabled }}
+        checksum/litellm-config: {{ include (print $.Template.BasePath "/litellm-config-script.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}
         {{- end }}
@@ -38,6 +42,12 @@ spec:
           configMap:
             name: keycloak-config-script
             defaultMode: 0755
+        {{- if and .Values.litellm.enabled }}
+        - name: litellm-config-script
+          configMap:
+            name: litellm-config-script
+            defaultMode: 0755
+        {{- end }}
       initContainers:
       - name: keycloak-config
         imagePullPolicy: Always
@@ -50,6 +60,19 @@ spec:
         command:
           - sh
           - /scripts/keycloak-config.sh
+      {{- if .Values.litellm.enabled }}
+      - name: litellm-config
+        imagePullPolicy: Always
+        image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
+        env:
+        {{- include "openhands.env" . | nindent 8 }}
+        volumeMounts:
+          - name: litellm-config-script
+            mountPath: /scripts
+        command:
+          - sh
+          - /scripts/litellm-config.sh
+      {{- end }}
       containers:
       - name: openhands
         imagePullPolicy: Always

@@ -169,8 +169,9 @@ litellm:
   # NOTE: to set the LLM model, set the LITELLM_DEFAULT_MODEL variable in the env section above.
   # REQUIRED: Update to match the hostname set in the litellm-helm ingress section
   url: "https://llm-proxy.example.com"
-  # REQUIRED: Update this AFTER you initially install the chart and login to litellm to create the team.
-  # teamId: ""
+  # Team ID for LiteLLM. If the team ID doesn't exist, it will automatically be created.
+  # Set this to use an existing team.
+  teamId: "openhands"
   auth:
     existingSecret: lite-llm-api-key
 

@@ -247,51 +247,19 @@ authentication as well.
 
 When the chart is deployed, a job will run to configure the Keycloak realm with the identity provider credentials you provided.
 
-### Install OpenHands
+### LiteLLM configuration
 
-Now we can install the helm chart.
-
-```bash
-helm dependency update
-helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
-```
-
-This installation won't complete successfully the first time because we need to set up LiteLLM.
-
-> [!NOTE]
-> This process will be automated in the near future.
->
 > [!IMPORTANT]
 > We recommend using the provided LiteLLM instance rather than bringing your
 > own. The provided LiteLLM instance uses an admin key for automated user
 > management, which is the most extensively tested scenario. Our automation
 > relies on this admin key to create and delete users automatically.
 
-To set up LiteLLM, first use port-forward to connect:
+#### Configure LiteLLM Models
 
-```bash
-kubectl port-forward svc/openhands-litellm 4000:4000 -n openhands
-```
-
-Next, create a new Team in LiteLLM:
-
-- Navigate to <http://localhost:4000/ui> in your browser.
-- login using the username `admin` password $GLOBAL_SECRET (set above).
-- go to Teams -> Create New Team.
-- Name it whatever you want.
-- Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to site-values.yaml:
+You'll need to set your model list for LiteLLM, using the LLM secrets you set above:
 
 ```yaml
-litellm:
-  teamId: "<TEAM_ID>"
-```
-
-You'll also need to set your model list for LiteLLM, using the LLM secrets you set above:
-
-```yaml
-litellm:
-  teamId: "<TEAM_ID>"
-
 litellm-helm:
   proxy_config:
     model_list:
@@ -301,25 +269,38 @@ litellm-helm:
           api_key: os.environ/ANTHROPIC_API_KEY
 ```
 
-Finally you will need to set the default LLM model to use in your site-values.yaml. Find the "env:" section below in your site-values.yaml and uncomment the LITELLM_DEFAULT_MODEL. Set "your-model" to one of the models you configured:
+You will also need to set the default LLM model to use in your site-values.yaml. Find the "env:" section in your site-values.yaml and uncomment the LITELLM_DEFAULT_MODEL. Set "your-model" to one of the models you configured:
 
 ```yaml
 env:
-  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
-  LITE_LLM_TEAM_NAME: openhands
   # replace <your-model> with your LLM model and uncomment this variable
-  # LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
+  LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
+```
+
+#### LiteLLM Team Configuration
+
+To use an existing team, provide the team ID.
+
+If you do not set a team ID, a new team with ID `openhands` will be created. If the team ID you provide doesn't
+already exist, a new team with that ID will be created.
+
+```yaml
+litellm:
+  teamId: "<TEAM_ID>"
+```
+
+### Install OpenHands
+
+Now we can install the helm chart.
+
+```bash
+helm dependency update
+helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
 ```
 
 ### Verify your Setup
 
-Finally, upgrade the release:
-
-```bash
-helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
-```
-
-You should now be able to see OpenHands running with:
+After installation, you should be able to see OpenHands running with:
 
 ```bash
 kubectl port-forward svc/openhands-service 3000:3000 -n openhands

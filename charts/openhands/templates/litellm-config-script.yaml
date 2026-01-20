@@ -1,0 +1,59 @@
+{{- if and .Values.litellm.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config-script
+data:
+  litellm-config.sh: |
+    #!/bin/sh
+    set -eu
+
+    echo "Setting up LiteLLM"
+
+    MAX_RETRIES=60
+    RETRY_INTERVAL=5
+
+    echo "LiteLLM Configuration Script"
+    echo "=============================="
+    echo "API URL: $LITE_LLM_API_URL"
+    echo "Team ID: $LITE_LLM_TEAM_ID"
+
+    echo ""
+    echo "Waiting for LiteLLM to be ready..."
+    retries=0
+    until curl --output /dev/null --silent --fail "$LITE_LLM_API_URL/health/liveness"; do
+        retries=$((retries + 1))
+        if [ $retries -ge $MAX_RETRIES ]; then
+            echo "ERROR: LiteLLM did not become ready after $((MAX_RETRIES * RETRY_INTERVAL)) seconds"
+            exit 1
+        fi
+        echo "LiteLLM not ready yet (attempt $retries/$MAX_RETRIES), waiting ${RETRY_INTERVAL}s..."
+        sleep $RETRY_INTERVAL
+    done
+    echo "LiteLLM is ready!"
+
+    echo ""
+    echo "Checking for existing team with ID: $LITE_LLM_TEAM_ID"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$LITE_LLM_API_URL/team/info?team_id=$LITE_LLM_TEAM_ID" \
+      -H "Authorization: Bearer $LITE_LLM_API_KEY" \
+      -H "Content-Type: application/json")
+
+    if [ "$HTTP_CODE" = "200" ]; then
+        echo "Team already exists with ID: $LITE_LLM_TEAM_ID"
+        exit 0
+    elif [ "$HTTP_CODE" = "404" ]; then
+        echo "Team does not exist, creating new team with ID: $LITE_LLM_TEAM_ID"
+        curl --fail -s -X POST "$LITE_LLM_API_URL/team/new" \
+          -H "Authorization: Bearer $LITE_LLM_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"team_id\": \"$LITE_LLM_TEAM_ID\",
+            \"team_alias\": \"$LITE_LLM_TEAM_ID\"
+          }"
+        echo ""
+        echo "Created team with ID: $LITE_LLM_TEAM_ID"
+    else
+        echo "ERROR: Unexpected response code: $HTTP_CODE"
+        exit 1
+    fi
+{{- end }}
