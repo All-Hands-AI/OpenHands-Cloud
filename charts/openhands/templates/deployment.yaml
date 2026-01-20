@@ -42,7 +42,7 @@ spec:
           configMap:
             name: keycloak-config-script
             defaultMode: 0755
-        {{- if and .Values.litellm.enabled }}
+        {{- if .Values.litellm.enabled }}
         - name: litellm-config-script
           configMap:
             name: litellm-config-script
