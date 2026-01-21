@@ -81,10 +81,15 @@ def update_chart(
         for dep in chart_data.get("dependencies", []):
             if dep.get("name") == "runtime-api":
                 old_runtime_version = dep.get("version")
-                dep["version"] = new_runtime_api_version
-                print(
-                    f"Updated runtime-api version: {old_runtime_version} -> {new_runtime_api_version}"
-                )
+                if old_runtime_version == new_runtime_api_version:
+                    print(
+                        f"runtime-api version unchanged: {old_runtime_version} (already latest)"
+                    )
+                else:
+                    dep["version"] = new_runtime_api_version
+                    print(
+                        f"Updated runtime-api version: {old_runtime_version} -> {new_runtime_api_version}"
+                    )
                 break
 
     yaml.dump(chart_data, chart_path)
