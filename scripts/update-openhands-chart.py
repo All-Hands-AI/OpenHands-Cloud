@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["PyGithub"]
+# dependencies = ["PyGithub", "ruamel.yaml"]
 # ///
 """Update OpenHands chart script."""
 
@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 from github import Github
+from ruamel.yaml import YAML
 
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SCRIPT_DIR = Path(__file__).parent
@@ -27,23 +28,16 @@ def get_latest_semver_tag(repo_name: str) -> str | None:
 
 
 def update_chart_app_version(chart_path: Path, new_version: str) -> None:
-    """Update the appVersion in Chart.yaml without reformatting."""
-    content = chart_path.read_text()
+    """Update the appVersion in Chart.yaml while preserving formatting."""
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.indent(mapping=2, sequence=4, offset=2)
 
-    # Extract old version for logging
-    match = re.search(r"^appVersion:\s*(.+)$", content, re.MULTILINE)
-    old_version = match.group(1).strip() if match else None
+    chart_data = yaml.load(chart_path)
+    old_version = chart_data.get("appVersion")
+    chart_data["appVersion"] = new_version
+    yaml.dump(chart_data, chart_path)
 
-    # Replace appVersion line in-place
-    new_content = re.sub(
-        r"^appVersion:\s*.+$",
-        f"appVersion: {new_version}",
-        content,
-        count=1,
-        flags=re.MULTILINE,
-    )
-
-    chart_path.write_text(new_content)
     print(f"Updated appVersion: {old_version} -> {new_version}")
 
 
