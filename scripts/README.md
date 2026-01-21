@@ -17,8 +17,6 @@ Updates the `appVersion` in `charts/openhands/Chart.yaml` to the latest semantic
    export GITHUB_TOKEN=your_github_token
    ```
 
-   > **Note:** Without a valid `GITHUB_TOKEN`, the script will be subject to GitHub API rate limits (60 requests/hour for unauthenticated requests). Setting a token increases this limit significantly.
-
 2. Run the script:
 
    ```bash
