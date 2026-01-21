@@ -1,15 +1,15 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["PyGithub", "ruamel.yaml"]
+# dependencies = ["PyGithub", "PyYAML"]
 # ///
 """Update OpenHands chart script."""
 
 import re
 from pathlib import Path
 
+import yaml
 from github import Github
-from ruamel.yaml import YAML
 
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SCRIPT_DIR = Path(__file__).parent
@@ -29,13 +29,15 @@ def get_latest_semver_tag(repo_name: str) -> str | None:
 
 def update_chart_app_version(chart_path: Path, new_version: str) -> None:
     """Update the appVersion in Chart.yaml."""
-    yaml = YAML()
-    yaml.preserve_quotes = True
+    with open(chart_path) as f:
+        chart_data = yaml.safe_load(f)
 
-    chart_data = yaml.load(chart_path)
     old_version = chart_data.get("appVersion")
     chart_data["appVersion"] = new_version
-    yaml.dump(chart_data, chart_path)
+
+    with open(chart_path, "w") as f:
+        yaml.dump(chart_data, f, default_flow_style=False, sort_keys=False)
+
     print(f"Updated appVersion: {old_version} -> {new_version}")
 
 
