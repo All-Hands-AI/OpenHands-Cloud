@@ -42,7 +42,7 @@ def update_chart_app_version(chart_path: Path, new_version: str) -> None:
 
 
 def main() -> None:
-    latest_tag = get_latest_semver_tag("All-Hands-AI/OpenHands")
+    latest_tag = get_latest_semver_tag("OpenHands/OpenHands")
     if latest_tag:
         print(f"Latest OpenHands tag: {latest_tag}")
         update_chart_app_version(CHART_PATH, latest_tag)
