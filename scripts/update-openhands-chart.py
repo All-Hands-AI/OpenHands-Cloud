@@ -259,12 +259,17 @@ def main() -> None:
 
     print()
     print("=" * 60)
-    print("Updating chart files...")
+    print("Updating Chart.yaml...")
     print("=" * 60)
 
     update_chart(CHART_PATH, latest_tag, runtime_api_version)
 
     if deploy_config:
+        print()
+        print("=" * 60)
+        print("Updating values.yaml...")
+        print("=" * 60)
+
         update_values(
             VALUES_PATH,
             deploy_config.openhands_sha,
