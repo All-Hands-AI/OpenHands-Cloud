@@ -143,27 +143,47 @@ def update_chart(
     yaml.dump(chart_data, chart_path)
 
 
-def update_values(values_path: Path, openhands_sha: str) -> None:
-    """Update the enterprise-server image tag in values.yaml."""
-    short_sha = openhands_sha[:7]
-    new_tag = f"sha-{short_sha}"
-
+def update_values(
+    values_path: Path, openhands_sha: str, runtime_api_sha: str
+) -> None:
+    """Update image tags in values.yaml."""
     content = values_path.read_text()
 
-    # Find and replace the image tag using regex
-    pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
-    match = re.search(pattern, content)
+    # Update enterprise-server image tag
+    enterprise_short_sha = openhands_sha[:7]
+    enterprise_new_tag = f"sha-{enterprise_short_sha}"
 
-    if match:
-        old_tag = match.group(2)
-        if old_tag == new_tag:
+    enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
+    enterprise_match = re.search(enterprise_pattern, content)
+
+    if enterprise_match:
+        old_tag = enterprise_match.group(2)
+        if old_tag == enterprise_new_tag:
             print(f"enterprise-server image tag unchanged: {old_tag} (already latest)")
         else:
-            new_content = re.sub(pattern, rf"\g<1>{new_tag}", content)
-            values_path.write_text(new_content)
-            print(f"Updated enterprise-server image tag: {old_tag} -> {new_tag}")
+            content = re.sub(enterprise_pattern, rf"\g<1>{enterprise_new_tag}", content)
+            print(f"Updated enterprise-server image tag: {old_tag} -> {enterprise_new_tag}")
     else:
         print("Could not find enterprise-server image tag in values.yaml")
+
+    # Update runtime-api image tag
+    runtime_short_sha = runtime_api_sha[:7]
+    runtime_new_tag = f"sha-{runtime_short_sha}"
+
+    runtime_pattern = r"(runtime-api:\s*\n(?:.*\n)*?\s*image:\s*\n\s*tag:\s*)(\S+)"
+    runtime_match = re.search(runtime_pattern, content)
+
+    if runtime_match:
+        old_tag = runtime_match.group(2)
+        if old_tag == runtime_new_tag:
+            print(f"runtime-api image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(runtime_pattern, rf"\g<1>{runtime_new_tag}", content)
+            print(f"Updated runtime-api image tag: {old_tag} -> {runtime_new_tag}")
+    else:
+        print("Could not find runtime-api image tag in values.yaml")
+
+    values_path.write_text(content)
 
 
 def main() -> None:
@@ -201,7 +221,9 @@ def main() -> None:
     update_chart(CHART_PATH, latest_tag, runtime_api_version)
 
     if deploy_config:
-        update_values(VALUES_PATH, deploy_config.openhands_sha)
+        update_values(
+            VALUES_PATH, deploy_config.openhands_sha, deploy_config.runtime_api_sha
+        )
 
 
 if __name__ == "__main__":
