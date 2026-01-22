@@ -1,15 +1,13 @@
-# Scripts
-
-## update-openhands-chart.py
+# Update OpenHands chart
 
 Updates the OpenHands helm charts to cut a new release.
 
-### Prerequisites
+## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) must be installed
 - A GitHub token with read access to the OpenHands repository
 
-### Usage
+## Usage
 
 1. Set the `GITHUB_TOKEN` environment variable:
 
@@ -29,7 +27,7 @@ Updates the OpenHands helm charts to cut a new release.
    uv run scripts/update-openhands-chart.py
    ```
 
-#### DRY RUN mode
+### DRY RUN mode
 
 ```bash
 ./scripts/update-openhands-chart.py --dry-run
