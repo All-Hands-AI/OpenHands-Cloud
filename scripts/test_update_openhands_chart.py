@@ -370,5 +370,137 @@ runtime-api:
         assert 'working_dir: "/openhands/code/"' in content
 
 
+class TestDryRun:
+    """Tests for dry-run functionality."""
+
+    @pytest.fixture
+    def sample_chart_yaml(self):
+        """Create a sample Chart.yaml content."""
+        return """\
+apiVersion: v2
+description: Test chart
+name: test-chart
+appVersion: 1.0.0
+version: 0.1.0
+dependencies:
+  - name: runtime-api
+    version: 0.1.10
+"""
+
+    @pytest.fixture
+    def sample_values_yaml(self):
+        """Create a sample values.yaml content."""
+        return """\
+image:
+  repository: ghcr.io/openhands/enterprise-server
+  tag: sha-oldsha1
+
+runtime:
+  image:
+    repository: ghcr.io/openhands/runtime
+    tag: oldsha1234567890-nikolaik
+
+runtime-api:
+  enabled: true
+  image:
+    tag: sha-oldsha2
+  warmRuntimes:
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/runtime:oldsha1234567890-nikolaik"
+"""
+
+    @pytest.fixture
+    def temp_chart_file(self, sample_chart_yaml):
+        """Create a temporary Chart.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_chart_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    @pytest.fixture
+    def temp_values_file(self, sample_values_yaml):
+        """Create a temporary values.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_values_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_update_chart_dry_run_no_file_changes(self, temp_chart_file):
+        """Test that dry-run doesn't modify Chart.yaml."""
+        original_content = temp_chart_file.read_text()
+
+        update_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+
+        assert temp_chart_file.read_text() == original_content
+
+    def test_update_chart_dry_run_prints_changes(self, temp_chart_file, capsys):
+        """Test that dry-run still prints what would be changed."""
+        update_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+
+        captured = capsys.readouterr()
+        assert "Updated appVersion: 1.0.0 -> 2.0.0" in captured.out
+        assert "Updated version: 0.1.0 -> 0.1.1" in captured.out
+        assert "Updated runtime-api version: 0.1.10 -> 0.2.0" in captured.out
+
+    def test_update_values_dry_run_no_file_changes(self, temp_values_file):
+        """Test that dry-run doesn't modify values.yaml."""
+        original_content = temp_values_file.read_text()
+
+        update_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_api_sha="newapi1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
+            dry_run=True,
+        )
+
+        assert temp_values_file.read_text() == original_content
+
+    def test_update_values_dry_run_prints_changes(self, temp_values_file, capsys):
+        """Test that dry-run still prints what would be changed."""
+        update_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_api_sha="newapi1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
+            dry_run=True,
+        )
+
+        captured = capsys.readouterr()
+        assert "Updated enterprise-server image tag:" in captured.out
+        assert "Updated runtime-api image tag:" in captured.out
+        assert "Updated runtime image tag:" in captured.out
+        assert "Updated warmRuntimes image tag:" in captured.out
+
+    def test_update_chart_without_dry_run_modifies_file(self, temp_chart_file):
+        """Test that without dry-run, Chart.yaml is modified."""
+        original_content = temp_chart_file.read_text()
+
+        update_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=False)
+
+        assert temp_chart_file.read_text() != original_content
+
+    def test_update_values_without_dry_run_modifies_file(self, temp_values_file):
+        """Test that without dry-run, values.yaml is modified."""
+        original_content = temp_values_file.read_text()
+
+        update_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_api_sha="newapi1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
+            dry_run=False,
+        )
+
+        assert temp_values_file.read_text() != original_content
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

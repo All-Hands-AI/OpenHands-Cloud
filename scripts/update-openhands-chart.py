@@ -5,6 +5,7 @@
 # ///
 """Update OpenHands chart script."""
 
+import argparse
 import base64
 import io
 import os
@@ -118,7 +119,10 @@ def bump_patch_version(version: str) -> str:
 
 
 def update_chart(
-    chart_path: Path, new_app_version: str, new_runtime_api_version: str | None
+    chart_path: Path,
+    new_app_version: str,
+    new_runtime_api_version: str | None,
+    dry_run: bool = False,
 ) -> None:
     """Update appVersion, bump patch version, and update runtime-api dependency."""
     yaml = YAML()
@@ -151,7 +155,8 @@ def update_chart(
                     )
                 break
 
-    yaml.dump(chart_data, chart_path)
+    if not dry_run:
+        yaml.dump(chart_data, chart_path)
 
 
 def update_values(
@@ -159,6 +164,7 @@ def update_values(
     openhands_sha: str,
     runtime_api_sha: str,
     runtime_image_tag: str,
+    dry_run: bool = False,
 ) -> None:
     """Update image tags in values.yaml."""
     content = values_path.read_text()
@@ -223,10 +229,30 @@ def update_values(
     else:
         print("Could not find warmRuntimes image tag in values.yaml")
 
-    values_path.write_text(content)
+    if not dry_run:
+        values_path.write_text(content)
 
 
-def main() -> None:
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Update OpenHands chart with latest versions from GitHub."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be updated without making changes.",
+    )
+    return parser.parse_args()
+
+
+def main(dry_run: bool = False) -> None:
+    if dry_run:
+        print("=" * 60)
+        print("DRY RUN MODE - No changes will be made")
+        print("=" * 60)
+        print()
+
     print("=" * 60)
     print("Fetching latest versions...")
     print("=" * 60)
@@ -267,7 +293,7 @@ def main() -> None:
     print("Updating Chart.yaml...")
     print("=" * 60)
 
-    update_chart(CHART_PATH, latest_tag, runtime_api_version)
+    update_chart(CHART_PATH, latest_tag, runtime_api_version, dry_run=dry_run)
 
     if deploy_config:
         print()
@@ -280,8 +306,10 @@ def main() -> None:
             deploy_config.openhands_sha,
             deploy_config.runtime_api_sha,
             deploy_config.openhands_runtime_image_tag,
+            dry_run=dry_run,
         )
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(dry_run=args.dry_run)
