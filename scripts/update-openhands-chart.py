@@ -222,6 +222,10 @@ def update_values(
 
 
 def main() -> None:
+    print("=" * 60)
+    print("Fetching latest versions...")
+    print("=" * 60)
+
     latest_tag = get_latest_semver_tag("OpenHands/OpenHands")
     if latest_tag:
         print(f"Latest OpenHands tag: {latest_tag}")
@@ -252,6 +256,11 @@ def main() -> None:
         print(f"Latest runtime-api chart version: {runtime_api_version}")
     else:
         print("Could not fetch runtime-api version")
+
+    print()
+    print("=" * 60)
+    print("Updating chart files...")
+    print("=" * 60)
 
     update_chart(CHART_PATH, latest_tag, runtime_api_version)
 
