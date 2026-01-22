@@ -48,7 +48,7 @@ jobs:
         if: matrix.chart.name == 'openhands'
         run: |
           RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
-          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-pr.${{ github.event.pull_request.number }}"
+          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-pr-${{ github.event.pull_request.number }}"
           
           yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
           
