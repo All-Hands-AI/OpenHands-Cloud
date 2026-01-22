@@ -28,5 +28,3 @@ Updates the OpenHands helm charts to cut a new release.
    ```bash
    uv run scripts/update-openhands-chart.py
    ```
-
-The script will fetch the latest semantic version tag (format: `x.y.z`) from the OpenHands repository and update the `appVersion` field in the Helm chart.
