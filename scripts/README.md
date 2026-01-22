@@ -28,3 +28,15 @@ Updates the OpenHands helm charts to cut a new release.
    ```bash
    uv run scripts/update-openhands-chart.py
    ```
+
+#### DRY RUN mode
+
+```bash
+./scripts/update-openhands-chart.py --dry-run
+```
+
+Or using uv directly:
+
+```bash
+uv run scripts/update-openhands-chart.py --dry-run
+```
