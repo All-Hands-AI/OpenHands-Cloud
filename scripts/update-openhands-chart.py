@@ -17,9 +17,15 @@ from github import Auth, Github
 from ruamel.yaml import YAML
 
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+SHORT_SHA_LENGTH = 7
 SCRIPT_DIR = Path(__file__).parent
 CHART_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "values.yaml"
+
+
+def get_short_sha(sha: str) -> str:
+    """Return the first 7 characters of a SHA hash."""
+    return sha[:SHORT_SHA_LENGTH]
 
 
 @dataclass
@@ -153,8 +159,7 @@ def update_values(
     content = values_path.read_text()
 
     # Update enterprise-server image tag
-    enterprise_short_sha = openhands_sha[:7]
-    enterprise_new_tag = f"sha-{enterprise_short_sha}"
+    enterprise_new_tag = f"sha-{get_short_sha(openhands_sha)}"
 
     enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
     enterprise_match = re.search(enterprise_pattern, content)
@@ -170,8 +175,7 @@ def update_values(
         print("Could not find enterprise-server image tag in values.yaml")
 
     # Update runtime-api image tag
-    runtime_api_short_sha = runtime_api_sha[:7]
-    runtime_api_new_tag = f"sha-{runtime_api_short_sha}"
+    runtime_api_new_tag = f"sha-{get_short_sha(runtime_api_sha)}"
 
     runtime_api_pattern = r"(runtime-api:\s*\n(?:.*\n)*?\s*image:\s*\n\s*tag:\s*)(\S+)"
     runtime_api_match = re.search(runtime_api_pattern, content)

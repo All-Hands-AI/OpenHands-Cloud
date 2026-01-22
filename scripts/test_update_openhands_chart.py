@@ -23,8 +23,10 @@ spec.loader.exec_module(module)
 bump_patch_version = module.bump_patch_version
 update_chart = module.update_chart
 update_values = module.update_values
+get_short_sha = module.get_short_sha
 DeployConfig = module.DeployConfig
 SEMVER_PATTERN = module.SEMVER_PATTERN
+SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
 
 
 class TestSemverPattern:
@@ -44,6 +46,26 @@ class TestSemverPattern:
         assert not SEMVER_PATTERN.match("1.2.3+build")
         assert not SEMVER_PATTERN.match("latest")
         assert not SEMVER_PATTERN.match("")
+
+
+class TestGetShortSha:
+    """Tests for get_short_sha function."""
+
+    def test_returns_first_seven_chars(self):
+        assert get_short_sha("abcdefghijklmnop") == "abcdefg"
+
+    def test_full_sha_length(self):
+        sha = "6ccd42bb2975866f1abc21e635c01d2afbdd1acf"
+        assert get_short_sha(sha) == "6ccd42b"
+
+    def test_exactly_seven_chars(self):
+        assert get_short_sha("1234567") == "1234567"
+
+    def test_short_sha_length_constant(self):
+        assert SHORT_SHA_LENGTH == 7
+
+    def test_numeric_sha(self):
+        assert get_short_sha("1234567890abcdef") == "1234567"
 
 
 class TestBumpPatchVersion:
