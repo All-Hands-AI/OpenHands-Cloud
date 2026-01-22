@@ -15,6 +15,8 @@ Updates the OpenHands helm charts to cut a new release.
    export GITHUB_TOKEN=your_github_token
    ```
 
+   > Try getting with: `gh auth status --show-token`
+
 2. Run the script:
 
    ```bash
