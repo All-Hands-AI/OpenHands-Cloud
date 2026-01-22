@@ -26,6 +26,7 @@ update_values = module.update_values
 get_short_sha = module.get_short_sha
 format_sha_tag = module.format_sha_tag
 get_branch_name = module.get_branch_name
+has_uncommitted_changes = module.has_uncommitted_changes
 DeployConfig = module.DeployConfig
 SEMVER_PATTERN = module.SEMVER_PATTERN
 SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
@@ -103,6 +104,15 @@ class TestGetBranchName:
 
     def test_branch_name_real_version(self):
         assert get_branch_name("1.2.1") == "update-openhands-chart-1.2.1"
+
+
+class TestHasUncommittedChanges:
+    """Tests for has_uncommitted_changes function."""
+
+    def test_returns_bool(self):
+        # Function should return a boolean
+        result = has_uncommitted_changes()
+        assert isinstance(result, bool)
 
 
 class TestBumpPatchVersion:

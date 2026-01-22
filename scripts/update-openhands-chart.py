@@ -241,6 +241,17 @@ def get_branch_name(app_version: str) -> str:
     return f"update-openhands-chart-{app_version}"
 
 
+def has_uncommitted_changes() -> bool:
+    """Check if there are uncommitted changes in the working directory."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return bool(result.stdout.strip())
+
+
 def create_branch_and_pr(app_version: str) -> str | None:
     """Create a new branch from main, commit only chart changes, and open a draft PR."""
     token = os.environ.get("GITHUB_TOKEN")
@@ -248,7 +259,13 @@ def create_branch_and_pr(app_version: str) -> str | None:
         print("GITHUB_TOKEN required to create PR")
         return None
 
+    # Check for uncommitted changes before proceeding
+    if has_uncommitted_changes():
+        print("Error: Uncommitted changes detected. Please commit or discard changes before running.")
+        return None
+
     branch_name = get_branch_name(app_version)
+    current_branch = None
 
     try:
         # Save current branch to return to later
@@ -259,14 +276,6 @@ def create_branch_and_pr(app_version: str) -> str | None:
             capture_output=True,
             text=True,
         ).stdout.strip()
-
-        # Stash any uncommitted changes (including chart changes)
-        subprocess.run(
-            ["git", "stash", "push", "-m", "temp-chart-updates"],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
 
         # Fetch latest main
         subprocess.run(
@@ -279,14 +288,6 @@ def create_branch_and_pr(app_version: str) -> str | None:
         # Create new branch from main
         subprocess.run(
             ["git", "checkout", "-b", branch_name, "origin/main"],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        # Apply stashed changes
-        subprocess.run(
-            ["git", "stash", "pop"],
             cwd=REPO_ROOT,
             check=True,
             capture_output=True,
@@ -342,14 +343,15 @@ def create_branch_and_pr(app_version: str) -> str | None:
     except subprocess.CalledProcessError as e:
         print(f"Git command failed: {e}")
         # Try to return to original branch on error
-        try:
-            subprocess.run(
-                ["git", "checkout", current_branch],
-                cwd=REPO_ROOT,
-                capture_output=True,
-            )
-        except Exception:
-            pass
+        if current_branch:
+            try:
+                subprocess.run(
+                    ["git", "checkout", current_branch],
+                    cwd=REPO_ROOT,
+                    capture_output=True,
+                )
+            except Exception:
+                pass
         return None
     except Exception as e:
         print(f"Error creating PR: {e}")
