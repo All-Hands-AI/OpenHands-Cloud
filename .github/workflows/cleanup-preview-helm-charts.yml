@@ -1,0 +1,24 @@
+name: Cleanup Preview Charts
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        chart:
+          - name: runtime-api
+          - name: image-loader
+          - name: openhands
+    steps:
+      - name: Delete preview package version
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: charts/${{ matrix.chart.name }}
+          package-type: container
+          version-pattern: ".*-pr-${{ github.event.pull_request.number }}$"
