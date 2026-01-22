@@ -10,6 +10,7 @@ import base64
 import io
 import os
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,8 +21,10 @@ from ruamel.yaml import YAML
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SHORT_SHA_LENGTH = 7
 SCRIPT_DIR = Path(__file__).parent
-CHART_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "Chart.yaml"
-VALUES_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "values.yaml"
+REPO_ROOT = SCRIPT_DIR.parent
+CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
+VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
+GITHUB_REPO = "All-Hands-AI/OpenHands-Cloud"
 
 
 def get_short_sha(sha: str) -> str:
@@ -233,6 +236,76 @@ def update_values(
         values_path.write_text(content)
 
 
+def get_branch_name(app_version: str) -> str:
+    """Generate branch name for the update PR."""
+    return f"update-openhands-chart-{app_version}"
+
+
+def create_branch_and_pr(app_version: str) -> str | None:
+    """Create a new branch, commit changes, and open a draft PR."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("GITHUB_TOKEN required to create PR")
+        return None
+
+    branch_name = get_branch_name(app_version)
+
+    try:
+        # Create and checkout new branch
+        subprocess.run(
+            ["git", "checkout", "-b", branch_name],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Stage changes
+        subprocess.run(
+            ["git", "add", "charts/openhands/Chart.yaml", "charts/openhands/values.yaml"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Commit changes
+        commit_message = f"Update OpenHands chart to {app_version}"
+        subprocess.run(
+            ["git", "commit", "-m", commit_message],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Push branch
+        subprocess.run(
+            ["git", "push", "-u", "origin", branch_name],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Create draft PR using GitHub API
+        gh = Github(auth=Auth.Token(token))
+        repo = gh.get_repo(GITHUB_REPO)
+
+        pr = repo.create_pull(
+            title=f"Update OpenHands chart to {app_version}",
+            body=f"Automated update of OpenHands Helm chart to version {app_version}.",
+            head=branch_name,
+            base="main",
+            draft=True,
+        )
+
+        return pr.html_url
+
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed: {e}")
+        return None
+    except Exception as e:
+        print(f"Error creating PR: {e}")
+        return None
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -308,6 +381,23 @@ def main(dry_run: bool = False) -> None:
             deploy_config.openhands_runtime_image_tag,
             dry_run=dry_run,
         )
+
+    # Handle PR creation
+    branch_name = get_branch_name(latest_tag)
+    print()
+    print("=" * 60)
+    print("Pull Request...")
+    print("=" * 60)
+
+    if dry_run:
+        print(f"Would create draft PR with branch: {branch_name}")
+    else:
+        print(f"Creating draft PR with branch: {branch_name}")
+        pr_url = create_branch_and_pr(latest_tag)
+        if pr_url:
+            print(f"Draft PR created: {pr_url}")
+        else:
+            print("Failed to create PR")
 
 
 if __name__ == "__main__":
