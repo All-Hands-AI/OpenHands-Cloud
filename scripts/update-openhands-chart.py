@@ -19,6 +19,7 @@ from ruamel.yaml import YAML
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SCRIPT_DIR = Path(__file__).parent
 CHART_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "Chart.yaml"
+VALUES_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "values.yaml"
 
 
 @dataclass
@@ -142,6 +143,29 @@ def update_chart(
     yaml.dump(chart_data, chart_path)
 
 
+def update_values(values_path: Path, openhands_sha: str) -> None:
+    """Update the enterprise-server image tag in values.yaml."""
+    short_sha = openhands_sha[:7]
+    new_tag = f"sha-{short_sha}"
+
+    content = values_path.read_text()
+
+    # Find and replace the image tag using regex
+    pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
+    match = re.search(pattern, content)
+
+    if match:
+        old_tag = match.group(2)
+        if old_tag == new_tag:
+            print(f"enterprise-server image tag unchanged: {old_tag} (already latest)")
+        else:
+            new_content = re.sub(pattern, rf"\g<1>{new_tag}", content)
+            values_path.write_text(new_content)
+            print(f"Updated enterprise-server image tag: {old_tag} -> {new_tag}")
+    else:
+        print("Could not find enterprise-server image tag in values.yaml")
+
+
 def main() -> None:
     latest_tag = get_latest_semver_tag("OpenHands/OpenHands")
     if latest_tag:
@@ -175,6 +199,9 @@ def main() -> None:
         print("Could not fetch runtime-api version")
 
     update_chart(CHART_PATH, latest_tag, runtime_api_version)
+
+    if deploy_config:
+        update_values(VALUES_PATH, deploy_config.openhands_sha)
 
 
 if __name__ == "__main__":
