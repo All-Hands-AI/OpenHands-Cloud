@@ -2,7 +2,7 @@
 
 ## update-openhands-chart.py
 
-Updates the `appVersion` in `charts/openhands/Chart.yaml` to the latest semantic version tag from the OpenHands repository.
+Updates the OpenHands helm charts to cut a new release.
 
 ### Prerequisites
 
