@@ -38,3 +38,17 @@ Or using uv directly:
 ```bash
 uv run scripts/update-openhands-chart.py --dry-run
 ```
+
+## Tests
+
+Run the tests:
+
+```bash
+./scripts/test_update_openhands_chart.py
+```
+
+Or using uv directly:
+
+```bash
+uv run scripts/test_update_openhands_chart.py
+```
