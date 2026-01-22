@@ -144,7 +144,10 @@ def update_chart(
 
 
 def update_values(
-    values_path: Path, openhands_sha: str, runtime_api_sha: str
+    values_path: Path,
+    openhands_sha: str,
+    runtime_api_sha: str,
+    runtime_image_tag: str,
 ) -> None:
     """Update image tags in values.yaml."""
     content = values_path.read_text()
@@ -167,21 +170,49 @@ def update_values(
         print("Could not find enterprise-server image tag in values.yaml")
 
     # Update runtime-api image tag
-    runtime_short_sha = runtime_api_sha[:7]
-    runtime_new_tag = f"sha-{runtime_short_sha}"
+    runtime_api_short_sha = runtime_api_sha[:7]
+    runtime_api_new_tag = f"sha-{runtime_api_short_sha}"
 
-    runtime_pattern = r"(runtime-api:\s*\n(?:.*\n)*?\s*image:\s*\n\s*tag:\s*)(\S+)"
+    runtime_api_pattern = r"(runtime-api:\s*\n(?:.*\n)*?\s*image:\s*\n\s*tag:\s*)(\S+)"
+    runtime_api_match = re.search(runtime_api_pattern, content)
+
+    if runtime_api_match:
+        old_tag = runtime_api_match.group(2)
+        if old_tag == runtime_api_new_tag:
+            print(f"runtime-api image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(runtime_api_pattern, rf"\g<1>{runtime_api_new_tag}", content)
+            print(f"Updated runtime-api image tag: {old_tag} -> {runtime_api_new_tag}")
+    else:
+        print("Could not find runtime-api image tag in values.yaml")
+
+    # Update runtime image tag (under runtime.image.tag)
+    runtime_pattern = r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
     runtime_match = re.search(runtime_pattern, content)
 
     if runtime_match:
         old_tag = runtime_match.group(2)
-        if old_tag == runtime_new_tag:
-            print(f"runtime-api image tag unchanged: {old_tag} (already latest)")
+        if old_tag == runtime_image_tag:
+            print(f"runtime image tag unchanged: {old_tag} (already latest)")
         else:
-            content = re.sub(runtime_pattern, rf"\g<1>{runtime_new_tag}", content)
-            print(f"Updated runtime-api image tag: {old_tag} -> {runtime_new_tag}")
+            content = re.sub(runtime_pattern, rf"\g<1>{runtime_image_tag}", content)
+            print(f"Updated runtime image tag: {old_tag} -> {runtime_image_tag}")
     else:
-        print("Could not find runtime-api image tag in values.yaml")
+        print("Could not find runtime image tag in values.yaml")
+
+    # Update warmRuntimes image (contains full image path with tag)
+    warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
+    warm_runtime_match = re.search(warm_runtime_pattern, content)
+
+    if warm_runtime_match:
+        old_tag = warm_runtime_match.group(2)
+        if old_tag == runtime_image_tag:
+            print(f"warmRuntimes image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(warm_runtime_pattern, rf'\g<1>{runtime_image_tag}"', content)
+            print(f"Updated warmRuntimes image tag: {old_tag} -> {runtime_image_tag}")
+    else:
+        print("Could not find warmRuntimes image tag in values.yaml")
 
     values_path.write_text(content)
 
@@ -222,7 +253,10 @@ def main() -> None:
 
     if deploy_config:
         update_values(
-            VALUES_PATH, deploy_config.openhands_sha, deploy_config.runtime_api_sha
+            VALUES_PATH,
+            deploy_config.openhands_sha,
+            deploy_config.runtime_api_sha,
+            deploy_config.openhands_runtime_image_tag,
         )
 
 
