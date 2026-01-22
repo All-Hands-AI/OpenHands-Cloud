@@ -23,6 +23,7 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
+      max_parallel: 1
 
     steps:
       - name: Checkout
@@ -43,6 +44,16 @@ jobs:
           # Update Chart.yaml with preview version
           yq -i ".version = \"${PREVIEW_VERSION}\"" charts/${{ matrix.chart.name }}/Chart.yaml
       
+      - name: Update runtime-api dependency version
+        if: matrix.chart.name == 'openhands'
+        run: |
+          RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
+          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-pr.${{ github.event.pull_request.number }}"
+          
+          yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
+          
+          helm dependency update charts/openhands
+
       - name: Test ${{ matrix.chart.name }} chart with default values
         run: |
           echo "Testing ${{ matrix.chart.name }} chart with default values"
