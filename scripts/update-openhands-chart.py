@@ -5,8 +5,11 @@
 # ///
 """Update OpenHands chart script."""
 
+import base64
+import io
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
@@ -16,6 +19,15 @@ from ruamel.yaml import YAML
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SCRIPT_DIR = Path(__file__).parent
 CHART_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "Chart.yaml"
+
+
+@dataclass
+class DeployConfig:
+    """Configuration values from the deploy workflow."""
+
+    openhands_sha: str
+    openhands_runtime_image_tag: str
+    runtime_api_sha: str
 
 
 def get_latest_semver_tag(repo_name: str) -> str | None:
@@ -31,6 +43,37 @@ def get_latest_semver_tag(repo_name: str) -> str | None:
     except Exception as e:
         print(f"Error fetching tags from {repo_name}: {e}")
     return None
+
+
+def get_deploy_config(repo_name: str, ref: str | None = None) -> DeployConfig | None:
+    """Fetch deployment config values from deploy.yaml workflow."""
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("GITHUB_TOKEN required to access deploy workflow")
+        return None
+
+    headers = {"Authorization": f"Bearer {token}"}
+    url = f"https://api.github.com/repos/{repo_name}/contents/.github/workflows/deploy.yaml"
+    if ref:
+        url += f"?ref={ref}"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        content = base64.b64decode(response.json()["content"]).decode("utf-8")
+        yaml = YAML()
+        workflow = yaml.load(io.StringIO(content))
+
+        env = workflow.get("env", {})
+        return DeployConfig(
+            openhands_sha=env.get("OPENHANDS_SHA", ""),
+            openhands_runtime_image_tag=env.get("OPENHANDS_RUNTIME_IMAGE_TAG", ""),
+            runtime_api_sha=env.get("RUNTIME_API_SHA", ""),
+        )
+    except Exception as e:
+        print(f"Error fetching deploy config: {e}")
+        return None
 
 
 def get_latest_helm_chart_version(org: str, package: str) -> str | None:
@@ -112,6 +155,16 @@ def main() -> None:
         print(f"Latest deploy tag: {deploy_tag}")
     else:
         print("No deploy semantic version tag found")
+
+    # Fetch deploy config from the latest tagged version
+    deploy_config = get_deploy_config("OpenHands/deploy", ref=deploy_tag)
+    if deploy_config:
+        print(f"Deploy config (from {deploy_tag}):")
+        print(f"  OPENHANDS_SHA: {deploy_config.openhands_sha}")
+        print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
+        print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
+    else:
+        print("Could not fetch deploy config")
 
     runtime_api_version = get_latest_helm_chart_version(
         "all-hands-ai", "helm-charts/runtime-api"
