@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 import requests
-from github import Github
+from github import Auth, Github
 from ruamel.yaml import YAML
 
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
@@ -20,12 +20,16 @@ CHART_PATH = SCRIPT_DIR.parent / "charts" / "openhands" / "Chart.yaml"
 
 def get_latest_semver_tag(repo_name: str) -> str | None:
     """Fetch the latest semantic version tag (x.y.z) from a GitHub repository."""
-    gh = Github()
-    repo = gh.get_repo(repo_name)
-    tags = repo.get_tags()
-    for tag in tags:
-        if SEMVER_PATTERN.match(tag.name):
-            return tag.name
+    token = os.environ.get("GITHUB_TOKEN")
+    gh = Github(auth=Auth.Token(token)) if token else Github()
+    try:
+        repo = gh.get_repo(repo_name)
+        tags = repo.get_tags()
+        for tag in tags:
+            if SEMVER_PATTERN.match(tag.name):
+                return tag.name
+    except Exception as e:
+        print(f"Error fetching tags from {repo_name}: {e}")
     return None
 
 
@@ -102,6 +106,12 @@ def main() -> None:
     else:
         print("No semantic version tag found")
         return
+
+    deploy_tag = get_latest_semver_tag("OpenHands/deploy")
+    if deploy_tag:
+        print(f"Latest deploy tag: {deploy_tag}")
+    else:
+        print("No deploy semantic version tag found")
 
     runtime_api_version = get_latest_helm_chart_version(
         "all-hands-ai", "helm-charts/runtime-api"
