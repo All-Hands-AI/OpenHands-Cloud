@@ -28,6 +28,11 @@ def get_short_sha(sha: str) -> str:
     return sha[:SHORT_SHA_LENGTH]
 
 
+def format_sha_tag(sha: str) -> str:
+    """Format a SHA hash into a sha-SHORT_SHA tag format."""
+    return f"sha-{get_short_sha(sha)}"
+
+
 @dataclass
 class DeployConfig:
     """Configuration values from the deploy workflow."""
@@ -159,7 +164,7 @@ def update_values(
     content = values_path.read_text()
 
     # Update enterprise-server image tag
-    enterprise_new_tag = f"sha-{get_short_sha(openhands_sha)}"
+    enterprise_new_tag = format_sha_tag(openhands_sha)
 
     enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
     enterprise_match = re.search(enterprise_pattern, content)
@@ -175,7 +180,7 @@ def update_values(
         print("Could not find enterprise-server image tag in values.yaml")
 
     # Update runtime-api image tag
-    runtime_api_new_tag = f"sha-{get_short_sha(runtime_api_sha)}"
+    runtime_api_new_tag = format_sha_tag(runtime_api_sha)
 
     runtime_api_pattern = r"(runtime-api:\s*\n(?:.*\n)*?\s*image:\s*\n\s*tag:\s*)(\S+)"
     runtime_api_match = re.search(runtime_api_pattern, content)

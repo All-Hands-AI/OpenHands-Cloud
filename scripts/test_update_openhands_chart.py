@@ -24,6 +24,7 @@ bump_patch_version = module.bump_patch_version
 update_chart = module.update_chart
 update_values = module.update_values
 get_short_sha = module.get_short_sha
+format_sha_tag = module.format_sha_tag
 DeployConfig = module.DeployConfig
 SEMVER_PATTERN = module.SEMVER_PATTERN
 SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
@@ -66,6 +67,28 @@ class TestGetShortSha:
 
     def test_numeric_sha(self):
         assert get_short_sha("1234567890abcdef") == "1234567"
+
+
+class TestFormatShaTag:
+    """Tests for format_sha_tag function."""
+
+    def test_formats_with_sha_prefix(self):
+        assert format_sha_tag("abcdefghijklmnop") == "sha-abcdefg"
+
+    def test_full_sha_to_tag(self):
+        sha = "6ccd42bb2975866f1abc21e635c01d2afbdd1acf"
+        assert format_sha_tag(sha) == "sha-6ccd42b"
+
+    def test_numeric_sha_to_tag(self):
+        assert format_sha_tag("1234567890abcdef") == "sha-1234567"
+
+    def test_exactly_seven_chars(self):
+        assert format_sha_tag("abcdefg") == "sha-abcdefg"
+
+    def test_real_world_sha(self):
+        # Test with actual SHA from deploy workflow
+        sha = "743f6256a690efc388af6e960ad8009f5952e721"
+        assert format_sha_tag(sha) == "sha-743f625"
 
 
 class TestBumpPatchVersion:
