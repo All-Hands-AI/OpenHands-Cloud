@@ -242,7 +242,7 @@ def get_branch_name(app_version: str) -> str:
 
 
 def create_branch_and_pr(app_version: str) -> str | None:
-    """Create a new branch, commit changes, and open a draft PR."""
+    """Create a new branch from main, commit only chart changes, and open a draft PR."""
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         print("GITHUB_TOKEN required to create PR")
@@ -251,15 +251,48 @@ def create_branch_and_pr(app_version: str) -> str | None:
     branch_name = get_branch_name(app_version)
 
     try:
-        # Create and checkout new branch
+        # Save current branch to return to later
+        current_branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+        # Stash any uncommitted changes (including chart changes)
         subprocess.run(
-            ["git", "checkout", "-b", branch_name],
+            ["git", "stash", "push", "-m", "temp-chart-updates"],
             cwd=REPO_ROOT,
             check=True,
             capture_output=True,
         )
 
-        # Stage changes
+        # Fetch latest main
+        subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Create new branch from main
+        subprocess.run(
+            ["git", "checkout", "-b", branch_name, "origin/main"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Apply stashed changes
+        subprocess.run(
+            ["git", "stash", "pop"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
+        # Stage only chart changes
         subprocess.run(
             ["git", "add", "charts/openhands/Chart.yaml", "charts/openhands/values.yaml"],
             cwd=REPO_ROOT,
@@ -296,10 +329,27 @@ def create_branch_and_pr(app_version: str) -> str | None:
             draft=True,
         )
 
+        # Return to original branch
+        subprocess.run(
+            ["git", "checkout", current_branch],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+
         return pr.html_url
 
     except subprocess.CalledProcessError as e:
         print(f"Git command failed: {e}")
+        # Try to return to original branch on error
+        try:
+            subprocess.run(
+                ["git", "checkout", current_branch],
+                cwd=REPO_ROOT,
+                capture_output=True,
+            )
+        except Exception:
+            pass
         return None
     except Exception as e:
         print(f"Error creating PR: {e}")
