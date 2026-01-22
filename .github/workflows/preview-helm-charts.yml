@@ -77,14 +77,14 @@ jobs:
           echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_OUTPUT
           echo "Using repository owner: ${REPO_OWNER}"
 
-      # - name: Publish ${{ matrix.chart.name }} chart to GHCR
-      #   uses: appany/helm-oci-chart-releaser@v0.4.2
-      #   with:
-      #     name: ${{ matrix.chart.name }}
-      #     repository: helm-charts
-      #     path: ${{ matrix.chart.path }}
-      #     registry: ghcr.io/${{ steps.chart_info.outputs.REPO_OWNER }}
-      #     registry_username: ${{ github.actor }}
-      #     registry_password: ${{ secrets.GITHUB_TOKEN }}
-      #     update_dependencies: 'true'
-      #     tag: ${{ steps.chart_info.outputs.VERSION }}
+      - name: Publish ${{ matrix.chart.name }} chart to GHCR
+        uses: appany/helm-oci-chart-releaser@v0.4.2
+        with:
+          name: ${{ matrix.chart.name }}
+          repository: helm-charts
+          path: ${{ matrix.chart.path }}
+          registry: ghcr.io/${{ steps.chart_info.outputs.REPO_OWNER }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          update_dependencies: 'true'
+          tag: ${{ steps.chart_info.outputs.VERSION }}
