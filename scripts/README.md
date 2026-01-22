@@ -1,4 +1,4 @@
-# Update OpenHands chart
+# Description
 
 Updates the OpenHands helm charts to cut a new release.
 
