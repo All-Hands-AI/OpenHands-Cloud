@@ -48,10 +48,10 @@ class DeployConfig:
     runtime_api_sha: str
 
 
-def get_latest_semver_tag(repo_name: str) -> str | None:
+def get_latest_semver_tag(token: str, repo_name: str) -> str | None:
     """Fetch the latest semantic version tag (x.y.z) from a GitHub repository."""
-    token = os.environ.get("GITHUB_TOKEN")
-    gh = Github(auth=Auth.Token(token)) if token else Github()
+    # TODO: use github package or use api but not both in the script
+    gh = Github(auth=Auth.Token(token))
     try:
         repo = gh.get_repo(repo_name)
         tags = repo.get_tags()
@@ -120,13 +120,8 @@ def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | 
         return None
 
 
-def get_deploy_config(repo_name: str, ref: str | None = None) -> DeployConfig | None:
+def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> DeployConfig | None:
     """Fetch deployment config values from deploy.yaml workflow."""
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("GITHUB_TOKEN required to access deploy workflow")
-        return None
-
     headers = {"Authorization": f"Bearer {token}"}
     url = f"https://api.github.com/repos/{repo_name}/contents/.github/workflows/deploy.yaml"
     if ref:
@@ -362,6 +357,11 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
         print("=" * 60)
         print()
 
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("Environment variable GITHUB_TOKEN is required. Try getting with: gh auth status --show-token")
+        return
+
     print("=" * 60)
     print("Fetching latest versions...")
     print("=" * 60)
@@ -369,7 +369,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     if deploy_tag:
         print(f"Using specified deploy tag: {deploy_tag}")
     else:
-        deploy_tag = get_latest_semver_tag("OpenHands/deploy")
+        deploy_tag = get_latest_semver_tag(token, "OpenHands/deploy")
         if deploy_tag:
             print(f"Latest deploy tag: {deploy_tag}")
         else:
@@ -377,7 +377,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
             return
 
     # Fetch deploy config from the tagged version
-    deploy_config = get_deploy_config("OpenHands/deploy", ref=deploy_tag)
+    deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
     if not deploy_config:
         print("Could not fetch deploy config")
         return
