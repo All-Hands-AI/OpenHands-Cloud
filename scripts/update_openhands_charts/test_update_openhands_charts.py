@@ -609,10 +609,22 @@ warmRuntimes:
             yield Path(f.name)
         Path(f.name).unlink(missing_ok=True)
 
+    def test_update_image_tag(self, temp_runtime_api_values_file):
+        """Test that runtime-api image tag is updated correctly."""
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
+            runtime_image_tag="9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik",
+        )
+
+        content = temp_runtime_api_values_file.read_text()
+        assert "tag: sha-abc1234" in content
+
     def test_update_warm_runtimes_image(self, temp_runtime_api_values_file):
         """Test that warmRuntimes image tag is updated correctly."""
         update_runtime_api_values(
             temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
             runtime_image_tag="9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik",
         )
 
@@ -624,28 +636,31 @@ warmRuntimes:
         # First update
         update_runtime_api_values(
             temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
         # Second update with same value
         update_runtime_api_values(
             temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
         captured = capsys.readouterr()
+        assert "runtime-api image tag unchanged" in captured.out
         assert "runtime-api warmRuntimes image tag unchanged" in captured.out
 
     def test_preserves_other_content(self, temp_runtime_api_values_file):
         """Test that other content is preserved."""
         update_runtime_api_values(
             temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
         content = temp_runtime_api_values_file.read_text()
         assert "replicaCount: 1" in content
-        assert "tag: sha-0c907c9" in content
         assert 'working_dir: "/openhands/code/"' in content
 
     def test_dry_run_no_file_changes(self, temp_runtime_api_values_file):
@@ -654,6 +669,7 @@ warmRuntimes:
 
         update_runtime_api_values(
             temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
             runtime_image_tag="newruntime123-nikolaik",
             dry_run=True,
         )

@@ -296,11 +296,27 @@ def update_runtime_api_chart(
 
 def update_runtime_api_values(
     values_path: Path,
+    runtime_api_sha: str,
     runtime_image_tag: str,
     dry_run: bool = False,
 ) -> None:
-    """Update warmRuntimes default config image in runtime-api values.yaml."""
+    """Update image tag and warmRuntimes default config image in runtime-api values.yaml."""
     content = values_path.read_text()
+
+    # Update image.tag with sha-SHORT_SHA format
+    new_image_tag = format_sha_tag(runtime_api_sha)
+    image_tag_pattern = r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
+    image_tag_match = re.search(image_tag_pattern, content)
+
+    if image_tag_match:
+        old_tag = image_tag_match.group(2)
+        if old_tag == new_image_tag:
+            print(f"runtime-api image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(image_tag_pattern, rf'\g<1>{new_image_tag}', content)
+            print(f"Updated runtime-api image tag: {old_tag} -> {new_image_tag}")
+    else:
+        print("Could not find runtime-api image tag in values.yaml")
 
     # Update warmRuntimes image (contains full image path with tag)
     warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
@@ -394,6 +410,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Updating runtime-api values.yaml...")
     update_runtime_api_values(
         RUNTIME_API_VALUES_PATH,
+        deploy_config.runtime_api_sha,
         deploy_config.openhands_runtime_image_tag,
         dry_run=dry_run,
     )
