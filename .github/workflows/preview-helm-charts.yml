@@ -134,7 +134,7 @@ jobs:
           yq -i ".version = \"${PREVIEW_VERSION}\"" charts/${{ matrix.chart.name }}/Chart.yaml
       
       - name: Update runtime-api dependency version
-        if: steps.check.outputs.should_publish == 'true' && matrix.chart.name == 'openhands'
+        if: steps.check.outputs.should_publish == 'true' && matrix.chart.name == 'openhands' && needs.detect-changes.outputs.runtime-api == 'true'
         run: |
           RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
           RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
