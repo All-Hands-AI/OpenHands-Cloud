@@ -367,7 +367,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
         OPENHANDS_REPO_PATH, deploy_config.openhands_sha
     )
     if openhands_version:
-        print(f"OpenHands version (tag containing {deploy_config.openhands_sha[:7]}): {openhands_version}")
+        print(f"OpenHands version (latest tag containing OPENHANDS_SHA): {openhands_version}")
     else:
         print(f"No semantic version tag found containing commit {deploy_config.openhands_sha[:7]}")
         return
