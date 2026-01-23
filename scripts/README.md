@@ -1,6 +1,6 @@
 # Description
 
-Updates the OpenHands helm charts to cut a new release.
+Updates the OpenHands and runtime-api helm charts to cut a new enterprise chart release.
 
 ## Prerequisites
 
