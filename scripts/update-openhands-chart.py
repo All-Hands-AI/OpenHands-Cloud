@@ -10,6 +10,7 @@ import base64
 import io
 import os
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,7 @@ CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
 RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
+OPENHANDS_REPO_PATH = REPO_ROOT.parent / "OpenHands"
 
 
 def get_short_sha(sha: str) -> str:
@@ -59,6 +61,54 @@ def get_latest_semver_tag(repo_name: str) -> str | None:
     except Exception as e:
         print(f"Error fetching tags from {repo_name}: {e}")
     return None
+
+
+def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | None:
+    """Get the latest semantic version tag containing a specific commit from a local git repo.
+
+    This function:
+    1. Runs git pull to fetch the latest updates
+    2. Runs git tag --contains <commit_sha> to get all tags containing the commit
+    3. Filters for semantic version tags and returns the latest one
+    """
+    if not repo_path.exists():
+        print(f"Repository not found at {repo_path}")
+        return None
+
+    try:
+        # Pull latest updates
+        subprocess.run(
+            ["git", "pull"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Get tags containing the commit
+        result = subprocess.run(
+            ["git", "tag", "--contains", commit_sha],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        tags = result.stdout.strip().split("\n")
+        # Filter for semantic version tags
+        semver_tags = [t for t in tags if t and SEMVER_PATTERN.match(t)]
+
+        if semver_tags:
+            # Sort by version number (descending) and return the latest
+            semver_tags.sort(key=lambda v: list(map(int, v.split("."))), reverse=True)
+            return semver_tags[0]
+
+        return None
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed: {e}")
+        return None
+    except Exception as e:
+        print(f"Error getting tags containing commit: {e}")
+        return None
 
 
 def get_deploy_config(repo_name: str, ref: str | None = None) -> DeployConfig | None:
@@ -314,13 +364,6 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Fetching latest versions...")
     print("=" * 60)
 
-    latest_tag = get_latest_semver_tag("OpenHands/OpenHands")
-    if latest_tag:
-        print(f"Latest OpenHands tag: {latest_tag}")
-    else:
-        print("No semantic version tag found")
-        return
-
     if deploy_tag:
         print(f"Using specified deploy tag: {deploy_tag}")
     else:
@@ -329,16 +372,28 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
             print(f"Latest deploy tag: {deploy_tag}")
         else:
             print("No deploy semantic version tag found")
+            return
 
-    # Fetch deploy config from the latest tagged version
+    # Fetch deploy config from the tagged version
     deploy_config = get_deploy_config("OpenHands/deploy", ref=deploy_tag)
-    if deploy_config:
-        print(f"Deploy config (from {deploy_tag}):")
-        print(f"  OPENHANDS_SHA: {deploy_config.openhands_sha}")
-        print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
-        print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
-    else:
+    if not deploy_config:
         print("Could not fetch deploy config")
+        return
+
+    print(f"Deploy config (from {deploy_tag}):")
+    print(f"  OPENHANDS_SHA: {deploy_config.openhands_sha}")
+    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
+    print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
+
+    # Get the semver tag containing the OPENHANDS_SHA from local OpenHands repo
+    openhands_version = get_semver_tag_containing_commit(
+        OPENHANDS_REPO_PATH, deploy_config.openhands_sha
+    )
+    if openhands_version:
+        print(f"OpenHands version (tag containing {deploy_config.openhands_sha[:7]}): {openhands_version}")
+    else:
+        print(f"No semantic version tag found containing commit {deploy_config.openhands_sha[:7]}")
+        return
 
     runtime_api_version = get_latest_helm_chart_version(
         "all-hands-ai", "helm-charts/runtime-api"
@@ -353,7 +408,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Updating Chart.yaml...")
     print("=" * 60)
 
-    update_chart(CHART_PATH, latest_tag, runtime_api_version, dry_run=dry_run)
+    update_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
 
     if deploy_config:
         print()

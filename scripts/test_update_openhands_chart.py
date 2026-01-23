@@ -27,9 +27,11 @@ update_runtime_api_chart = module.update_runtime_api_chart
 update_runtime_api_values = module.update_runtime_api_values
 get_short_sha = module.get_short_sha
 format_sha_tag = module.format_sha_tag
+get_semver_tag_containing_commit = module.get_semver_tag_containing_commit
 DeployConfig = module.DeployConfig
 SEMVER_PATTERN = module.SEMVER_PATTERN
 SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
+OPENHANDS_REPO_PATH = module.OPENHANDS_REPO_PATH
 
 
 class TestSemverPattern:
@@ -657,6 +659,22 @@ warmRuntimes:
         )
 
         assert temp_runtime_api_values_file.read_text() == original_content
+
+
+class TestGetSemverTagContainingCommit:
+    """Tests for get_semver_tag_containing_commit function."""
+
+    def test_returns_none_for_nonexistent_repo(self):
+        """Test that function returns None for non-existent repository."""
+        result = get_semver_tag_containing_commit(
+            Path("/nonexistent/repo"), "abc1234"
+        )
+        assert result is None
+
+    def test_openhands_repo_path_constant(self):
+        """Test that OPENHANDS_REPO_PATH is correctly set relative to REPO_ROOT."""
+        # The path should be at the parent of REPO_ROOT (OpenHands-Cloud)
+        assert OPENHANDS_REPO_PATH.name == "OpenHands"
 
 
 if __name__ == "__main__":
