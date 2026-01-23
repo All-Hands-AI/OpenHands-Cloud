@@ -405,17 +405,15 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
 
     print()
     print("=" * 60)
-    print("Updating Chart.yaml...")
+    print("Updating openhands chart...")
     print("=" * 60)
 
+    print("Updating openhands Chart.yaml...")
     update_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
 
     if deploy_config:
         print()
-        print("=" * 60)
-        print("Updating values.yaml...")
-        print("=" * 60)
-
+        print("Updating openhands values.yaml...")
         update_values(
             VALUES_PATH,
             deploy_config.openhands_sha,
@@ -426,16 +424,14 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
 
         print()
         print("=" * 60)
-        print("Updating runtime-api Chart.yaml...")
+        print("Updating runtime-api chart...")
         print("=" * 60)
 
+        print("Updating runtime-api Chart.yaml...")
         update_runtime_api_chart(RUNTIME_API_CHART_PATH, dry_run=dry_run)
 
         print()
-        print("=" * 60)
         print("Updating runtime-api values.yaml...")
-        print("=" * 60)
-
         update_runtime_api_values(
             RUNTIME_API_VALUES_PATH,
             deploy_config.openhands_runtime_image_tag,
