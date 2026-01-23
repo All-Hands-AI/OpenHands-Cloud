@@ -37,9 +37,10 @@ jobs:
           version: 'latest'
       - name: Use PR version suffix
         run: |
-          # Create a preview version like 0.1.0-pr-123
+          # Create a preview version like 0.1.0-alpha.123
+          # This should confirm to SemVer, the last number is the GitHub PR number
           CHART_VERSION=$(yq '.version' charts/${{ matrix.chart.name }}/Chart.yaml)
-          PREVIEW_VERSION="${CHART_VERSION}-pr-${{ github.event.pull_request.number }}"
+          PREVIEW_VERSION="${CHART_VERSION}-alpha.${{ github.event.pull_request.number }}"
           
           # Update Chart.yaml with preview version
           yq -i ".version = \"${PREVIEW_VERSION}\"" charts/${{ matrix.chart.name }}/Chart.yaml
@@ -48,7 +49,7 @@ jobs:
         if: matrix.chart.name == 'openhands'
         run: |
           RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
-          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-pr-${{ github.event.pull_request.number }}"
+          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
           
           yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
           
@@ -83,6 +84,12 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using chart version: ${VERSION}"
 
+          # Ensure we are publishing to an "alpha" version.
+          if [[ "$VERSION" != *alpha* ]]; then
+            echo "Error: Version '$VERSION' does not contain 'alpha'"
+            exit 1
+          fi
+
           # Convert repository owner to lowercase for GHCR
           REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER=${REPO_OWNER}" >> $GITHUB_OUTPUT
@@ -91,7 +98,7 @@ jobs:
       - name: Publish ${{ matrix.chart.name }} chart to GHCR
         uses: appany/helm-oci-chart-releaser@v0.4.2
         with:
-          name: ${{ matrix.chart.name }}-prerelease
+          name: ${{ matrix.chart.name }}
           repository: helm-charts
           path: ${{ matrix.chart.path }}
           registry: ghcr.io/${{ steps.chart_info.outputs.REPO_OWNER }}
@@ -99,11 +106,3 @@ jobs:
           registry_password: ${{ secrets.GITHUB_TOKEN }}
           update_dependencies: 'true'
           tag: ${{ steps.chart_info.outputs.VERSION }}
-
-      - name: Keep only 50 latest prerelease charts 
-        uses: actions/delete-package-versions@v4
-        with:
-          package-name: helm-charts/${{ matrix.chart.name }}-prerelease
-          package-type: container
-          min-versions-to-keep: 50
-          delete-only-pre-release-versions: True
