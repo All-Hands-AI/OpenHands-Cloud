@@ -365,4 +365,28 @@
       name: linear-app
       key: client-secret
 {{- end }}
+# V1 Conversation API Settings
+# These control the availability and default behavior of V1 conversations
+{{- if .Values.v1Conversations }}
+{{- if .Values.v1Conversations.enableV1Routes }}
+# Server-level switch: when "0", V1 API routes are disabled entirely
+- name: ENABLE_V1
+  value: {{ if eq .Values.v1Conversations.enableV1Routes "false" }}"0"{{ else }}"1"{{ end }}
+{{- end }}
+{{- if .Values.v1Conversations.defaultV1Enabled }}
+# Default v1_enabled setting for new users (affects frontend conversation creation)
+- name: V1_ENABLED
+  value: {{ .Values.v1Conversations.defaultV1Enabled | quote }}
+{{- end }}
+{{- if .Values.v1Conversations.enableV1GithubResolver }}
+# Enable V1 conversations for GitHub resolver integration
+- name: ENABLE_V1_GITHUB_RESOLVER
+  value: {{ .Values.v1Conversations.enableV1GithubResolver | quote }}
+{{- end }}
+{{- if .Values.v1Conversations.enableV1SlackResolver }}
+# Enable V1 conversations for Slack resolver integration
+- name: ENABLE_V1_SLACK_RESOLVER
+  value: {{ .Values.v1Conversations.enableV1SlackResolver | quote }}
+{{- end }}
+{{- end }}
 {{- end }}
