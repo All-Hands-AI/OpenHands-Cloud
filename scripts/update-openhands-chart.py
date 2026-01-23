@@ -142,29 +142,6 @@ def get_deploy_config(repo_name: str, ref: str | None = None) -> DeployConfig | 
         return None
 
 
-def get_latest_helm_chart_version(org: str, package: str) -> str | None:
-    """Fetch the latest version of a helm chart from GitHub Container Registry."""
-    # Get anonymous token for ghcr.io
-    token_url = f"https://ghcr.io/token?scope=repository:{org}/{package}:pull"
-    token_response = requests.get(token_url)
-    token_response.raise_for_status()
-    token = token_response.json().get("token")
-
-    # List tags from the registry
-    headers = {"Authorization": f"Bearer {token}"}
-    tags_url = f"https://ghcr.io/v2/{org}/{package}/tags/list"
-    response = requests.get(tags_url, headers=headers)
-    response.raise_for_status()
-
-    tags = response.json().get("tags", [])
-    # Sort tags to get the latest semver
-    semver_tags = [t for t in tags if SEMVER_PATTERN.match(t)]
-    if semver_tags:
-        semver_tags.sort(key=lambda v: list(map(int, v.split("."))), reverse=True)
-        return semver_tags[0]
-    return None
-
-
 def bump_patch_version(version: str) -> str:
     """Bump the patch version of a semantic version string."""
     major, minor, patch = version.split(".")
@@ -395,14 +372,24 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
         print(f"No semantic version tag found containing commit {deploy_config.openhands_sha[:7]}")
         return
 
-    runtime_api_version = get_latest_helm_chart_version(
-        "all-hands-ai", "helm-charts/runtime-api"
-    )
-    if runtime_api_version:
-        print(f"Latest runtime-api chart version: {runtime_api_version}")
-    else:
-        print("Could not fetch runtime-api version")
+    # Update runtime-api chart first to get the new version
+    print()
+    print("=" * 60)
+    print("Updating runtime-api chart...")
+    print("=" * 60)
 
+    print("Updating runtime-api Chart.yaml...")
+    runtime_api_version = update_runtime_api_chart(RUNTIME_API_CHART_PATH, dry_run=dry_run)
+
+    print()
+    print("Updating runtime-api values.yaml...")
+    update_runtime_api_values(
+        RUNTIME_API_VALUES_PATH,
+        deploy_config.openhands_runtime_image_tag,
+        dry_run=dry_run,
+    )
+
+    # Update openhands chart using the bumped runtime-api version
     print()
     print("=" * 60)
     print("Updating openhands chart...")
@@ -411,32 +398,15 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Updating openhands Chart.yaml...")
     update_openhands_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
 
-    if deploy_config:
-        print()
-        print("Updating openhands values.yaml...")
-        update_openhands_values(
-            VALUES_PATH,
-            deploy_config.openhands_sha,
-            deploy_config.runtime_api_sha,
-            deploy_config.openhands_runtime_image_tag,
-            dry_run=dry_run,
-        )
-
-        print()
-        print("=" * 60)
-        print("Updating runtime-api chart...")
-        print("=" * 60)
-
-        print("Updating runtime-api Chart.yaml...")
-        update_runtime_api_chart(RUNTIME_API_CHART_PATH, dry_run=dry_run)
-
-        print()
-        print("Updating runtime-api values.yaml...")
-        update_runtime_api_values(
-            RUNTIME_API_VALUES_PATH,
-            deploy_config.openhands_runtime_image_tag,
-            dry_run=dry_run,
-        )
+    print()
+    print("Updating openhands values.yaml...")
+    update_openhands_values(
+        VALUES_PATH,
+        deploy_config.openhands_sha,
+        deploy_config.runtime_api_sha,
+        deploy_config.openhands_runtime_image_tag,
+        dry_run=dry_run,
+    )
 
 
 if __name__ == "__main__":
