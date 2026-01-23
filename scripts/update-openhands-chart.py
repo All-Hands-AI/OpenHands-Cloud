@@ -417,7 +417,7 @@ def create_branch_and_pr(app_version: str) -> str | None:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Update OpenHands chart with latest versions from GitHub."
+        description="Update OpenHands and runtime-api charts based on a SaaS deploy."
     )
     parser.add_argument(
         "--dry-run",
@@ -428,7 +428,7 @@ def parse_args() -> argparse.Namespace:
         "--deploy-tag",
         type=str,
         default=None,
-        help="Specific deploy tag to use instead of fetching the latest semantic version tag.",
+        help="A tag of deploy repo to use instead of fetching the latest semantic version.",
     )
     return parser.parse_args()
 
