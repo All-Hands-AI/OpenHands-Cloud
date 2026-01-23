@@ -368,10 +368,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Show what would be updated without making changes.",
     )
+    parser.add_argument(
+        "--deploy-tag",
+        type=str,
+        default=None,
+        help="Specific deploy tag to use instead of fetching the latest semantic version tag.",
+    )
     return parser.parse_args()
 
 
-def main(dry_run: bool = False) -> None:
+def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     if dry_run:
         print("=" * 60)
         print("DRY RUN MODE - No changes will be made")
@@ -389,11 +395,14 @@ def main(dry_run: bool = False) -> None:
         print("No semantic version tag found")
         return
 
-    deploy_tag = get_latest_semver_tag("OpenHands/deploy")
     if deploy_tag:
-        print(f"Latest deploy tag: {deploy_tag}")
+        print(f"Using specified deploy tag: {deploy_tag}")
     else:
-        print("No deploy semantic version tag found")
+        deploy_tag = get_latest_semver_tag("OpenHands/deploy")
+        if deploy_tag:
+            print(f"Latest deploy tag: {deploy_tag}")
+        else:
+            print("No deploy semantic version tag found")
 
     # Fetch deploy config from the latest tagged version
     deploy_config = get_deploy_config("OpenHands/deploy", ref=deploy_tag)
@@ -454,4 +463,4 @@ def main(dry_run: bool = False) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    main(dry_run=args.dry_run)
+    main(dry_run=args.dry_run, deploy_tag=args.deploy_tag)
