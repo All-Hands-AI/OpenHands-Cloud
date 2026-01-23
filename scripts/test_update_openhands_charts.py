@@ -3,7 +3,7 @@
 # requires-python = ">=3.12"
 # dependencies = ["PyGithub", "ruamel.yaml", "requests", "pytest"]
 # ///
-"""Unit tests for update-openhands-chart.py."""
+"""Unit tests for update_openhands_charts.py."""
 
 import importlib.util
 import tempfile
@@ -14,14 +14,14 @@ from ruamel.yaml import YAML
 
 # Load the script as a module
 spec = importlib.util.spec_from_file_location(
-    "update_openhands_chart",
-    Path(__file__).parent / "update-openhands-chart.py",
+    "update_openhands_charts",
+    Path(__file__).parent / "update_openhands_charts.py",
 )
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 bump_patch_version = module.bump_patch_version
-update_openhand_chart = module.update_openhands_chart
+update_openhands_chart = module.update_openhands_chart
 update_openhands_values = module.update_openhands_values
 update_runtime_api_chart = module.update_runtime_api_chart
 update_runtime_api_values = module.update_runtime_api_values
@@ -147,7 +147,7 @@ dependencies:
 
     def test_update_app_version(self, temp_chart_file):
         """Test that appVersion is updated correctly."""
-        update_openhand_chart(temp_chart_file, "2.0.0", None)
+        update_openhands_chart(temp_chart_file, "2.0.0", None)
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -155,7 +155,7 @@ dependencies:
 
     def test_bump_chart_version(self, temp_chart_file):
         """Test that version is bumped correctly."""
-        update_openhand_chart(temp_chart_file, "2.0.0", None)
+        update_openhands_chart(temp_chart_file, "2.0.0", None)
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -163,7 +163,7 @@ dependencies:
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -174,7 +174,7 @@ dependencies:
 
     def test_runtime_api_unchanged_when_same_version(self, temp_chart_file, capsys):
         """Test that runtime-api is not updated when version is the same."""
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.1.10")
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.1.10")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -188,7 +188,7 @@ dependencies:
 
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -199,7 +199,7 @@ dependencies:
 
     def test_preserves_yaml_structure(self, temp_chart_file):
         """Test that YAML structure is preserved."""
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -440,13 +440,13 @@ runtime-api:
         """Test that dry-run doesn't modify Chart.yaml."""
         original_content = temp_chart_file.read_text()
 
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
 
         assert temp_chart_file.read_text() == original_content
 
     def test_update_chart_dry_run_prints_changes(self, temp_chart_file, capsys):
         """Test that dry-run still prints what would be changed."""
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
 
         captured = capsys.readouterr()
         assert "Updated appVersion: 1.0.0 -> 2.0.0" in captured.out
@@ -487,7 +487,7 @@ runtime-api:
         """Test that without dry-run, Chart.yaml is modified."""
         original_content = temp_chart_file.read_text()
 
-        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=False)
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=False)
 
         assert temp_chart_file.read_text() != original_content
 

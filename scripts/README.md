@@ -20,27 +20,27 @@ Updates the OpenHands and runtime-api helm charts to cut a new enterprise chart 
 2. Run the script:
 
    ```bash
-   ./scripts/update-openhands-chart.py
+   ./scripts/update_openhands_charts.py
    ```
 
    Or using uv directly:
 
    ```bash
-   uv run scripts/update-openhands-chart.py
+   uv run scripts/update_openhands_charts.py
    ```
 
-   > View help for available arguments: `uv run scripts/update-openhands-chart.py --help`
+   > View help for available arguments: `uv run scripts/update_openhands_charts.py --help`
 
 ### DRY RUN mode
 
 ```bash
-./scripts/update-openhands-chart.py --dry-run
+./scripts/update_openhands_charts.py --dry-run
 ```
 
 Or using uv directly:
 
 ```bash
-uv run scripts/update-openhands-chart.py --dry-run
+uv run scripts/update_openhands_charts.py --dry-run
 ```
 
 ## Tests
@@ -48,11 +48,11 @@ uv run scripts/update-openhands-chart.py --dry-run
 Run the tests:
 
 ```bash
-./scripts/test_update_openhands_chart.py
+./scripts/test_update_openhands_charts.py
 ```
 
 Or using uv directly:
 
 ```bash
-uv run scripts/test_update_openhands_chart.py
+uv run scripts/test_update_openhands_charts.py
 ```
