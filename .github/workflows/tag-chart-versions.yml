@@ -1,0 +1,55 @@
+name: Tag Chart Versions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+
+jobs:
+  tag-charts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Tag chart versions
+        run: |
+          # Define the charts to process
+          CHARTS=("image-loader" "openhands" "runtime-api")
+          
+          for chart in "${CHARTS[@]}"; do
+            CHART_PATH="charts/${chart}/Chart.yaml"
+            
+            if [ ! -f "$CHART_PATH" ]; then
+              echo "Chart.yaml not found at $CHART_PATH, skipping..."
+              continue
+            fi
+            
+            # Extract the current version from Chart.yaml
+            VERSION=$(grep '^version:' "$CHART_PATH" | awk '{print $2}')
+            
+            if [ -z "$VERSION" ]; then
+              echo "Could not extract version for $chart, skipping..."
+              continue
+            fi
+            
+            TAG="${chart}/${VERSION}"
+            echo "Checking tag: $TAG"
+            
+            # Check if the tag already exists
+            if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+              echo "Tag $TAG already exists, skipping..."
+            else
+              echo "Creating new tag: $TAG"
+              git tag "$TAG"
+              git push origin "$TAG"
+              echo "Successfully created and pushed tag: $TAG"
+            fi
+          done
