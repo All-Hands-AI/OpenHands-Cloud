@@ -10,7 +10,6 @@ import base64
 import io
 import os
 import re
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,7 +25,6 @@ CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
 RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
-GITHUB_REPO = "All-Hands-AI/OpenHands-Cloud"
 
 
 def get_short_sha(sha: str) -> str:
@@ -286,134 +284,6 @@ def update_runtime_api_values(
         values_path.write_text(content)
 
 
-def get_branch_name(app_version: str) -> str:
-    """Generate branch name for the update PR."""
-    return f"update-openhands-chart-{app_version}"
-
-
-def has_uncommitted_changes() -> bool:
-    """Check if there are uncommitted changes in the working directory."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-    )
-    return bool(result.stdout.strip())
-
-
-def create_branch_and_pr(app_version: str) -> str | None:
-    """Create a new branch from main, commit only chart changes, and open a draft PR."""
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("GITHUB_TOKEN required to create PR")
-        return None
-
-    # Check for uncommitted changes before proceeding
-    if has_uncommitted_changes():
-        print("Error: Uncommitted changes detected. Please commit or discard changes before running.")
-        return None
-
-    branch_name = get_branch_name(app_version)
-    current_branch = None
-
-    try:
-        # Save current branch to return to later
-        current_branch = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-
-        # Fetch latest main
-        subprocess.run(
-            ["git", "fetch", "origin", "main"],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        # Create new branch from main
-        subprocess.run(
-            ["git", "checkout", "-b", branch_name, "origin/main"],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        # Stage chart changes
-        subprocess.run(
-            [
-                "git", "add",
-                "charts/openhands/Chart.yaml",
-                "charts/openhands/values.yaml",
-                "charts/runtime-api/Chart.yaml",
-                "charts/runtime-api/values.yaml",
-            ],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        # Commit changes
-        commit_message = f"Update OpenHands chart to {app_version}"
-        subprocess.run(
-            ["git", "commit", "-m", commit_message],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        # Push branch
-        subprocess.run(
-            ["git", "push", "-u", "origin", branch_name],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        # Create draft PR using GitHub API
-        gh = Github(auth=Auth.Token(token))
-        repo = gh.get_repo(GITHUB_REPO)
-
-        pr = repo.create_pull(
-            title=f"Update OpenHands chart to {app_version}",
-            body=f"Automated update of OpenHands Helm chart to version {app_version}.",
-            head=branch_name,
-            base="main",
-            draft=True,
-        )
-
-        # Return to original branch
-        subprocess.run(
-            ["git", "checkout", current_branch],
-            cwd=REPO_ROOT,
-            check=True,
-            capture_output=True,
-        )
-
-        return pr.html_url
-
-    except subprocess.CalledProcessError as e:
-        print(f"Git command failed: {e}")
-        # Try to return to original branch on error
-        if current_branch:
-            try:
-                subprocess.run(
-                    ["git", "checkout", current_branch],
-                    cwd=REPO_ROOT,
-                    capture_output=True,
-                )
-            except Exception:
-                pass
-        return None
-    except Exception as e:
-        print(f"Error creating PR: {e}")
-        return None
-
-
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -516,23 +386,6 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
             deploy_config.openhands_runtime_image_tag,
             dry_run=dry_run,
         )
-
-    # Handle PR creation
-    branch_name = get_branch_name(latest_tag)
-    print()
-    print("=" * 60)
-    print("Pull Request...")
-    print("=" * 60)
-
-    if dry_run:
-        print(f"Would create draft PR with branch: {branch_name}")
-    else:
-        print(f"Creating draft PR with branch: {branch_name}")
-        pr_url = create_branch_and_pr(latest_tag)
-        if pr_url:
-            print(f"Draft PR created: {pr_url}")
-        else:
-            print("Failed to create PR")
 
 
 if __name__ == "__main__":

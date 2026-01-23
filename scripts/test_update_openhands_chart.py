@@ -27,8 +27,6 @@ update_runtime_api_chart = module.update_runtime_api_chart
 update_runtime_api_values = module.update_runtime_api_values
 get_short_sha = module.get_short_sha
 format_sha_tag = module.format_sha_tag
-get_branch_name = module.get_branch_name
-has_uncommitted_changes = module.has_uncommitted_changes
 DeployConfig = module.DeployConfig
 SEMVER_PATTERN = module.SEMVER_PATTERN
 SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
@@ -93,28 +91,6 @@ class TestFormatShaTag:
         # Test with actual SHA from deploy workflow
         sha = "743f6256a690efc388af6e960ad8009f5952e721"
         assert format_sha_tag(sha) == "sha-743f625"
-
-
-class TestGetBranchName:
-    """Tests for get_branch_name function."""
-
-    def test_branch_name_format(self):
-        assert get_branch_name("1.2.3") == "update-openhands-chart-1.2.3"
-
-    def test_branch_name_with_different_version(self):
-        assert get_branch_name("2.0.0") == "update-openhands-chart-2.0.0"
-
-    def test_branch_name_real_version(self):
-        assert get_branch_name("1.2.1") == "update-openhands-chart-1.2.1"
-
-
-class TestHasUncommittedChanges:
-    """Tests for has_uncommitted_changes function."""
-
-    def test_returns_bool(self):
-        # Function should return a boolean
-        result = has_uncommitted_changes()
-        assert isinstance(result, bool)
 
 
 class TestBumpPatchVersion:
