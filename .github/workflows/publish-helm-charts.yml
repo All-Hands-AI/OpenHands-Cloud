@@ -30,7 +30,8 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
-
+      # because openhands depends on runtime-api
+      max-parallel: 1
     steps:
       - name: Checkout
         uses: actions/checkout@v3
