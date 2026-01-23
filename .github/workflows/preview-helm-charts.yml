@@ -68,24 +68,47 @@ jobs:
     steps:
       - name: Check if chart should be published
         id: check
+        env:
+          HAS_CHANGES_RUNTIME_API: ${{ needs.detect-changes.outputs.runtime-api }}
+          HAS_CHANGES_IMAGE_LOADER: ${{ needs.detect-changes.outputs.image-loader }}
+          HAS_CHANGES_OPENHANDS: ${{ needs.detect-changes.outputs.openhands }}
+          IS_PUBLISHABLE_RUNTIME_API: ${{ needs.validate-chart-versions.outputs.runtime-api-publishable }}
+          IS_PUBLISHABLE_IMAGE_LOADER: ${{ needs.validate-chart-versions.outputs.image-loader-publishable }}
+          IS_PUBLISHABLE_OPENHANDS: ${{ needs.validate-chart-versions.outputs.openhands-publishable }}
         run: |
           CHART_NAME="${{ matrix.chart.name }}"
           case "$CHART_NAME" in
             runtime-api)
-              HAS_CHANGES="${{ needs.detect-changes.outputs.runtime-api }}"
-              IS_PUBLISHABLE="${{ needs.validate-chart-versions.outputs.runtime-api-publishable }}"
+              HAS_CHANGES="$HAS_CHANGES_RUNTIME_API"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_RUNTIME_API"
               ;;
             image-loader)
-              HAS_CHANGES="${{ needs.detect-changes.outputs.image-loader }}"
-              IS_PUBLISHABLE="${{ needs.validate-chart-versions.outputs.image-loader-publishable }}"
+              HAS_CHANGES="$HAS_CHANGES_IMAGE_LOADER"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_IMAGE_LOADER"
               ;;
             openhands)
-              HAS_CHANGES="${{ needs.detect-changes.outputs.openhands }}"
-              IS_PUBLISHABLE="${{ needs.validate-chart-versions.outputs.openhands-publishable }}"
+              HAS_CHANGES="$HAS_CHANGES_OPENHANDS"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_OPENHANDS"
               ;;
           esac
           
+          # Default IS_PUBLISHABLE to true if not set (assume publishable unless explicitly marked otherwise)
+          IS_PUBLISHABLE="${IS_PUBLISHABLE:-true}"
+          
           echo "Chart $CHART_NAME - has changes: $HAS_CHANGES, is publishable: $IS_PUBLISHABLE"
+          
+          # Only publish if chart has changes AND version was bumped
+          if [ "$HAS_CHANGES" = "true" ] && [ "$IS_PUBLISHABLE" = "true" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "✅ Chart $CHART_NAME will be published"
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+            if [ "$HAS_CHANGES" != "true" ]; then
+              echo "⏭️ Chart $CHART_NAME skipped - no changes"
+            else
+              echo "⏭️ Chart $CHART_NAME skipped - version not bumped"
+            fi
+          fi
 
       - name: Checkout
         if: steps.check.outputs.should_publish == 'true'
