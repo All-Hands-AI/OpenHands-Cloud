@@ -197,3 +197,61 @@ jobs:
           registry_password: ${{ secrets.GITHUB_TOKEN }}
           update_dependencies: 'true'
           tag: ${{ steps.chart_info.outputs.VERSION }}
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    needs: [publish-charts, detect-changes]
+
+    strategy:
+      matrix:
+        chart:
+          - name: runtime-api
+            path: charts/runtime-api
+          - name: image-loader
+            path: charts/image-loader
+          - name: openhands
+            path: charts/openhands
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Update runtime-api dependency version for openhands
+        if: matrix.chart.name == 'openhands' && needs.detect-changes.outputs.runtime-api == 'true'
+        run: |
+          RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
+          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
+
+          echo "Updating openhands runtime-api dependency to ${RUNTIME_API_PREVIEW}"
+          yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
+
+      - name: Lint ${{ matrix.chart.name }} chart
+        run: |
+          echo "Testing ${{ matrix.chart.name }} chart"
+          echo "Updating dependencies for ${{ matrix.chart.name }}"
+          helm dependency update ${{ matrix.chart.path }}
+
+          echo "Running helm lint for ${{ matrix.chart.name }}"
+          helm lint ${{ matrix.chart.path }}
+          if [ $? -ne 0 ]; then
+            echo "Helm lint failed for ${{ matrix.chart.name }}"
+            exit 1
+          fi
+          echo "Helm lint passed for ${{ matrix.chart.name }}"
+
+      - name: Template ${{ matrix.chart.name }} chart
+        run: |
+          echo "Running helm template for ${{ matrix.chart.name }}"
+          helm template ${{ matrix.chart.path }} --debug
+          if [ $? -ne 0 ]; then
+            echo "Helm template failed for ${{ matrix.chart.name }}"
+            exit 1
+          fi
+          echo "Helm template passed for ${{ matrix.chart.name }}"
