@@ -200,7 +200,7 @@ jobs:
 
   lint-and-test:
     runs-on: ubuntu-latest
-    needs: [publish-charts]
+    needs: [publish-charts, detect-changes]
 
     strategy:
       matrix:
@@ -222,6 +222,15 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 'latest'
+
+      - name: Update runtime-api dependency version for openhands
+        if: matrix.chart.name == 'openhands' && needs.detect-changes.outputs.runtime-api == 'true'
+        run: |
+          RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
+          RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
+          
+          echo "Updating openhands runtime-api dependency to ${RUNTIME_API_PREVIEW}"
+          yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
 
       - name: Lint ${{ matrix.chart.name }} chart
         run: |
