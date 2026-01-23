@@ -24,6 +24,8 @@ SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
 CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
+RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
+RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
 GITHUB_REPO = "All-Hands-AI/OpenHands-Cloud"
 
 
@@ -236,6 +238,54 @@ def update_values(
         values_path.write_text(content)
 
 
+def update_runtime_api_chart(
+    chart_path: Path,
+    dry_run: bool = False,
+) -> str:
+    """Bump the patch version of the runtime-api chart and return the new version."""
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.indent(mapping=2, sequence=4, offset=2)
+
+    chart_data = yaml.load(chart_path)
+
+    old_version = chart_data.get("version")
+    new_version = bump_patch_version(old_version)
+    chart_data["version"] = new_version
+    print(f"Updated runtime-api chart version: {old_version} -> {new_version}")
+
+    if not dry_run:
+        yaml.dump(chart_data, chart_path)
+
+    return new_version
+
+
+def update_runtime_api_values(
+    values_path: Path,
+    runtime_image_tag: str,
+    dry_run: bool = False,
+) -> None:
+    """Update warmRuntimes default config image in runtime-api values.yaml."""
+    content = values_path.read_text()
+
+    # Update warmRuntimes image (contains full image path with tag)
+    warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
+    warm_runtime_match = re.search(warm_runtime_pattern, content)
+
+    if warm_runtime_match:
+        old_tag = warm_runtime_match.group(2)
+        if old_tag == runtime_image_tag:
+            print(f"runtime-api warmRuntimes image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(warm_runtime_pattern, rf'\g<1>{runtime_image_tag}"', content)
+            print(f"Updated runtime-api warmRuntimes image tag: {old_tag} -> {runtime_image_tag}")
+    else:
+        print("Could not find warmRuntimes image tag in runtime-api values.yaml")
+
+    if not dry_run:
+        values_path.write_text(content)
+
+
 def get_branch_name(app_version: str) -> str:
     """Generate branch name for the update PR."""
     return f"update-openhands-chart-{app_version}"
@@ -293,9 +343,15 @@ def create_branch_and_pr(app_version: str) -> str | None:
             capture_output=True,
         )
 
-        # Stage only chart changes
+        # Stage chart changes
         subprocess.run(
-            ["git", "add", "charts/openhands/Chart.yaml", "charts/openhands/values.yaml"],
+            [
+                "git", "add",
+                "charts/openhands/Chart.yaml",
+                "charts/openhands/values.yaml",
+                "charts/runtime-api/Chart.yaml",
+                "charts/runtime-api/values.yaml",
+            ],
             cwd=REPO_ROOT,
             check=True,
             capture_output=True,
@@ -439,6 +495,24 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
             VALUES_PATH,
             deploy_config.openhands_sha,
             deploy_config.runtime_api_sha,
+            deploy_config.openhands_runtime_image_tag,
+            dry_run=dry_run,
+        )
+
+        print()
+        print("=" * 60)
+        print("Updating runtime-api Chart.yaml...")
+        print("=" * 60)
+
+        update_runtime_api_chart(RUNTIME_API_CHART_PATH, dry_run=dry_run)
+
+        print()
+        print("=" * 60)
+        print("Updating runtime-api values.yaml...")
+        print("=" * 60)
+
+        update_runtime_api_values(
+            RUNTIME_API_VALUES_PATH,
             deploy_config.openhands_runtime_image_tag,
             dry_run=dry_run,
         )

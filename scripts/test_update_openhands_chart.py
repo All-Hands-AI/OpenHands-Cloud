@@ -23,6 +23,8 @@ spec.loader.exec_module(module)
 bump_patch_version = module.bump_patch_version
 update_chart = module.update_chart
 update_values = module.update_values
+update_runtime_api_chart = module.update_runtime_api_chart
+update_runtime_api_values = module.update_runtime_api_values
 get_short_sha = module.get_short_sha
 format_sha_tag = module.format_sha_tag
 get_branch_name = module.get_branch_name
@@ -524,6 +526,161 @@ runtime-api:
         )
 
         assert temp_values_file.read_text() != original_content
+
+
+class TestUpdateRuntimeApiChart:
+    """Tests for update_runtime_api_chart function."""
+
+    @pytest.fixture
+    def sample_runtime_api_chart_yaml(self):
+        """Create a sample runtime-api Chart.yaml content."""
+        return """\
+apiVersion: v2
+name: runtime-api
+description: A Helm chart for the Flask application
+version: 0.1.20 # Change this to trigger a new helm chart version being published
+appVersion: "1.0.0"
+dependencies:
+  - name: postgresql
+    version: 15.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+"""
+
+    @pytest.fixture
+    def temp_runtime_api_chart_file(self, sample_runtime_api_chart_yaml):
+        """Create a temporary runtime-api Chart.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_runtime_api_chart_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_bump_runtime_api_version(self, temp_runtime_api_chart_file):
+        """Test that runtime-api chart version is bumped correctly."""
+        new_version = update_runtime_api_chart(temp_runtime_api_chart_file)
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_runtime_api_chart_file)
+        assert chart_data["version"] == "0.1.21"
+        assert new_version == "0.1.21"
+
+    def test_preserves_other_fields(self, temp_runtime_api_chart_file):
+        """Test that other fields are preserved."""
+        update_runtime_api_chart(temp_runtime_api_chart_file)
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_runtime_api_chart_file)
+        assert chart_data["apiVersion"] == "v2"
+        assert chart_data["name"] == "runtime-api"
+        assert chart_data["appVersion"] == "1.0.0"
+        assert len(chart_data["dependencies"]) == 1
+
+    def test_dry_run_no_file_changes(self, temp_runtime_api_chart_file):
+        """Test that dry-run doesn't modify the file."""
+        original_content = temp_runtime_api_chart_file.read_text()
+
+        update_runtime_api_chart(temp_runtime_api_chart_file, dry_run=True)
+
+        assert temp_runtime_api_chart_file.read_text() == original_content
+
+    def test_dry_run_returns_new_version(self, temp_runtime_api_chart_file):
+        """Test that dry-run still returns the new version."""
+        new_version = update_runtime_api_chart(temp_runtime_api_chart_file, dry_run=True)
+        assert new_version == "0.1.21"
+
+
+class TestUpdateRuntimeApiValues:
+    """Tests for update_runtime_api_values function."""
+
+    @pytest.fixture
+    def sample_runtime_api_values_yaml(self):
+        """Create a sample runtime-api values.yaml content."""
+        return """\
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/openhands/runtime-api
+  tag: sha-0c907c9
+  pullPolicy: Always
+
+warmRuntimes:
+  enabled: false
+  configMapName: warm-runtimes-config
+  count: 0
+  configs:
+    - name: default
+      image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
+      working_dir: "/openhands/code/"
+      environment: {}
+"""
+
+    @pytest.fixture
+    def temp_runtime_api_values_file(self, sample_runtime_api_values_yaml):
+        """Create a temporary runtime-api values.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_runtime_api_values_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_update_warm_runtimes_image(self, temp_runtime_api_values_file):
+        """Test that warmRuntimes image tag is updated correctly."""
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_image_tag="9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik",
+        )
+
+        content = temp_runtime_api_values_file.read_text()
+        assert 'image: "ghcr.io/openhands/runtime:9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik"' in content
+
+    def test_unchanged_when_same_value(self, temp_runtime_api_values_file, capsys):
+        """Test message when value is already up to date."""
+        # First update
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_image_tag="newruntime123-nikolaik",
+        )
+
+        # Second update with same value
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_image_tag="newruntime123-nikolaik",
+        )
+
+        captured = capsys.readouterr()
+        assert "runtime-api warmRuntimes image tag unchanged" in captured.out
+
+    def test_preserves_other_content(self, temp_runtime_api_values_file):
+        """Test that other content is preserved."""
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_image_tag="newruntime123-nikolaik",
+        )
+
+        content = temp_runtime_api_values_file.read_text()
+        assert "replicaCount: 1" in content
+        assert "tag: sha-0c907c9" in content
+        assert 'working_dir: "/openhands/code/"' in content
+
+    def test_dry_run_no_file_changes(self, temp_runtime_api_values_file):
+        """Test that dry-run doesn't modify the file."""
+        original_content = temp_runtime_api_values_file.read_text()
+
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_image_tag="newruntime123-nikolaik",
+            dry_run=True,
+        )
+
+        assert temp_runtime_api_values_file.read_text() == original_content
 
 
 if __name__ == "__main__":
