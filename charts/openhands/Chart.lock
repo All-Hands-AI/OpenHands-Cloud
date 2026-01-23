@@ -10,7 +10,7 @@ dependencies:
   version: 1.2.13
 - name: litellm-helm
   repository: oci://ghcr.io/berriai
-  version: 0.1.664
+  version: 0.1.781
 - name: minio
   repository: https://charts.min.io/
   version: 5.0.10
@@ -22,6 +22,6 @@ dependencies:
   version: 20.3.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.9
-digest: sha256:0eb3fcb98ec8a1aa3d6c2ba5e317942cbc2030a35440836ad6aec63de0dfb11e
-generated: "2025-08-21T14:15:03.196589052Z"
+  version: 0.1.20
+digest: sha256:993e079383b8356e71d7b12cdc0ae82ee0747f5ce72a9d7307471aa2c9be0da9
+generated: "2026-01-15T17:32:49.752308-05:00"

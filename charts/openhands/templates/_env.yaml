@@ -186,13 +186,6 @@
 {{- else if .Values.litellm.enabled }}
 - name: LITE_LLM_API_URL
   value: {{ .Values.litellm.url }}
-- name: LITE_LLM_TEAM_ID
-  value: {{ .Values.litellm.teamId }}
-- name: LITE_LLM_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.litellm.auth.existingSecret }}
-      key: lite-llm-api-key
 {{- end }}
 {{- if index .Values "litellm-helm" "enabled" }}
 - name: LITE_LLM_API_KEY
@@ -200,6 +193,16 @@
     secretKeyRef:
       name: {{ index .Values "litellm-helm" "masterkeySecretName" }}
       key: {{ index .Values "litellm-helm" "masterkeySecretKey" }}
+{{- else if .Values.litellm.enabled }}
+- name: LITE_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.litellm.auth.existingSecret }}
+      key: lite-llm-api-key
+{{- end }}
+{{- if .Values.litellm.enabled }}
+- name: LITE_LLM_TEAM_ID
+  value: {{ .Values.litellm.teamId }}
 {{- end }}
 {{- if .Values.stripe.enabled }}
 - name: STRIPE_API_KEY
