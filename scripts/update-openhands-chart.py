@@ -67,15 +67,24 @@ def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | 
     """Get the latest semantic version tag containing a specific commit from a local git repo.
 
     This function:
-    1. Runs git pull to fetch the latest updates
-    2. Runs git tag --contains <commit_sha> to get all tags containing the commit
-    3. Filters for semantic version tags and returns the latest one
+    1. Checks out main branch
+    2. Runs git pull to fetch the latest updates
+    3. Runs git tag --contains <commit_sha> to get all tags containing the commit
+    4. Filters for semantic version tags and returns the latest one
     """
     if not repo_path.exists():
         print(f"Repository not found at {repo_path}")
         return None
 
     try:
+        # Checkout main branch
+        subprocess.run(
+            ["git", "checkout", "main"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+        )
+
         # Pull latest updates
         subprocess.run(
             ["git", "pull"],
