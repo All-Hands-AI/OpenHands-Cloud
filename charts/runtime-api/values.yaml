@@ -146,7 +146,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
+      image: "ghcr.io/openhands/runtime:20eb9bd3c59c374f014e51aecd920761877a5179-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:
