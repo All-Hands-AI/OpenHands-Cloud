@@ -4,10 +4,50 @@ on:
     paths:
       - 'charts/**'
 
-jobs:          
+jobs:
+  validate-chart-versions:
+    uses: ./.github/workflows/validate-chart-versions.yml
+    with:
+      base_ref: origin/${{ github.event.pull_request.base.ref }}
+      enforce_version_bump: false
+
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      runtime-api: ${{ steps.changes.outputs.runtime-api }}
+      image-loader: ${{ steps.changes.outputs.image-loader }}
+      openhands: ${{ steps.changes.outputs.openhands }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Detect chart changes
+        id: changes
+        run: |
+          BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          echo "Comparing against: $BASE_REF"
+
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only $BASE_REF...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check each chart for changes
+          for chart in runtime-api image-loader openhands; do
+            if echo "$CHANGED_FILES" | grep -q "^charts/${chart}/"; then
+              echo "${chart}=true" >> $GITHUB_OUTPUT
+              echo "Changes detected in charts/${chart}"
+            else
+              echo "${chart}=false" >> $GITHUB_OUTPUT
+              echo "No changes in charts/${chart}"
+            fi
+          done
 
   publish-charts:
     runs-on: ubuntu-latest
+    needs: [validate-chart-versions, detect-changes]
     permissions:
       contents: read
       packages: write
@@ -26,16 +66,41 @@ jobs:
       max-parallel: 1
 
     steps:
+      - name: Check if chart should be published
+        id: check
+        run: |
+          CHART_NAME="${{ matrix.chart.name }}"
+          case "$CHART_NAME" in
+            runtime-api)
+              HAS_CHANGES="${{ needs.detect-changes.outputs.runtime-api }}"
+              IS_PUBLISHABLE="${{ needs.validate-chart-versions.outputs.runtime-api-publishable }}"
+              ;;
+            image-loader)
+              HAS_CHANGES="${{ needs.detect-changes.outputs.image-loader }}"
+              IS_PUBLISHABLE="${{ needs.validate-chart-versions.outputs.image-loader-publishable }}"
+              ;;
+            openhands)
+              HAS_CHANGES="${{ needs.detect-changes.outputs.openhands }}"
+              IS_PUBLISHABLE="${{ needs.validate-chart-versions.outputs.openhands-publishable }}"
+              ;;
+          esac
+          
+          echo "Chart $CHART_NAME - has changes: $HAS_CHANGES, is publishable: $IS_PUBLISHABLE"
+
       - name: Checkout
+        if: steps.check.outputs.should_publish == 'true'
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Set up Helm
+        if: steps.check.outputs.should_publish == 'true'
         uses: azure/setup-helm@v3
         with:
           version: 'latest'
+
       - name: Use PR version suffix
+        if: steps.check.outputs.should_publish == 'true'
         run: |
           # Create a preview version like 0.1.0-alpha.123
           # This should confirm to SemVer, the last number is the GitHub PR number
@@ -46,7 +111,7 @@ jobs:
           yq -i ".version = \"${PREVIEW_VERSION}\"" charts/${{ matrix.chart.name }}/Chart.yaml
       
       - name: Update runtime-api dependency version
-        if: matrix.chart.name == 'openhands'
+        if: steps.check.outputs.should_publish == 'true' && matrix.chart.name == 'openhands'
         run: |
           RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
           RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
@@ -56,6 +121,7 @@ jobs:
           helm dependency update charts/openhands
 
       - name: Test ${{ matrix.chart.name }} chart with default values
+        if: steps.check.outputs.should_publish == 'true'
         run: |
           echo "Testing ${{ matrix.chart.name }} chart with default values"
           echo "Updating dependencies for ${{ matrix.chart.name }}"
@@ -78,6 +144,7 @@ jobs:
           echo "Helm template test passed for ${{ matrix.chart.name }}"
 
       - name: Extract chart version and prepare repository
+        if: steps.check.outputs.should_publish == 'true'
         id: chart_info
         run: |
           VERSION=$(grep '^version:' ${{ matrix.chart.path }}/Chart.yaml | awk '{print $2}')
@@ -96,6 +163,7 @@ jobs:
           echo "Using repository owner: ${REPO_OWNER}"
 
       - name: Publish ${{ matrix.chart.name }} chart to GHCR
+        if: steps.check.outputs.should_publish == 'true'
         uses: appany/helm-oci-chart-releaser@v0.4.2
         with:
           name: ${{ matrix.chart.name }}
