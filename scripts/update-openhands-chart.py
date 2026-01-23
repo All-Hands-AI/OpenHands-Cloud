@@ -171,7 +171,7 @@ def bump_patch_version(version: str) -> str:
     return f"{major}.{minor}.{int(patch) + 1}"
 
 
-def update_chart(
+def update_openhands_chart(
     chart_path: Path,
     new_app_version: str,
     new_runtime_api_version: str | None,
@@ -212,7 +212,7 @@ def update_chart(
         yaml.dump(chart_data, chart_path)
 
 
-def update_values(
+def update_openhands_values(
     values_path: Path,
     openhands_sha: str,
     runtime_api_sha: str,
@@ -409,12 +409,12 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("=" * 60)
 
     print("Updating openhands Chart.yaml...")
-    update_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
+    update_openhands_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
 
     if deploy_config:
         print()
         print("Updating openhands values.yaml...")
-        update_values(
+        update_openhands_values(
             VALUES_PATH,
             deploy_config.openhands_sha,
             deploy_config.runtime_api_sha,

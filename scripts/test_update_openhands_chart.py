@@ -21,8 +21,8 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 bump_patch_version = module.bump_patch_version
-update_chart = module.update_chart
-update_values = module.update_values
+update_openhand_chart = module.update_openhands_chart
+update_openhands_values = module.update_openhands_values
 update_runtime_api_chart = module.update_runtime_api_chart
 update_runtime_api_values = module.update_runtime_api_values
 get_short_sha = module.get_short_sha
@@ -147,7 +147,7 @@ dependencies:
 
     def test_update_app_version(self, temp_chart_file):
         """Test that appVersion is updated correctly."""
-        update_chart(temp_chart_file, "2.0.0", None)
+        update_openhand_chart(temp_chart_file, "2.0.0", None)
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -155,7 +155,7 @@ dependencies:
 
     def test_bump_chart_version(self, temp_chart_file):
         """Test that version is bumped correctly."""
-        update_chart(temp_chart_file, "2.0.0", None)
+        update_openhand_chart(temp_chart_file, "2.0.0", None)
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -163,7 +163,7 @@ dependencies:
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
-        update_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -174,7 +174,7 @@ dependencies:
 
     def test_runtime_api_unchanged_when_same_version(self, temp_chart_file, capsys):
         """Test that runtime-api is not updated when version is the same."""
-        update_chart(temp_chart_file, "2.0.0", "0.1.10")
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.1.10")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -188,7 +188,7 @@ dependencies:
 
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
-        update_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -199,7 +199,7 @@ dependencies:
 
     def test_preserves_yaml_structure(self, temp_chart_file):
         """Test that YAML structure is preserved."""
-        update_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -273,7 +273,7 @@ runtime-api:
 
     def test_update_enterprise_server_tag(self, temp_values_file):
         """Test that enterprise-server image tag is updated correctly."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -285,7 +285,7 @@ runtime-api:
 
     def test_update_runtime_api_tag(self, temp_values_file):
         """Test that runtime-api image tag is updated correctly."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -297,7 +297,7 @@ runtime-api:
 
     def test_update_runtime_tag(self, temp_values_file):
         """Test that runtime image tag is updated correctly."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -309,7 +309,7 @@ runtime-api:
 
     def test_update_warm_runtimes_tag(self, temp_values_file):
         """Test that warmRuntimes image tag is updated correctly."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -322,7 +322,7 @@ runtime-api:
     def test_unchanged_when_same_values(self, temp_values_file, capsys):
         """Test messages when values are already up to date."""
         # First update to set the values
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -330,7 +330,7 @@ runtime-api:
         )
 
         # Second update with same values
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -345,7 +345,7 @@ runtime-api:
 
     def test_short_sha_format(self, temp_values_file):
         """Test that SHA is correctly shortened to 7 characters."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="abcdefghijklmnop",  # 16 chars
             runtime_api_sha="1234567890abcdef",  # 16 chars
@@ -360,7 +360,7 @@ runtime-api:
 
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -440,13 +440,13 @@ runtime-api:
         """Test that dry-run doesn't modify Chart.yaml."""
         original_content = temp_chart_file.read_text()
 
-        update_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
 
         assert temp_chart_file.read_text() == original_content
 
     def test_update_chart_dry_run_prints_changes(self, temp_chart_file, capsys):
         """Test that dry-run still prints what would be changed."""
-        update_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
 
         captured = capsys.readouterr()
         assert "Updated appVersion: 1.0.0 -> 2.0.0" in captured.out
@@ -457,7 +457,7 @@ runtime-api:
         """Test that dry-run doesn't modify values.yaml."""
         original_content = temp_values_file.read_text()
 
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -469,7 +469,7 @@ runtime-api:
 
     def test_update_values_dry_run_prints_changes(self, temp_values_file, capsys):
         """Test that dry-run still prints what would be changed."""
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
@@ -487,7 +487,7 @@ runtime-api:
         """Test that without dry-run, Chart.yaml is modified."""
         original_content = temp_chart_file.read_text()
 
-        update_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=False)
+        update_openhand_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=False)
 
         assert temp_chart_file.read_text() != original_content
 
@@ -495,7 +495,7 @@ runtime-api:
         """Test that without dry-run, values.yaml is modified."""
         original_content = temp_values_file.read_text()
 
-        update_values(
+        update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
             runtime_api_sha="newapi1234567890",
