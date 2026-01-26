@@ -419,6 +419,9 @@ litellm-helm:
     #     model: "anthropic/claude-3-7-sonnet-20250219"
     #     api_key: os.environ/ANTHROPIC_API_KEY
     litellm_settings:
+      # Set default max_budget to 0.0 globally (instead of unlimited/None)
+      # When budgets are created without specifying max_budget, they will default to 0.0
+      default_max_budget: 0.0
       num_retries: 3
       request_timeout: 600
       # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
