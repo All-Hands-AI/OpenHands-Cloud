@@ -1,0 +1,61 @@
+name: Scan Docker Images
+
+env:
+  REGISTRY: ghcr.io
+on:
+  pull_request:
+jobs:
+  discover_images:
+    name: Discover Images
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.extract.outputs.images }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract image references from charts
+        id: extract
+        run: |
+          # Extract image tags from chart values using yq
+          RUNTIME_API_TAG=$(yq '.image.tag' charts/runtime-api/values.yaml)
+          ENTERPRISE_TAG=$(yq '.image.tag' charts/openhands/values.yaml)
+          RUNTIME_TAG=$(yq '.runtime.image.tag' charts/openhands/values.yaml)
+
+          # Build the image list as JSON array
+          IMAGES=$(jq -n -c \
+            --arg runtime_api "openhands/runtime-api:${RUNTIME_API_TAG}" \
+            --arg enterprise "openhands/enterprise-server:${ENTERPRISE_TAG}" \
+            --arg runtime "openhands/runtime:${RUNTIME_TAG}" \
+            '[$runtime_api, $enterprise, $runtime]')
+
+          echo "images=${IMAGES}" >> $GITHUB_OUTPUT
+          echo "Discovered images: ${IMAGES}"
+
+  scan_docker_images:
+    name: Scan
+    runs-on: ubuntu-latest
+    needs: discover_images
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      actions: read
+    strategy:
+      matrix:
+        IMAGE: ${{ fromJson(needs.discover_images.outputs.images) }}
+    steps:
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        # This only reports, does not fail the build on CVE.
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ matrix.IMAGE }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          timeout: '10m'
+          scanners: 'vuln'  # Only scan vulnerabilities, not secrets/config
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
