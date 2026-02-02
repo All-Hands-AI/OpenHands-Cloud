@@ -158,7 +158,14 @@ authentication as well.
    - In "Permissions":
 
      - Open "Account permissions" and select "Access: Read-only" to "Email addresses".
-     - In "Repository permissions" add "Access: Read and Write" to "Projects".
+     - In "Repository permissions" add "Access: Read and Write" to:
+      - Actions
+      - Contents
+      - Commit Statuses
+      - Issues
+      - Pull Requests
+      - Webhooks
+      - Workflows
 
    - If you want to get webhooks:
 
