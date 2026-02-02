@@ -172,8 +172,7 @@ authentication as well.
      - Generate a webhook secret `export WEBHOOK_SECRET=head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`.
      - Check the "Active" checkbox.
      - Set the "Webhook URL" `https://openhands.example.com/integration/github/events`.
-     - Go to "Permissions", click in "Organization permissions" and add "Access: Read-only" to "Events".
-     - Go to "Repository permissions" add "Access: Read and Write" to "Webhooks"
+     - Go to "Permissions", click in "Organization permissions" and add "Access: Read-only" to "Events". Click in "Repository permissions" and add "Access: Read and Write" to "Webhooks".
      - Set the "Secret" to `$WEBHOOK_SECRET`.
 
    - Create the App.
