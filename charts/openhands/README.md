@@ -159,6 +159,7 @@ authentication as well.
 
      - Open "Account permissions" and select "Access: Read-only" to "Email addresses".
      - In "Repository permissions" add "Access: Read and Write" to:
+
       - Actions
       - Contents
       - Commit Statuses
