@@ -165,7 +165,6 @@ authentication as well.
       - Commit Statuses
       - Issues
       - Pull Requests
-      - Webhooks
       - Workflows
 
    - If you want to get webhooks:
@@ -174,6 +173,7 @@ authentication as well.
      - Check the "Active" checkbox.
      - Set the "Webhook URL" `https://openhands.example.com/integration/github/events`.
      - Go to "Permissions", click in "Organization permissions" and add "Access: Read-only" to "Events".
+     - Go to "Repository permissions" add "Access: Read and Write" to "Webhooks"
      - Set the "Secret" to `$WEBHOOK_SECRET`.
 
    - Create the App.
