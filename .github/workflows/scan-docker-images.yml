@@ -4,6 +4,13 @@ env:
   REGISTRY: ghcr.io
 on:
   pull_request:
+    paths:
+      - 'charts/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
 jobs:
   discover_images:
     name: Discover Images
