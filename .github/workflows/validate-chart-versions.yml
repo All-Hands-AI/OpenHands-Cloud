@@ -74,9 +74,12 @@ jobs:
             # Extract chart name from path (e.g., "charts/runtime-api" -> "runtime-api")
             chart_name=$(basename "$chart_dir")
             
-            # Check if any files in this chart directory were changed
-            if echo "$CHANGED_FILES" | grep -q "^${chart_dir}/"; then
+            # Check if any files in this chart directory were changed (excluding README.md)
+            CHART_CHANGES=$(echo "$CHANGED_FILES" | grep "^${chart_dir}/" | grep -v "README.md" || true)
+            if [ -n "$CHART_CHANGES" ]; then
               echo "Changes detected in ${chart_dir}, validating version..."
+              echo "Changed files (excluding README.md):"
+              echo "$CHART_CHANGES"
 
               # Get current version
               CURRENT_VERSION=$(yq e '.version' "${chart_dir}/Chart.yaml")
