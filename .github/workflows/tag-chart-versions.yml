@@ -7,6 +7,10 @@ on:
     paths:
       - 'charts/**'
 
+concurrency:
+  group: tag-charts
+  cancel-in-progress: false
+
 jobs:
   tag-charts:
     runs-on: ubuntu-latest
