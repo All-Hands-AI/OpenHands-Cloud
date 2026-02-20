@@ -7,8 +7,11 @@ metadata:
 spec:
   schedule: {{ .Values.cleanup.schedule | quote }}
   concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
         spec:
           {{- with .Values.securityContext }}
@@ -19,12 +22,6 @@ spec:
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- if .Values.ingressBase.enabled }}
-          volumes:
-            - name: ingress-base-config
-              configMap:
-                name: {{ include "runtime-api.fullname" . }}-ingress-base
           {{- end }}
           containers:
           - name: cleanup
@@ -38,10 +35,7 @@ spec:
                 value: {{ .Values.database.maxOverflow.cronjobs | default 5 | quote }}
               - name: RUNTIME_IDLE_SECONDS
                 value: {{ .Values.cleanup.idle_seconds | default 1800 | quote }}
-            {{- if .Values.ingressBase.enabled }}
-            volumeMounts:
-              - name: ingress-base-config
-                mountPath: /ingress-base
-            {{- end }}
+            resources:
+              {{- toYaml .Values.jobSettings.resources | nindent 14 }}
           restartPolicy: OnFailure
 {{- end }}

@@ -1,12 +1,12 @@
-{{- if .Values.podStatusLogger.enabled }}
+{{- if .Values.testKeysCleanup.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "runtime-api.fullname" . | trunc 33 | trimSuffix "-"  }}-pod-status-logger
+  name: {{ include "runtime-api.fullname" . }}-test-keys-cleanup
   labels:
     {{- include "runtime-api.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.podStatusLogger.schedule | quote }}
+  schedule: {{ .Values.testKeysCleanup.schedule | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
@@ -21,12 +21,18 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           containers:
-          - name: pod-status-logger
+          - name: test-keys-cleanup
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
             imagePullPolicy: {{ .Values.image.pullPolicy }}
-            command: ["python", "pod_status_logger.py"]
+            command: ["python", "cleanup_test_keys.py"]
             env:
+            - name: TEST_KEY_RETENTION_DAYS
+              value: {{ .Values.testKeysCleanup.retentionDays | quote }}
             {{- include "runtime-api.env" . | nindent 12 }}
+            - name: DB_POOL_SIZE
+              value: {{ .Values.database.poolSize.cronjobs | default 2 | quote }}
+            - name: DB_MAX_OVERFLOW
+              value: {{ .Values.database.maxOverflow.cronjobs | default 5 | quote }}
             resources:
               {{- toYaml .Values.jobSettings.resources | nindent 14 }}
           restartPolicy: OnFailure
