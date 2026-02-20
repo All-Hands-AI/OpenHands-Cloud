@@ -190,8 +190,6 @@ dbCleanup:
   enabled: true
   schedule: "0 0 * * *" # Run daily at midnight
   retentionDays: 90 # Number of days to retain runtime objects
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 1
 
 # Test API Keys cleanup CronJob configuration
 testKeysCleanup:
