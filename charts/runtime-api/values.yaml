@@ -71,6 +71,9 @@ affinity: {}
 postgresql:
   enabled: false
   isFeatureDeploy: false
+  # Set to true when deployed as subchart and parent chart owns PostgreSQL
+  # This ensures migrate-db runs as post-install hook (after postgres is ready)
+  postMigrate: false
   primary:
     persistence:
       enabled: false
