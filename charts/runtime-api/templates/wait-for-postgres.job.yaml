@@ -1,0 +1,46 @@
+{{- if and (or .Values.postgresql.enabled .Values.postgresql.postMigrate) (not .Values.externalDatabase.enabled) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "runtime-api.fullname" . }}-wait-for-postgres
+  labels:
+    {{- include "runtime-api.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 30
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      name: {{ include "runtime-api.fullname" . }}-wait-for-postgres
+      labels:
+        {{- include "runtime-api.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: wait-for-postgres
+          image: "bitnamilegacy/postgresql:latest"
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
+              until PGPASSWORD=$DB_PASS psql -h $DB_HOST -p 5432 -U $DB_USER -c '\q' > /dev/null 2>&1; do
+                echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+                sleep 2
+              done
+              echo "PostgreSQL is up and running!"
+          env:
+            {{- include "runtime-api.env" . | nindent 12 }}
+{{- end }}
