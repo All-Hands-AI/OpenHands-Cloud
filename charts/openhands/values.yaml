@@ -250,6 +250,11 @@ stripe:
   auth:
     existingSecret: stripe-secret
 
+resend:
+  enabled: false
+  auth:
+    existingSecret: resend-api-key
+
 tavily:
   enabled: false
   auth:

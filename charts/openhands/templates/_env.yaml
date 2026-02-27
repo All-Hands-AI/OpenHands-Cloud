@@ -218,6 +218,13 @@
 - name: REQUIRE_PAYMENT
   value: "{{ .Values.stripe.requirePayment | default false }}"
 {{- end }}
+{{- if .Values.resend.enabled }}
+- name: RESEND_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.resend.auth.existingSecret }}
+      key: resend-api-key
+{{- end }}
 {{- if .Values.tavily.enabled }}
 - name: TAVILY_API_KEY
   valueFrom:
