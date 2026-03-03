@@ -49,6 +49,10 @@
 - name: FILE_STORE
   value: {{ .Values.filestore.type }}
 {{- end }}
+{{- if .Values.filestore.provider }}
+- name: SHARED_EVENT_STORAGE_PROVIDER
+  value: {{ .Values.filestore.provider }}
+{{- end }}
 {{- if .Values.runtime.runAsRoot }}
 - name: SANDBOX_USER_ID
   value: '0'
@@ -187,7 +191,7 @@
 - name: LITE_LLM_API_URL
   value: {{ .Values.litellm.url }}
 {{- end }}
-{{- if index .Values "litellm-helm" "enabled" }}
+{{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
 - name: LITE_LLM_API_KEY
   valueFrom:
     secretKeyRef:

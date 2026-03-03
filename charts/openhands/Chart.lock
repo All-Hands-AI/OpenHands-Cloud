@@ -22,6 +22,6 @@ dependencies:
   version: 20.3.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.20
-digest: sha256:993e079383b8356e71d7b12cdc0ae82ee0747f5ce72a9d7307471aa2c9be0da9
-generated: "2026-01-15T17:32:49.752308-05:00"
+  version: 0.1.21-alpha.304
+digest: sha256:91de387fcf3da78462ebabb94fb05a5c04733362c9e70c87f3bf56ad583abd1b
+generated: "2026-03-03T15:22:05.190106883-05:00"

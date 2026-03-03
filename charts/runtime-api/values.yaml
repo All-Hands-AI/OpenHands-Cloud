@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-0c907c9
+  tag: sha-c5193e4
   pullPolicy: Always
 
 imagePullSecrets:
@@ -44,12 +44,25 @@ resources:
     cpu: 1
     memory: 4Gi
 
-# Security context settings for all pods
-securityContext:
-  runAsUser: 1000
-  runAsNonRoot: true
+# Unified job settings for both jobs and cronjobs
+jobSettings:
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 1
+      memory: 3Gi
+    requests:
+      cpu: 1
+      memory: 3Gi
+  # Timeout settings (30 minutes)
+  activeDeadlineSeconds: 1800
+  # History limits
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
 
 nodeSelector: {}
+
+securityContext: {}
 
 tolerations: []
 
@@ -58,6 +71,9 @@ affinity: {}
 postgresql:
   enabled: false
   isFeatureDeploy: false
+  # Set to true when deployed as subchart and parent chart owns PostgreSQL
+  # This ensures migrate-db runs as post-install hook (after postgres is ready)
+  postMigrate: false
   primary:
     persistence:
       enabled: false
@@ -137,7 +153,7 @@ autoscaling:
 cleanup:
   enabled: true
   schedule: "*/5 * * * *"
-  idle_seconds: 1800 # Default to 30 minutes
+  idle_seconds: 1200 # Default to 20 minutes
   dead_seconds: 86400 # Default to 1 day
 
 warmRuntimes:
@@ -146,7 +162,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
+      image: "ghcr.io/openhands/runtime:c0bb84dfa20b4973effbe938d19ed7342e42d4be-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:
@@ -177,13 +193,20 @@ dbCleanup:
   enabled: true
   schedule: "0 0 * * *" # Run daily at midnight
   retentionDays: 90 # Number of days to retain runtime objects
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 1
+
+# Test API Keys cleanup CronJob configuration
+testKeysCleanup:
+  enabled: false # Disabled by default, enabled only in feature and staging environments
+  schedule: "0 0 * * *" # Run daily at midnight
+  retentionDays: 2 # Number of days to retain test API keys
 
 # Pod Status Logger configuration
 podStatusLogger:
   enabled: true
   schedule: "*/5 * * * *" # Run every 5 minutes
+
+monitoring:
+  enabled: false
 
 datadog:
   enabled: false
