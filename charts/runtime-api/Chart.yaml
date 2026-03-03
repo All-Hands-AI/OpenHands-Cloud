@@ -1,5 +1,5 @@
 apiVersion: v2
-name: runtime-api-helm
+name: runtime-api
 description: A Helm chart for the FastAPI application
 version: 0.1.21 # Change this to trigger a new helm chart version being published
 appVersion: "1.0.0"
