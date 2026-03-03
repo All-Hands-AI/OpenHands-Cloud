@@ -17,9 +17,12 @@ jobs:
       base_ref: HEAD~1
       enforce_version_bump: true
 
-  test-charts:
+  test-and-publish-charts:
     runs-on: ubuntu-latest
     needs: [validate-chart-versions]
+    permissions:
+      contents: read
+      packages: write
 
     strategy:
       matrix:
@@ -65,34 +68,6 @@ jobs:
           fi
           echo "Helm template test passed for ${{ matrix.chart.name }}"
 
-  publish-charts:
-    runs-on: ubuntu-latest
-    needs: test-charts
-    permissions:
-      contents: read
-      packages: write
-
-    strategy:
-      matrix:
-        chart:
-          - name: runtime-api
-            path: charts/runtime-api
-          - name: image-loader
-            path: charts/image-loader
-          - name: openhands
-            path: charts/openhands
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'latest'
-
       - name: Extract chart version and prepare repository
         id: chart_info
         run: |
@@ -116,3 +91,4 @@ jobs:
           registry_password: ${{ secrets.GITHUB_TOKEN }}
           update_dependencies: 'true'
           tag: ${{ steps.chart_info.outputs.VERSION }}
+
