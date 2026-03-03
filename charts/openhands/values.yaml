@@ -509,7 +509,7 @@ maintenanceTasks:
       memory: "1Gi"
       cpu: "500m"
 
-runtime-api:
+runtime-api-helm:
   enabled: true
   replicaCount: 1
   runtimeInSameCluster: true

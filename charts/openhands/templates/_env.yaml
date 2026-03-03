@@ -49,6 +49,10 @@
 - name: FILE_STORE
   value: {{ .Values.filestore.type }}
 {{- end }}
+{{- if .Values.filestore.provider }}
+- name: SHARED_EVENT_STORAGE_PROVIDER
+  value: {{ .Values.filestore.provider }}
+{{- end }}
 {{- if .Values.runtime.runAsRoot }}
 - name: SANDBOX_USER_ID
   value: '0'
