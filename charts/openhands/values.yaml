@@ -71,6 +71,8 @@ env:
   RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.app.example.com"
   # replace prod/claude-3-7-sonnet-20250219 with your LLM model and uncomment or override this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/prod/claude-3-7-sonnet-20250219"
+  # Set to "false" to default new users to V0 conversations (they can still opt-in to V1)
+  DEFAULT_V1_ENABLED: "false"
 
 filestore:
   ephemeral: false
