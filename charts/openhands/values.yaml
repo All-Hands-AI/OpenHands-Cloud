@@ -14,6 +14,7 @@ appConfig:
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
   OPENHANDS_BITBUCKET_SERVICE_CLS: "integrations.bitbucket.bitbucket_service.SaaSBitBucketService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
+  OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS: "integrations.bitbucket_data_center.bitbucket_dc_service.SaaSBitbucketDCService"
   OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
 
@@ -105,6 +106,9 @@ bitbucket:
   enabled: false
   auth:
     existingSecret: bitbucket-app
+
+bitbucketDataCenter:
+  enabled: false
 
 gitlabWebhookInstallation:
   enabled: false
@@ -333,6 +337,12 @@ keycloak:
   extraEnvVars:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
+    - name: KC_HTTP_ENABLED
+      value: "true"
+    - name: KC_PROXY_HEADERS
+      value: "xforwarded"
+    - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+      value: "true"
   image:
     repository: bitnamilegacy/keycloak
 

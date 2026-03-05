@@ -1,0 +1,39 @@
+enabled: false
+
+bitbucketDomain: ""
+
+image:
+  repository: python
+  tag: "3.11-alpine"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: traefik
+  host: ""
+  path: /oauth2/userinfo
+  tls:
+    enabled: true
+    secretName: ""
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true

@@ -1,0 +1,101 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "bitbucket-oauth-proxy.fullname" . }}-config
+  labels:
+    {{- include "bitbucket-oauth-proxy.labels" . | nindent 4 }}
+data:
+  userinfo.py: |
+    #!/usr/bin/env python3
+    import http.server
+    import json
+    import urllib.request
+    import urllib.error
+    import os
+
+    BITBUCKET_DOMAIN = os.environ.get('BITBUCKET_DOMAIN', '{{ .Values.bitbucketDomain }}')
+    BITBUCKET_BASE_URL = f'https://{BITBUCKET_DOMAIN}'
+
+    class UserInfoHandler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            print(f'{self.address_string()} - {format % args}')
+
+        def do_GET(self):
+            if self.path == '/health' or self.path == '/':
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(b'OK')
+                return
+
+            if self.path == '/oauth2/userinfo':
+                auth_header = self.headers.get('Authorization', '')
+
+                if not auth_header.startswith('Bearer '):
+                    self.send_response(401)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error': 'missing_token'}).encode())
+                    return
+
+                try:
+                    # Get username from whoami endpoint
+                    req = urllib.request.Request(
+                        f'{BITBUCKET_BASE_URL}/plugins/servlet/applinks/whoami',
+                        headers={'Authorization': auth_header}
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        username = resp.read().decode('utf-8').strip()
+
+                    if not username:
+                        self.send_response(401)
+                        self.send_header('Content-Type', 'application/json')
+                        self.end_headers()
+                        self.wfile.write(json.dumps({'error': 'not_authenticated'}).encode())
+                        return
+
+                    # Get user details from REST API
+                    req = urllib.request.Request(
+                        f'{BITBUCKET_BASE_URL}/rest/api/latest/users/{username}',
+                        headers={'Authorization': auth_header}
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        user_data = json.loads(resp.read().decode('utf-8'))
+
+                    # Return standard OIDC userinfo format
+                    userinfo = {
+                        'sub': str(user_data.get('id', username)),
+                        'preferred_username': user_data.get('name', username),
+                        'name': user_data.get('displayName', username),
+                        'email': user_data.get('emailAddress', ''),
+                    }
+
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(userinfo).encode())
+
+                except urllib.error.HTTPError as e:
+                    self.send_response(e.code)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error': f'bitbucket_error: {e.code}'}).encode())
+                except Exception as e:
+                    self.send_response(500)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error': str(e)}).encode())
+            else:
+                self.send_response(404)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': 'not_found'}).encode())
+
+    if __name__ == '__main__':
+        port = int(os.environ.get('PORT', 8080))
+        server = http.server.HTTPServer(('0.0.0.0', port), UserInfoHandler)
+        print(f'Bitbucket OAuth userinfo proxy listening on :{port}')
+        print(f'Proxying to: {BITBUCKET_BASE_URL}')
+        server.serve_forever()
+{{- end }}

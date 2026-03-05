@@ -3,6 +3,12 @@ name: runtime-api
 description: A Helm chart for the FastAPI application
 version: 0.1.21 # Change this to trigger a new helm chart version being published
 appVersion: "1.0.0"
+annotations:
+  images: |
+    - name: runtime-api
+      image: ghcr.io/all-hands-ai/runtime-api:sha-c5193e4
+    - name: postgresql
+      image: registry-1.docker.io/bitnamicharts/postgresql:16.4.0
 dependencies:
   - name: postgresql
     version: 15.x.x

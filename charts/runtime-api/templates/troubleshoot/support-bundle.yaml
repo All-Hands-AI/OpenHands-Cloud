@@ -1,0 +1,9 @@
+{{- define "runtime.troubleshoot.supportBundle" -}}
+apiVersion: troubleshoot.sh/v1beta2
+kind: SupportBundle
+metadata:
+  name: {{ .Release.Name }}-support-bundle
+spec:
+  collectors: {{- include "runtime.troubleshoot.collectors.shared" .  | nindent 4 }}
+  analyzers: {{- include "runtime.troubleshoot.analyzers.shared" .  | nindent 4 }}
+{{- end -}}

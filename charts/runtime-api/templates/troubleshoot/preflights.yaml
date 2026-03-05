@@ -1,0 +1,9 @@
+{{- define "runtime.troubleshoot.preflights" -}}
+apiVersion: troubleshoot.sh/v1beta2
+kind: Preflight
+metadata:
+  name: {{ .Release.Name }}-preflight
+spec:
+  collectors: {{- include "runtime.troubleshoot.collectors.shared" .  | nindent 4 }}
+  analyzers: {{- include "runtime.troubleshoot.analyzers.shared" .  | nindent 4 }}
+{{- end -}}

@@ -1,0 +1,44 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: bitbucket-oauth-proxy
+spec:
+  chart:
+    name: bitbucket-oauth-proxy
+    chartVersion: 0.1.0
+  releaseName: bitbucket-oauth-proxy
+  namespace: openhands
+  weight: 5
+  values:
+    enabled: repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}
+
+    bitbucketDomain: '{{repl ConfigOption "bitbucket_data_center_domain" }}'
+
+    image:
+      repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/library/python'
+      tag: "3.11-alpine"
+      pullPolicy: IfNotPresent
+
+    imagePullSecrets:
+      - name: '{{repl ImagePullSecretName }}'
+
+    ingress:
+      enabled: repl{{ and (ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1") (ConfigOptionNotEquals "bitbucket_data_center_domain" "") }}
+      className: traefik
+      # Use separate domain for the proxy: bitbucket-auth-proxy.{base_domain}
+      host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}bitbucket-auth-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}bitbucket-auth-proxy.{{repl ConfigOption "app_hostname"}}{{repl end}}'
+      path: /oauth2/userinfo
+      tls:
+        enabled: true
+        secretName: openhands-tls
+      annotations:
+        traefik.ingress.kubernetes.io/router.tls: "true"
+
+  optionalValues:
+    - when: '{{repl HasLocalRegistry }}'
+      recursiveMerge: true
+      values:
+        image:
+          repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/python'
+
+  builder: {}

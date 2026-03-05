@@ -9,3 +9,5 @@ __pycache__/
 
 # Vscode files
 .vscode
+
+build/
