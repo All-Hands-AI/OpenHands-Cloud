@@ -1,0 +1,31 @@
+{{- if and .Values.pluginDirectory.enabled .Values.pluginDirectory.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: plugin-directory
+  labels:
+    app: plugin-directory
+  {{- with .Values.pluginDirectory.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.pluginDirectory.ingress.className }}
+  {{- if .Values.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.pluginDirectory.ingress.host }}
+      secretName: plugin-directory-tls
+  {{- end }}
+  rules:
+    - host: {{ .Values.pluginDirectory.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: plugin-directory
+                port:
+                  number: 3000
+{{- end }}

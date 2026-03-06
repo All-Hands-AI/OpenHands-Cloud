@@ -443,6 +443,21 @@
   value: server.utils.saas_app_conversation_info_injector.SaasAppConversationInfoServiceInjector
 - name: CONVERSATION_MANAGER_CLASS
   value: server.saas_nested_conversation_manager.SaasNestedConversationManager
+{{- if .Values.pluginDirectory.enabled }}
+- name: PLUGIN_DIRECTORY_HOST
+  value: {{ .Values.pluginDirectory.ingress.host | quote }}
+- name: PLUGIN_DIRECTORY_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.pluginDirectory.auth.existingSecret }}
+      key: oidc-client-secret
+{{- else }}
+# Empty values for Keycloak envsubst when plugin-directory is disabled
+- name: PLUGIN_DIRECTORY_HOST
+  value: ""
+- name: PLUGIN_DIRECTORY_CLIENT_SECRET
+  value: ""
+{{- end }}
 {{- end }}
 
 {{/*
