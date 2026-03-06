@@ -17,4 +17,6 @@ data:
     GRANT ALL PRIVILEGES ON DATABASE bitnami_keycloak TO {{ .Values.postgresql.auth.username }};
     CREATE DATABASE runtime_api_db;
     GRANT ALL PRIVILEGES ON DATABASE runtime_api_db TO {{ .Values.postgresql.auth.username }};
+    CREATE DATABASE plugindir;
+    GRANT ALL PRIVILEGES ON DATABASE plugindir TO {{ .Values.postgresql.auth.username }};
 {{- end }}

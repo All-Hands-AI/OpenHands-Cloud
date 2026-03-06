@@ -603,6 +603,40 @@ jiraDc:
 linear:
   enabled: false
 
+pluginDirectory:
+  enabled: false
+  client:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-client
+      tag: "1.1.0"
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+  server:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-server
+      tag: "1.1.0"
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+  env:
+    MARKETPLACE_SOURCE: ""
+    FEATURED_PLUGIN_IDS: ""
+    LOG_LEVEL: "INFO"
+  ingress:
+    enabled: false
+    # host: "plugins.example.com"
+    className: traefik
+    annotations: {}
+  auth:
+    existingSecret: plugin-directory-secrets
+
 global:
   security:
     # This allows using the bitnamilegacy image repo.
