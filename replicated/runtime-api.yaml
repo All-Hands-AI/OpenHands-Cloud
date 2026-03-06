@@ -9,7 +9,7 @@ spec:
   releaseName: runtime-api
   exclude: true
   weight: 20
-  upgradeFlags: ["--wait"]
+  forceConflicts: true
   values:
     replicaCount: 1
     autoscaling:

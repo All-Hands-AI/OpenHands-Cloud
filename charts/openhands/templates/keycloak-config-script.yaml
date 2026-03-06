@@ -20,7 +20,7 @@ data:
     until curl --output /dev/null --silent --head --fail $KEYCLOAK_SERVER_URL; do
         echo '.'
         sleep 5
-    doneq
+    done
 
     ACCESS_TOKEN=$(curl -s -X POST "$KEYCLOAK_SERVER_URL/realms/master/protocol/openid-connect/token" -H "Content-Type: application/x-www-form-urlencoded" -d "client_id=admin-cli" -d "grant_type=password" -d "username=tmpadmin" -d "password=$KEYCLOAK_ADMIN_PASSWORD" | jq -r '.access_token')
     if [ "$ACCESS_TOKEN" = "null" ]; then
@@ -90,7 +90,7 @@ data:
     fi
     if [ "$ERROR_MESSAGE" = "Realm not found." ]; then
       echo "Creating allhands realm..."
-      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_PROVIDER_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_USER_INFO_URL'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
+      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_PROVIDER_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET,$BITBUCKET_DATA_CENTER_HOST'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
       keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms\" -H \"Authorization: Bearer $ACCESS_TOKEN\" -H \"Content-Type: application/json\" --data \"@/app/allhands-realm-github-provider.json\""
       echo "Created allhands realm."
     fi

@@ -345,12 +345,6 @@ spec:
           type: text
           when: 'repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}'
           required: true
-        - name: bitbucket_data_center_user_info_url
-          title: Bitbucket Data Center User Info URL
-          help_text: OAuth 2.0 User Info URL of your Bitbucket Data Center instance
-          type: text
-          when: 'repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}'
-          required: true
         - name: bitbucket_data_center_client_id
           title: Bitbucket Data Center Client ID
           help_text: Client ID from your Bitbucket Data Center OAuth App

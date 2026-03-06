@@ -9,6 +9,7 @@ spec:
   releaseName: openhands
   namespace: openhands
   weight: 10
+  forceConflicts: true
   values:
     global:
       imageRegistry: 'images.r9.all-hands.dev'
@@ -130,9 +131,10 @@ spec:
       values:
         runtime-api:
           replicaCount: 1
+          autoscaling:
+            enabled: false
           image:
             repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
-            tag: add-runtime-image-pull-secrets
           imagePullSecrets:
             - name: '{{repl ImagePullSecretName }}'
           ingress:
@@ -141,15 +143,18 @@ spec:
             host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime-api.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_api_hostname"}}{{repl end}}'
             tls: true
             tlsSecretName: openhands-tls
+          runtimeInSameCluster: true
           env:
             DB_HOST: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
             DB_USER: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_username"}}{{repl else}}postgres{{repl end}}'
+            DB_NAME: "runtime_api_db"
             RUNTIME_BASE_URL: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
             RUNTIME_IMAGE_PULL_SECRETS: '{{repl ImagePullSecretName }}'
             STORAGE_CLASS: "openebs-hostpath"
             INGRESS_CLASS: "traefik"
+            RUNTIME_CLASS: ""
           warmRuntimes:
-            enable: true
+            enabled: true
             count: 1
             configs:
               - name: default
@@ -180,7 +185,12 @@ spec:
                   - "0"
           ingressBase:
             enabled: true
+            apiVersion: networking.k8s.io/v1
+            kind: Ingress
             metadata:
+              name: base-ingress
+              labels:
+                app: runtime-api
               annotations:
                 kubernetes.io/ingress.class: traefik
 
@@ -437,7 +447,6 @@ spec:
         runtime-api:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/runtime-api'
-            tag: add-runtime-image-pull-secrets
         replicated:
           image:
             registry: '{{repl LocalRegistryHost }}'

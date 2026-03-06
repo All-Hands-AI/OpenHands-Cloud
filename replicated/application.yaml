@@ -49,10 +49,6 @@ spec:
     - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/deployment/openhands-runtime-api{{repl end}}'
     - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/service/openhands-runtime-api{{repl end}}'
     - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/ingress/openhands-runtime-api-ingress{{repl end}}'
-
-    # bitbucket data center oauth proxy
-    - openhands/service/bitbucket-oauth-proxy
-
   ports:
     - serviceName: openhands
       servicePort: 3000

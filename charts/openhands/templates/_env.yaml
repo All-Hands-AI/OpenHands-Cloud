@@ -402,11 +402,6 @@
     secretKeyRef:
       name: bitbucket-data-center-app
       key: host
-- name: BITBUCKET_DATA_CENTER_USER_INFO_URL
-  valueFrom:
-    secretKeyRef:
-      name: bitbucket-data-center-app
-      key: user-info-url
 {{- end }}
 {{- end }}
 
@@ -747,10 +742,5 @@
     secretKeyRef:
       name: bitbucket-data-center-app
       key: host
-- name: BITBUCKET_DATA_CENTER_USER_INFO_URL
-  valueFrom:
-    secretKeyRef:
-      name: bitbucket-data-center-app
-      key: user-info-url
 {{- end }}
 {{- end }}

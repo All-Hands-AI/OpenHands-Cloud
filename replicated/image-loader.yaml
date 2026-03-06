@@ -11,4 +11,4 @@ spec:
   useHelmInstall: true
   exclude: true
   weight: 30
-  upgradeFlags: ["--wait"]
+  forceConflicts: true
