@@ -13,6 +13,7 @@ appConfig:
   OPENHANDS_GITHUB_SERVICE_CLS: "integrations.github.github_service.SaaSGitHubService"
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
   OPENHANDS_BITBUCKET_SERVICE_CLS: "integrations.bitbucket.bitbucket_service.SaaSBitBucketService"
+  OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS: "integrations.bitbucket_data_center.bitbucket_dc_service.SaaSBitbucketDCService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
   OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
@@ -105,6 +106,19 @@ bitbucket:
   enabled: false
   auth:
     existingSecret: bitbucket-app
+
+bitbucketDataCenter:
+  enabled: false
+  # If Bitbucket Data Center is not enabled, we still need to provide
+  # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
+  # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
+  #
+  # This is different from the other providers we configure, where keycloak defaults
+  # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
+  # Self-hosted Bitbucket Data Center instances don't have a well known host.
+  #
+  # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
+  host: placeholder.invalid
 
 gitlabWebhookInstallation:
   enabled: false
