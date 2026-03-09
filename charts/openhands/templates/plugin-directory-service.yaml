@@ -1,0 +1,17 @@
+{{- if .Values.pluginDirectory.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: plugin-directory
+  labels:
+    app: plugin-directory
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: plugin-directory
+{{- end }}
