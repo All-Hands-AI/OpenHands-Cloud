@@ -258,6 +258,34 @@ authentication as well.
 
 When the chart is deployed, a job will run to configure the Keycloak realm with the identity provider credentials you provided.
 
+#### Bitbucket Data Center
+
+Bitbucket Data Center is the self-hosted version of Bitbucket. The setup is different from the cloud version. 
+
+1. Create a Bitbucket Data Center Application Link:
+
+   - Follow the instructions in Bitbucket Data Center to create an [OAuth2 Application Link](https://confluence.atlassian.com/enterprise/link-to-atlassian-products-using-oauth-2-0-1688928427.html)
+   - Grant repository read and write scopes.
+   - Set the application URL to `https://auth.openhands.example.com/realms/openhands/broker/bitbucket_data_center
+   - Note the Client ID and Client Secret provided by Bitbucket Data Center
+
+2. Create a Bitbucket Data Center App secret:
+
+   ```bash
+   kubectl create secret generic bitbucket-data-center-app -n openhands \
+     --from-literal=client-id=<your-client-id> \
+     --from-literal=client-secret=<your-client-secret> \
+   ```
+
+3. Update site-values.yaml file:
+
+   ```yaml
+   bitbucketDataCenter:
+     # Set this to true if you are using Bitbucket Data Center as your identity provider
+     enabled: true
+     host: <your-bitbucket-data-center-host>
+   ```
+
 ### LiteLLM configuration
 
 > [!IMPORTANT]

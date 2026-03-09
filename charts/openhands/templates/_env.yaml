@@ -11,6 +11,10 @@
 - name: OPENHANDS_BITBUCKET_SERVICE_CLS
   value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_SERVICE_CLS }}
 {{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+- name: OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS
+  value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS }}
+{{- end }}
 - name: OPENHANDS_MCP_CONFIG_CLS
   value: {{ .Values.appConfig.OPENHANDS_MCP_CONFIG_CLS }}
 - name: OPENHANDS_CONVERSATION_VALIDATOR_CLS
@@ -182,6 +186,20 @@
   valueFrom:
     secretKeyRef:
       name: {{ .Values.bitbucket.auth.existingSecret }}
+      key: client-secret
+{{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+- name: BITBUCKET_DATA_CENTER_HOST
+  value: {{ .Values.bitbucketDataCenter.host }}
+- name: BITBUCKET_DATA_CENTER_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-id
+- name: BITBUCKET_DATA_CENTER_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
       key: client-secret
 {{- end }}
 {{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
