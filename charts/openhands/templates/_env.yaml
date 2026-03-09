@@ -188,24 +188,19 @@
       name: {{ .Values.bitbucket.auth.existingSecret }}
       key: client-secret
 {{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
 - name: BITBUCKET_DATA_CENTER_HOST
   value: .Values.bitbucketDataCenter.host
-{{- if .Values.bitbucketDataCenter.enabled }}
-- name: BITBUCKET_DATA_CENTER_APP_CLIENT_ID
+- name: BITBUCKET_DATA_CENTER_CLIENT_ID
   valueFrom:
     secretKeyRef:
       name: bitbucket-data-center-app
       key: client-id
-- name: BITBUCKET_DATA_CENTER_APP_CLIENT_SECRET
+- name: BITBUCKET_DATA_CENTER_CLIENT_SECRET
   valueFrom:
     secretKeyRef:
       name: bitbucket-data-center-app
       key: client-secret
-{{- else }}
-- name: BITBUCKET_DATA_CENTER_APP_CLIENT_ID
-  value: "placeholder"
-- name: BITBUCKET_DATA_CENTER_APP_CLIENT_SECRET
-  value: "placeholder"
 {{- end }}
 {{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
 - name: LITE_LLM_API_URL

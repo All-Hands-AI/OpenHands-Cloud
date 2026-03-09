@@ -109,16 +109,7 @@ bitbucket:
 
 bitbucketDataCenter:
   enabled: false
-  # If Bitbucket Data Center is not enabled, we still need to provide
-  # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
-  # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
-  #
-  # This is different from the other providers we configure, where keycloak defaults
-  # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
-  # Self-hosted Bitbucket Data Center instances don't have a well known host.
-  #
-  # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
-  host: placeholder.invalid
+  host: ""
 
 gitlabWebhookInstallation:
   enabled: false
