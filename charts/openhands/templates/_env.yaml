@@ -380,13 +380,28 @@
       key: client-secret
 {{- end }}
 
+{{- $providers := list }}
+{{- if .Values.github.enabled }}
+{{- $providers = append $providers "github" }}
+{{- end }}
+{{- if .Values.gitlab.enabled }}
+{{- $providers = append $providers "gitlab" }}
+{{- end }}
+{{- if .Values.bitbucket.enabled }}
+{{- $providers = append $providers "bitbucket" }}
+{{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+{{- $providers = append $providers "bitbucket_data_center" }}
+{{- end }}
+{{- if $providers }}
+- name: OH_WEB_CLIENT_PROVIDERS_CONFIGURED
+  value: {{ $providers | toJson | quote }}
+{{- end }}
+- name: OH_APP_MODE
+  value: "saas"
 {{- if .Values.bitbucketDataCenter.enabled }}
 - name: OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS
   value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS }}
-- name: OH_APP_MODE
-  value: "saas"
-- name: OH_WEB_CLIENT_PROVIDERS_CONFIGURED
-  value: '["bitbucket_data_center"]'
 - name: BITBUCKET_DATA_CENTER_CLIENT_ID
   valueFrom:
     secretKeyRef:
