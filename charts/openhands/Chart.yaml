@@ -2,7 +2,7 @@ apiVersion: v2
 description: OpenHands is an AI-driven autonomous software engineer
 name: openhands
 appVersion: 0.62.0
-version: 0.2.3
+version: 0.2.4
 maintainers:
   - name: rbren
   - name: xingyao
@@ -13,7 +13,7 @@ dependencies:
     version: 9.2.5
     condition: clickhouse.enabled
   - name: keycloak
-    version: 24.5.2
+    version: 24.7.5
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: keycloak.enabled
   - name: langfuse
