@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: langfuse-salt
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  salt: {{ .Values.config.langfuse_salt | b64enc | quote }}
