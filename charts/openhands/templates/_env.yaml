@@ -188,20 +188,6 @@
       name: {{ .Values.bitbucket.auth.existingSecret }}
       key: client-secret
 {{- end }}
-{{- if .Values.bitbucketDataCenter.enabled }}
-- name: BITBUCKET_DATA_CENTER_HOST
-  value: {{ .Values.bitbucketDataCenter.host }}
-- name: BITBUCKET_DATA_CENTER_CLIENT_ID
-  valueFrom:
-    secretKeyRef:
-      name: bitbucket-data-center-app
-      key: client-id
-- name: BITBUCKET_DATA_CENTER_CLIENT_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: bitbucket-data-center-app
-      key: client-secret
-{{- end }}
 {{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
 - name: LITE_LLM_API_URL
   value: http://{{ .Release.Name }}-litellm
@@ -396,5 +382,382 @@
     secretKeyRef:
       name: linear-app
       key: client-secret
+{{- end }}
+
+{{- $providers := list }}
+{{- if .Values.github.enabled }}
+{{- $providers = append $providers "github" }}
+{{- end }}
+{{- if .Values.gitlab.enabled }}
+{{- $providers = append $providers "gitlab" }}
+{{- end }}
+{{- if .Values.bitbucket.enabled }}
+{{- $providers = append $providers "bitbucket" }}
+{{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+{{- $providers = append $providers "bitbucket_data_center" }}
+{{- end }}
+{{- if $providers }}
+- name: OH_WEB_CLIENT_PROVIDERS_CONFIGURED
+  value: {{ $providers | toJson | quote }}
+{{- end }}
+- name: OH_APP_MODE
+  value: "saas"
+{{- if .Values.bitbucketDataCenter.enabled }}
+- name: BITBUCKET_DATA_CENTER_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-id
+- name: BITBUCKET_DATA_CENTER_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-secret
+- name: BITBUCKET_DATA_CENTER_HOST
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: host
+{{- end }}
+{{- end }}
+
+{{- define "openhands.env.keycloak-config" }}
+- name: RUNTIME
+  value: remote
+- name: OPENHANDS_CONFIG_CLS
+  value: {{ .Values.appConfig.OPENHANDS_CONFIG_CLS }}
+- name: OPENHANDS_GITHUB_SERVICE_CLS
+  value: {{ .Values.appConfig.OPENHANDS_GITHUB_SERVICE_CLS }}
+- name: OPENHANDS_GITLAB_SERVICE_CLS
+  value: {{ .Values.appConfig.OPENHANDS_GITLAB_SERVICE_CLS }}
+{{- if .Values.bitbucket.enabled }}
+- name: OPENHANDS_BITBUCKET_SERVICE_CLS
+  value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_SERVICE_CLS }}
+{{- end }}
+- name: OPENHANDS_MCP_CONFIG_CLS
+  value: {{ .Values.appConfig.OPENHANDS_MCP_CONFIG_CLS }}
+- name: OPENHANDS_CONVERSATION_VALIDATOR_CLS
+  value: {{ .Values.appConfig.OPENHANDS_CONVERSATION_VALIDATOR_CLS }}
+- name: OPENHANDS_EXPERIMENT_MANAGER_CLS
+  value: {{ .Values.appConfig.OPENHANDS_EXPERIMENT_MANAGER_CLS }}
+- name: LOG_JSON
+  value: '1'
+- name: LOG_JSON_LEVEL_KEY
+  value: 'severity'
+{{- if .Values.appConfig.POSTHOG_CLIENT_KEY }}
+- name: POSTHOG_CLIENT_KEY
+  value: {{ .Values.appConfig.POSTHOG_CLIENT_KEY }}
+{{- end }}
+
+- name: FILE_STORE_PATH
+  value: {{ .Values.filestore.bucket }}
+- name: SANDBOX_KEEP_RUNTIME_ALIVE
+  value: 'true'
+- name: SANDBOX_CLOSE_DELAY
+  value: "1800"
+{{- if .Values.filestore.ephemeral }}
+- name: FILE_STORE
+  value: s3
+- name: AWS_ACCESS_KEY_ID
+  value: {{ (index .Values.minio.svcaccts 0).accessKey }}
+- name: AWS_SECRET_ACCESS_KEY
+  value: {{ (index .Values.minio.svcaccts 0).secretKey }}
+- name: AWS_S3_ENDPOINT
+  value: {{ printf "%s-%s" $.Release.Name "minio:9000" }}
+- name: AWS_S3_BUCKET
+  value: {{ .Values.filestore.bucket }}
+- name: AWS_S3_SECURE
+  value: 'false'
+{{- else }}
+- name: FILE_STORE
+  value: {{ .Values.filestore.type }}
+{{- end }}
+- name: SANDBOX_USER_ID
+  value: '0'
+- name: RUN_AS_OPENHANDS
+  value: 'false'
+- name: NO_SETUP
+  value: 'true'
+- name: SANDBOX_RUNTIME_CONTAINER_IMAGE
+  value: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag | default (printf "%s-nikolaik" (.Values.image.tag | default .Chart.AppVersion)) }}"
+- name: SANDBOX_REMOTE_RUNTIME_API_URL
+  value: {{ .Values.sandbox.apiHostname }}
+- name: SANDBOX_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: sandbox-api-key
+      key: sandbox-api-key
+{{- if .Values.sessions.existingSecret }}
+- name: JWT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.sessions.existingSecret }}
+      key: jwt-secret
+{{- end }}
+{{- if .Values.allowedUsers }}
+- name: GITHUB_USER_LIST_FILE
+  value: /app/user-waitlist/user-waitlist.txt
+{{- end }}
+{{- if .Values.allowedUsersSheet }}
+- name: GITHUB_USERS_SHEET_ID
+  value: {{ .Values.allowedUsersSheet }}
+{{- end }}
+{{- if .Values.redis.enabled }}
+- name: REDIS_HOST
+  value: {{ .Release.Name }}-redis-master
+- name: REDIS_PORT
+  value: "6379"
+- name: REDIS_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.redis.auth.existingSecret }}
+      key: redis-password
+{{- end }}
+- name: KEYCLOAK_SERVER_URL
+  value: {{ .Values.keycloak.url }}
+- name: KEYCLOAK_REALM_NAME
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-realm
+      key: realm-name
+- name: KEYCLOAK_PROVIDER_NAME
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-realm
+      key: provider-name
+- name: KEYCLOAK_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-realm
+      key: client-id
+- name: KEYCLOAK_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-realm
+      key: client-secret
+- name: KEYCLOAK_SMTP_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-realm
+      key: smtp-password
+- name: KEYCLOAK_ADMIN_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: keycloak-admin
+      key: admin-password
+{{- if .Values.github.enabled }}
+- name: GITHUB_APP_PRIVATE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: github-app
+      key: private-key
+- name: GITHUB_APP_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: github-app
+      key: webhook-secret
+- name: GITHUB_APP_ID
+  valueFrom:
+    secretKeyRef:
+      name: github-app
+      key: app-id
+- name: GITHUB_APP_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: github-app
+      key: client-id
+- name: GITHUB_APP_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: github-app
+      key: client-secret
+{{- end }}
+{{- if .Values.gitlab.enabled }}
+- name: GITLAB_APP_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: gitlab-app
+      key: client-id
+- name: GITLAB_APP_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: gitlab-app
+      key: client-secret
+{{- end }}
+{{- if .Values.bitbucket.enabled }}
+- name: BITBUCKET_APP_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.bitbucket.auth.existingSecret }}
+      key: client-id
+- name: BITBUCKET_APP_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.bitbucket.auth.existingSecret }}
+      key: client-secret
+{{- end }}
+{{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
+- name: LITE_LLM_API_URL
+  value: http://{{ .Release.Name }}-litellm
+{{- else if .Values.litellm.enabled }}
+- name: LITE_LLM_API_URL
+  value: {{ .Values.litellm.url }}
+{{- end }}
+{{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
+- name: LITE_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ index .Values "litellm-helm" "masterkeySecretName" }}
+      key: {{ index .Values "litellm-helm" "masterkeySecretKey" }}
+{{- else if .Values.litellm.enabled }}
+- name: LITE_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.litellm.auth.existingSecret }}
+      key: lite-llm-api-key
+{{- end }}
+{{- if .Values.litellm.enabled }}
+- name: LITE_LLM_TEAM_ID
+  value: {{ .Values.litellm.teamId }}
+{{- end }}
+{{- if .Values.stripe.enabled }}
+- name: STRIPE_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.stripe.auth.existingSecret }}
+      key: stripe-api-key
+- name: STRIPE_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.stripe.auth.existingSecret }}
+      key: stripe-webhook-secret
+- name: REQUIRE_PAYMENT
+  value: "{{ .Values.stripe.requirePayment | default false }}"
+{{- end }}
+{{- if .Values.resend.enabled }}
+- name: RESEND_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.resend.auth.existingSecret }}
+      key: resend-api-key
+{{- end }}
+{{- if .Values.tavily.enabled }}
+- name: TAVILY_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.tavily.auth.existingSecret }}
+      key: tavily-api-key
+{{- end }}
+{{- if .Values.ingress.enabled }}
+{{- if .Values.ingress.prefixWithBranch }}
+- name: WEB_HOST
+  value: {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
+- name: AUTH_WEB_HOST
+  value: {{ .Values.branchSanitized }}.auth.{{ .Values.ingress.host }}
+- name: MCP_HOST
+  value: {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
+{{- else }}
+- name: WEB_HOST
+  value: {{ .Values.ingress.host }}
+- name: AUTH_WEB_HOST
+  value: auth.{{ .Values.ingress.host }}
+- name: MCP_HOST
+  value: {{ .Values.ingress.host }}
+{{- end }}
+{{- else }}
+- name: WEB_HOST
+  value: {{ .Values.ingress.host }}
+- name: AUTH_WEB_HOST
+  value: keycloak
+- name: MCP_HOST
+  value: {{ .Values.ingress.host }}
+{{- end }}
+
+{{- if .Values.slack.enabled }}
+- name: SLACK_CLIENT_ID
+  value: "{{ .Values.slack.clientId }}"
+- name: SLACK_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: slack-auth
+      key: client-secret
+- name: SLACK_SIGNING_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: slack-auth
+      key: signing-secret
+- name: SLACK_WEBHOOKS_ENABLED
+  value: "1"
+{{- end }}
+
+{{- if .Values.githubProxy.enabled }}
+- name: GITHUB_PROXY
+  value: "1"
+{{- end }}
+{{- if .Values.githubProxy.endpointsEnabled }}
+- name: GITHUB_PROXY_ENDPOINTS
+  value: "1"
+{{- end }}
+
+{{- if .Values.debuggingRoutes.enabled }}
+- name: ADD_DEBUGGING_ROUTES
+  value: "1"
+{{- end }}
+
+{{- if .Values.postgresql.enabled }}
+- name: DB_HOST
+  value: "{{ .Release.Name }}-postgresql"
+- name: DB_USER
+  value: "{{ .Values.postgresql.auth.username }}"
+- name: DB_NAME
+  value: "{{ .Values.postgresql.auth.database }}"
+{{- end }}
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+- name: {{ $key }}
+  value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- if .Values.datadog.enabled }}
+# Datadog configuration
+- name: DD_AGENT_HOST
+  value: {{ .Values.datadog.agentHost | quote }}
+- name: DD_TRACE_AGENT_PORT
+  value: "8126"
+- name: DD_DOGSTATSD_PORT
+  value: "8125"
+- name: DD_SERVICE
+  value: {{ .Values.datadog.service | quote }}
+- name: DD_ENV
+  value: {{ .Values.datadog.env | quote }}
+- name: DD_LOGS_INJECTION
+  value: "true"
+- name: DD_TRACE_ENABLED
+  value: "true"
+- name: DD_TRACE_SAMPLING_RULES
+  value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
+{{- end }}
+- name: DB_PASS
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgresql.auth.existingSecret }}
+      key: password
+{{- if .Values.bitbucketDataCenter.enabled }}
+- name: BITBUCKET_DATA_CENTER_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-id
+- name: BITBUCKET_DATA_CENTER_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-secret
+- name: BITBUCKET_DATA_CENTER_HOST
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: host
 {{- end }}
 {{- end }}
