@@ -1,0 +1,285 @@
+image:
+  repository: xxx/ghcr.io/all-hands-ai/enterprise-server@sha256
+  tag: xxx
+
+# Security context settings for all pods
+securityContext:
+  runAsUser: 42420
+  runAsGroup: 42420
+  fsGroup: 42420 # optional, if the pod needs to write to mounted volumes
+  fsGroupChangePolicy: Always
+  runAsNonRoot: true
+
+containers:
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ "ALL" ]
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+global:
+  security:
+    allowInsecureImages: true
+
+commonAnnotations:
+  strategy.spinnaker.io/versioned: "false"
+
+deployment:
+  replicas: 1
+
+serviceAccount:
+  create: false
+  name: openhands-sa
+
+ingress:
+  enabled: true
+  class: nginx
+  host: "app.openhands.jasper.epixagents.test.aws.jpmchase.net"
+  annotations: {
+      strategy.spinnaker.io/versioned: "false",
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "16k",
+      nginx.ingress.kubernetes.io/proxy-buffers-number: "8",     
+  }
+    # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
+    # cert-manager.io/cluster-issuer: letsencrypt-production
+
+sandbox:
+  apiHostname: https://runtime.openhands.jasper.epixagents.test.aws.jpmchase.net
+
+env:
+  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
+  LITE_LLM_TEAM_NAME: openhands
+  LITE_LLM_TEAM_ID: "xxx"
+  LITE_LLM_API_URL: https://litellm.openhands.jasper.epixagents.test.aws.jpmchase.net
+  LITELLM_DEFAULT_MODEL: "litellm_proxy/bedrock/anthropic.claude-sonnet-4-20250514-v1:0"
+  DEBUG: "true"
+  ENABLE_ENTERPRISE_SSO: "true"
+  AUTH_URL: "https://auth.app.openhands.jasper.epixagents.test.aws.jpmchase.net"
+  AUTH_WEB_HOST: "auth.app.openhands.jasper.epixagents.test.aws.jpmchase.net"
+  no_proxy: "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.com,.jpmorgan.com,.eks.amazonaws.com,localhost"
+  NO_PROXY: "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.com,.jpmorgan.com,.eks.amazonaws.com,localhost"
+  RUNTIME_USERNAME: "jules"
+  RUNTIME_UID: 1000
+  MAX_CONCURRENT_CONVERSATIONS: "500"
+  ROLE_CHECK_ENABLED: "true"
+
+filestore:
+  ephemeral: false
+  bucket: app-id-112864-dep-id-116295-uu-id-d9r8zfegk1bu
+  type: s3
+
+keycloak:
+  enabled: true
+  proxyHeaders: xforwarded
+  commonAnnotations: {
+      strategy.spinnaker.io/versioned: "false"
+    } 
+  containerSecurityContext:
+    readOnlyRootFilesystem: false
+  image:
+    registry: xxx.dkr.ecr.us-east-1.amazonaws.com
+    repository: container-release/epixagents/bitnami/keycloak@sha256
+    tag: 884007cf73a96678c7ee2f736e0802454f154499507b6fb77556436397ef90ac
+  url: "https://auth.app.openhands.jasper.epixagents.test.aws.jpmchase.net"
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: "auth.app.openhands.jasper.epixagents.test.aws.jpmchase.net"
+    annotations: {
+        nginx.ingress.kubernetes.io/proxy-buffer-size: "16k",
+        nginx.ingress.kubernetes.io/proxy-buffers-number: "8",
+    }
+    # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
+    # cert-manager.io/cluster-issuer: letsencrypt-production
+
+litellm:
+  enabled: false
+
+litellm-helm:
+  enabled: true
+  image:
+    name: xxx/ghcr.io/berriai/litellm-non_root@sha256
+    repository: xxx/ghcr.io/berriai/litellm-non_root@sha256
+    registry: xxx.dkr.ecr.us-east-1.amazonaws.com
+    tag: xxx
+    pullPolicy: IfNotPresent
+  volumeMounts:
+    - name: prism-volume
+      mountPath: /.cache
+    - name: nodejs-volume
+      mountPath: /tmp/.npm
+    - name: resource-config-volume
+      mountPath: /etc/ssl/certs
+  securityContext:
+    runAsUser: 65534
+    runAsGroup: 65534
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ "ALL" ]
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  serviceAccount:
+    create: false
+    name: openhands-sa
+    annotations: {}
+    createRBAC: false
+  url: https://litellm.openhands.jasper.epixagents.test.aws.jpmchase.net
+  masterkeySecretName: lite-llm-api-key
+  masterkeySecretKey: lite-llm-api-key
+  environmentSecrets: [litellm-env-secrets]
+  envVars: {
+    LITELLM_MIGRATION_DIR: "/.cache",
+    PRISMA_BINARY_CACHE_DIR: "/.cache",
+    no_proxy: "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.com,.jpmorgan.com,.eks.amazonaws.com,localhost",
+    NO_PROXY: "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.com,.jpmorgan.com,.eks.amazonaws.com,localhost",
+    NPM_CONFIG_CACHE: "/tmp",
+    NODE_EXTRA_CA_CERTS: "/etc/ssl/certs/ca-certificates.crt",
+    NPM_CONFIG_STRICT_SSL: "false",
+    NPM_CONFIG_REGISTRY: "https://artifacts-read.gkp.jpmchase.net/artifactory/api/npm/npm",
+    UI_USERNAME: "admin",
+    PROXY_ADMIN_ID: "admin",
+    USE_PRISMA_MIGRATE: "True",
+    PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING: "true"
+  }
+  ui:
+    secretName: litellm-env-secrets
+    secretKey: UI_PASSWORD
+  migrationJob:
+    enabled: true
+  db:
+    #deployStandalone: false
+    useExisting: true
+    database: litellm
+    endpoint: "openhands-postgresql"
+    secret:
+      name: postgres-password
+      usernameKey: username
+      passwordKey: password
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {
+        nginx.ingress.kubernetes.io/proxy-buffer-size: "16k",
+        nginx.ingress.kubernetes.io/proxy-buffers-number: "8"
+    }
+    hosts:
+    - host: litellm.openhands.jasper.epixagents.test.aws.jpmchase.net
+      paths:
+      - path: /
+        pathType: Prefix
+    tls:
+    - hosts:
+      - litellm.openhands.jasper.epixagents.test.aws.jpmchase.net
+  proxy_config:
+    environment_variables: {"OR_APP_NAME": "OpenHands", "OR_SITE_URL": "https://docs.all-hands.dev"}
+    model_list:
+    - model_name: "claude4"
+      litellm_params:
+        model: "bedrock/anthropic.claude-sonnet-4-20250514-v1:0"
+        model_id: "arn:aws:bedrock:us-east-1:xxx:application-inference-profile/z3uadpbkwzym"
+    litellm_settings:
+      drop_params: True
+      num_retries: 3
+      request_timeout: 600
+      context_window_fallbacks: []
+      allowed_fails: 3
+    general_settings:
+      allow_requests_on_db_unavailable: "True"
+  volumes:
+    - name: prism-volume
+      emptyDir: {}
+    - name: nodejs-volume
+      emptyDir: {}
+    - name: resource-config-volume
+      configMap:
+        name: keycloak-config-ca-certs
+        items:
+        - key: ca-certificates.crt
+          path: ca-certificates.crt
+
+runtime-api:
+  enabled: false
+  ingress:
+    host: runtime.openhands.jasper.epixagents.test.aws.jpmchase.net
+  env:
+    RUNTIME_BASE_URL: "runtime.openhands.jasper.epixagents.test.aws.jpmchase.net"
+  runtimeInSameCluster: false
+  image:
+    name: xxx/ghcr.io/all-hands-ai/runtime-api
+    repository: xxx/ghcr.io/all-hands-ai/runtime-api@sha256
+    registry: xxx.dkr.ecr.us-east-1.amazonaws.com
+    tag: xxx
+    pullPolicy: Always
+  serviceAccount:
+    name: runtime-api
+
+runtime:
+  runAsRoot: false
+  image:
+    name: xxx/jasper-sandbox-runtime-jdk-21-oh-59@sha256:xxx
+    repository: xxx/jasper-sandbox-runtime-jdk-21-oh-59@sha256
+    tag: xxx
+
+integrationEvents:
+  deployment:
+    replicas: 1
+  uvicorn:
+    workers: 2
+
+mcpEvents:
+  deployment:
+    replicas: 1
+  uvicorn:
+    workers: 2
+
+gitlab:
+  enabled: false
+github:
+  enabled: false
+githubProxy:
+  enabled: false
+  endpointsEnabled: false
+bitbucket:
+  enabled: false
+
+
+redis:   # need to update # Source: openhands/charts/redis/templates/master/application.yaml for image pull locations?
+  enabled: true
+  image:
+    registry: xxx.dkr.ecr.us-east-1.amazonaws.com
+    repository: container-release/epixagents/bitnami/redis@sha256   # spinnaker error requesting image pulled from "approved repos"
+    tag: xxx
+
+
+migrationJob:
+  enabled: true
+  initContainer:
+    enabled: false
+
+
+postgresql:
+  configMap:
+    annotations: {
+      strategy.spinnaker.io/versioned: "false"
+    }
+  enabled: true
+  image:
+    registry: xxx.dkr.ecr.us-east-1.amazonaws.com
+    repository: container-release/epixagents/bitnami/postgresql@sha256
+    tag: xxx
+    debug: true
+  primary:
+    podAnnotations: {
+      strategy.spinnaker.io/versioned: "false"
+    }
+    persistence:
+      enabled: true                   # Enable persistent storage
+      storageClass: "io1-encrypted"   # Storage class name (leave empty to use default)
+      accessModes:
+        - ReadWriteOnce                 # Access mode for the volume
+      size: 20Gi                      # Size of the persistent volume
+      annotations: {}                 # Any annotations for the PVC
+      mountPath: /bitnami/postgresql

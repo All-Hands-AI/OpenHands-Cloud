@@ -1,0 +1,220 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  repository: xxx/ghcr.io/all-hands-ai/runtime-api@sha256
+  tag: xxx
+  pullPolicy: Always
+
+imagePullSecrets: []
+#- name: ghcr-login-secret
+
+serviceAccount:
+  create: false
+  name: openhands-sa
+  annotations: {}
+  createRBAC: false
+
+runtimeInSameCluster: true
+defaultAPIKeySecretName: default-api-key
+
+service:
+  type: ClusterIP
+  port: 5000
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  DEV_MODE: "false"
+  ARTIFACT_REGISTRY_REPOSITORY: "runtime-api-docker-repo"
+  ARTIFACT_REGISTRY_LOCATION: "us-central1"
+  GCP_REGION: "us-central1"
+  STORAGE_CLASS: "io1-encrypted"
+  INCLUDE_START_PROBE: "true"
+  INCLUDE_LIVENESS_PROBE: "true"
+  RUNTIME_CLASS: ""
+  RUNTIME_IN_SAME_CLUSTER: "true"
+  RUNTIME_BASE_URL: "runtime.openhands.jasper.epixagents.test.aws.jpmchase.net"
+  RUN_AS_OPENHANDS: "true"
+  INGRESS_CLASS: "nginx"
+  RUNTIME_ROUTING_MODE: "path"
+  RUNTIME_URL_SEPARATOR: "/"
+  CPU_REQUEST: "2500m"
+  MEMORY_REQUEST: "8000Mi"
+  MEMORY_LIMIT: "8000Mi"
+  K8S_NAMESPACE: "oh-runtime-pods"
+  SSL_CERT_FILE: "/etc/ssl/certs/ca-certificates.crt"
+  REQUESTS_CA_BUNDLE: "/etc/ssl/certs/ca-certificates.crt"
+  SU_TO_USER: "false"
+  RUNTIME_USERNAME: "jules"
+
+resources:
+  limits:
+    cpu: 1
+    memory: 4Gi
+  requests:
+    cpu: 1
+    memory: 4Gi
+
+# Security context settings for all pods
+securityContext:
+  runAsUser: 1000
+  runAsNonRoot: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+postgresql:
+  enabled: true
+  image:
+    registry: xxx.dkr.ecr.us-east-1.amazonaws.com
+    repository: container-release/epixagents/bitnami/postgresql@sha256
+    tag: xxx
+    debug: true
+  isFeatureDeploy: false
+  primary:
+    persistence:
+      enabled: true                   # Enable persistent storage
+      storageClass: "io1-encrypted"   # Storage class name (leave empty to use default)
+      accessModes:
+        - ReadWriteOnce                 # Access mode for the volume
+      size: 20Gi                     # Size of the persistent volume
+      annotations: {}                 # Any annotations for the PVC
+      mountPath: /bitnami/postgresql
+  auth:
+    username: postgres
+    password: "" # This should be set externally for security reasons
+    existingSecret: postgres-password
+    database: runtime_api_db
+  service:
+    ports:
+      postgresql: 5432
+
+# External database configuration (used when postgresql.enabled=false)
+database:
+  create: false # Will only be true for AWS as it can't create the DB in terraform
+  secretName: runtime-api-db-credentials # Secret containing external database credentials
+  poolSize:
+    api: 5 # Pool size for API deployment (default)
+    cronjobs: 2 # Pool size for cronjobs (default)
+  maxOverflow:
+    api: 10 # Max overflow for API deployment (default)
+    cronjobs: 5 # Max overflow for cronjobs (default)
+
+helm-release-pruner:
+  enabled: false
+  job:
+    schedule: "0 */4 * * *"
+    dryRun: False
+  pruneProfiles:
+    - olderThan: "1 days ago"
+      helmReleaseFilter: "^runtime-api-.*$"
+      namespaceFilter: "^runtime-api-.*$"
+      maxReleasesToKeep: 10
+
+ingress:
+  enabled: true
+  host: runtime.openhands.jasper.epixagents.test.aws.jpmchase.net
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+  # cert-manager.io/cluster-issuer: letsencrypt
+  path: /
+  pathType: Prefix
+  tls: true
+
+# Base ingress configuration for runtime ingress inheritance
+# Only metadata (labels and annotations) will be inherited, not the spec
+ingressBase:
+  enabled: true
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: base-ingress
+    labels:
+      app: runtime-api
+      environment: production
+      team: platform
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      #cert-manager.io/cluster-issuer: letsencrypt-prod
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 75
+
+cleanup:
+  enabled: true
+  schedule: "*/5 * * * *"
+  idle_seconds: 18000 # Default to 30 minutes (3 hrs)
+  dead_seconds: 604800 # Default to 1 day (7 days)
+
+warmRuntimes:
+  enabled: true
+  configMapName: warm-runtimes-config
+  count: 20
+  configs:
+    - name: default
+      image: "xxx/jasper-sandbox-runtime-jdk-21-oh-59@sha256:xxx"
+      working_dir: "/openhands/code/"
+      environment:
+        #USER: "jules"
+        DEBUG: "true"
+        SU_TO_USER: "false"
+        RUNTIME_USERNAME: "jules"
+      command:
+        - /openhands/micromamba/bin/micromamba
+        - run
+        - -n
+        - openhands
+        - poetry
+        - run
+        - python
+        - -u
+        - -m
+        - openhands.runtime.action_execution_server
+        - "60000"
+        - --working-dir
+        - /workspace
+        - --plugins
+        - agent_skills
+        - jupyter
+        - vscode
+        - --username
+        - "jules"
+        - --user-id
+        - "1000"
+
+# Database cleanup CronJob configuration
+dbCleanup:
+  enabled: true
+  schedule: "0 0 * * *" # Run daily at midnight
+  retentionDays: 90 # Number of days to retain runtime objects
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+
+# Pod Status Logger configuration
+podStatusLogger:
+  enabled: true
+  schedule: "*/5 * * * *" # Run every 5 minutes
+
+monitoring:
+  enabled: false
+
+datadog:
+  enabled: false
+  env: "test"

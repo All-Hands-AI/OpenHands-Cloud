@@ -1,0 +1,210 @@
+image:
+  # repository: ghcr.io/all-hands-ai/enterprise-server
+  tag: sha-8c84845
+
+deployment:
+  replicas: 1
+
+allowedUsers:
+  - rbren
+  - xingyaoww
+  - neubig
+  - amanape
+  - tofarr
+  - lucasreed
+  - mamoodi
+  - anthrocypher
+  - malhotra5
+  - raymyers
+  - chuck@all-hands.dev
+  - all-hands-bot
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::941377112440:role/chucktest-core-app-openhands-sa-role
+
+filestore:
+  ephemeral: false
+  bucket: 941377112440-chucktest-core-app-openhands-sessions
+  type: s3
+  provider: aws
+
+runtime:
+  runAsRoot: false
+  image:
+    tag: 8c84845930fe656f22630baf088d40f212e0adf0-nikolaik
+
+ingress:
+  enabled: true
+  host: "app.chucktest.aws.all-hands.dev"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+
+certificate:
+  enabled: true
+  name: runtime
+  namespace: openhands
+  secretName: runtime-tls
+  issuer: letsencrypt
+  domains:
+    - "runtime.chucktest.aws.all-hands.dev"
+
+# Enable the TLSStore for Traefik to use the wildcard certificate as default
+tlsStore:
+  enabled: true
+  name: default
+  secretName: runtime-tls
+
+tls:
+  enabled: true
+
+github:
+  enabled: true
+
+sandbox:
+  apiHostname: https://runtime-api.chucktest.aws.all-hands.dev
+
+env:
+  AGENT_SERVER_IMAGE_REPOSITORY: "ghcr.io/openhands/agent-server"
+  AGENT_SERVER_IMAGE_TAG: "97ab053-python"
+  OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_USERS_PAGE: "true"
+  OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: "true"
+  OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_INTEGRATIONS_PAGE: "true"
+  OH_APP_MODE: "saas"
+  OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: "false"
+  OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_JIRA: "false"
+  OH_WEB_CLIENT_PROVIDERS_CONFIGURED: '["github","enterprise_sso"]'
+  OH_APP_CONVERSATION_INFO_KIND: "server.utils.saas_app_conversation_info_injector.SaasAppConversationInfoServiceInjector"
+  CONVERSATION_MANAGER_CLASS: "server.saas_nested_conversation_manager.SaasNestedConversationManager"
+  OPENHANDS_PROVIDER_BASE_URL: "https://llm-proxy.eval.all-hands.dev/"
+  #V1_ENABLED: "false"
+  #ENABLE_V1: "0"
+  DEFAULT_V1_ENABLED: "false"
+  ENABLE_V1_SLACK_RESOLVER: "false"
+  ENABLE_V1_GITHUB_RESOLVER: "false"
+  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
+  #LITE_LLM_TEAM_NAME: openhands
+  LITELLM_DEFAULT_MODEL: "litellm_proxy/claude-opus-4-5-20251101"
+  #LITE_LLM_API_URL: "http://openhands-litellm:4000"
+  #LITE_LLM_TEAM_ID: "f8bdfe75-9f9b-43ee-b992-e85cdf08ec35"
+  ENABLE_ENTERPRISE_SSO: "true"
+  # LITE_LLM_API_URL: "URL"
+  # LITE_LLM_TEAM_ID: "teamId"
+  # RUN_AS_OPENHANDS: "true"
+  # CONVERSATION_MANAGER_CLASS: "server.saas_nested_conversation_manager.SaasNestedConversationManager"
+  MAX_CONCURRENT_CONVERSATIONS: "10"
+  # RUNTIME_URL_PATTERN: "https://{runtime_id}.runtime.chucktest.aws.all-hands.dev"
+  RUNTIME_URL_PATTERN: "https://runtime.chucktest.aws.all-hands.dev/{runtime_id}"
+  RUNTIME_ROUTING_MODE: "path"
+  DISABLE_WAITLIST: "true"
+  #LOG_LEVEL: "DEBUG"
+  #DEBUG: "true"
+  # RUNTIME_USERNAME: "cbutkus"
+  # RUNTIME_UID: 1000
+  OH_WEBHOOKS_0_BASE_URL: https://app.chucktest.aws.all-hands.dev/api/v1/webhooks
+  DEFAULT_INITIAL_BUDGET: "10.0"
+
+litellm:
+  enabled: true
+  teamId: "f8bdfe75-9f9b-43ee-b992-e85cdf08ec35"
+  url: "http://openhands-litellm:4000"
+
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: false
+
+keycloak:
+  enabled: true
+  replicaCount: 1
+  ingress:
+    enabled: true
+    hostname: "auth.app.chucktest.aws.all-hands.dev"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+
+litellm-helm:
+  # Set this to false if you are using your own litellm instance
+  enabled: true
+  ingress:
+    hosts:
+      - host: llm-proxy.chucktest.aws.all-hands.dev
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: llm-proxy-tls
+        hosts:
+          - llm-proxy.chucktest.aws.all-hands.dev
+  proxy_config:
+    environment_variables:
+      {
+        "OR_APP_NAME": "OpenHands",
+        "OR_SITE_URL": "https://docs.all-hands.dev",
+      }
+    # Needs to be updated with your models. If you bring your own litellm, then just point at that!
+    model_list:
+      - model_name: "claude-opus-4-5-20251101"
+        litellm_params:
+          model: "anthropic/claude-opus-4-5-20251101"
+          api_key: os.environ/ANTHROPIC_API_KEY
+      - model_name: "claude-sonnet-4-5-20250929"
+        litellm_params:
+          model: "anthropic/claude-sonnet-4-5-20250929"
+          api_key: os.environ/ANTHROPIC_API_KEY
+    litellm_settings:
+      default_max_budget: null
+
+runtime-api:
+  enabled: true
+  image:
+    tag: sha-f81cdeb
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::941377112440:role/chucktest-core-app-openhands-sa-role
+  ingress:
+    enabled: true
+    host: runtime-api.chucktest.aws.all-hands.dev
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+  env:
+    RUNTIME_BASE_URL: "runtime.chucktest.aws.all-hands.dev"
+    STORAGE_CLASS: "gp2"
+    RUN_AS_OPENHANDS: "true"
+    RUNTIME_DISABLE_SSL: "false"
+    SU_TO_USER: "false"
+    RUNTIME_ROUTING_MODE: "path"
+    RUNTIME_URL_SEPARATOR: "/"
+    USE_GATEWAY_API: "true"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+    GATEWAY_NAME: "runtime-gateway"
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 1
+  warmRuntimes:
+    count: 3
+    configs:
+      - name: v1_current
+        image: "ghcr.io/openhands/agent-server:97ab053-python"
+        working_dir: "/workspace"
+        environment:
+          SU_TO_USER: "false"
+          LOG_JSON: "1"
+          LOG_JSON_LEVEL_KEY: severity
+          OH_ALLOW_CORS_ORIGINS_0: https://app.chucktest.aws.all-hands.dev
+          OH_BASH_EVENTS_DIR: /workspace/bash_events
+          OH_CONVERSATIONS_PATH: /workspace/conversations
+          OH_ENABLE_VNC: "0"
+          OH_VSCODE_PORT: "60001"
+          OH_WEBHOOKS_0_BASE_URL: https://app.chucktest.aws.all-hands.dev/api/v1/webhooks
+          OPENVSCODE_SERVER_ROOT: /openhands/.openvscode-server
+          VSCODE_PORT: "60001"
+          WORKER_1: "12000"
+          WORKER_2: "12001"
+        command:
+          - /usr/local/bin/openhands-agent-server
+          - --port
+          - "60000"
+        run_as_user: 10001
+        run_as_group: 10001
+        fs_group: 10001
