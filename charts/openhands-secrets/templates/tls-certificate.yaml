@@ -35,36 +35,3 @@ data:
   ca.crt: {{ .Values.config.tls_ca_certificate | b64enc | quote }}
   {{- end }}
 {{- end }}
----
-# This is already set up on the ingress definition passed to the keycloak chart
-# If you leave both here, you'll get a conflict and the helm chart will fail to install.
-
-{{/*{{- if and (.Values.config.tls_certificate) (.Values.config.tls_private_key) }}*/}}
-{{/*apiVersion: v1*/}}
-{{/*kind: Secret*/}}
-{{/*metadata:*/}}
-{{/*  name: {{ .Values.config.auth_hostname }}-tls*/}}
-{{/*  namespace: {{ .Release.Namespace }}*/}}
-{{/*type: kubernetes.io/tls*/}}
-{{/*data:*/}}
-{{/*  {{- if .Values.config.tls_certificate }}*/}}
-{{/*  tls.crt: {{ .Values.config.tls_certificate | b64enc | quote }}*/}}
-{{/*  {{- end }}*/}}
-{{/*  {{- if .Values.config.tls_private_key }}*/}}
-{{/*  tls.key: {{ .Values.config.tls_private_key | b64enc | quote }}*/}}
-{{/*  {{- end }}*/}}
-{{/*  {{- if .Values.config.tls_ca_certificate }}*/}}
-{{/*  ca.crt: {{ .Values.config.tls_ca_certificate | b64enc | quote }}*/}}
-{{/*  {{- end }}*/}}
-{{/*{{- end }}*/}}
-# ---
-# {{- if lookup "apiextensions.k8s.io/v1" "CustomResourceDefinition" "" "tlsstores.traefik.io" }}
-# apiVersion: traefik.io/v1alpha1
-# kind: TLSStore
-# metadata:
-#   name: default
-#   namespace: {{ .Release.Namespace }}
-# spec:
-#   defaultCertificate:
-#     secretName: traefik-tls
-# {{- end }}
