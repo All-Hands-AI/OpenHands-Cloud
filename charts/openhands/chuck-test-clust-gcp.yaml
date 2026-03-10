@@ -1,0 +1,182 @@
+image:
+  repository: ghcr.io/all-hands-ai/enterprise-server
+  tag: sha-37daf06
+
+deployment:
+  replicas: 1
+
+allowedUsers:
+  - rbren
+  - xingyaoww
+  - neubig
+  - amanape
+  - tofarr
+  - lucasreed
+  - mamoodi
+  - anthrocypher
+  - malhotra5
+  - raymyers
+  - chuck@all-hands.dev
+  - all-hands-bot
+
+runtime:
+  runAsRoot: true
+  image:
+    tag: e21d0b13a443841872df6a4d039537bd01fa5494-nikolaik
+
+ingress:
+  enabled: true
+  host: "app.chucksandbox.all-hands.dev"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+
+certificate:
+  enabled: true
+  name: runtime
+  namespace: openhands
+  secretName: runtime-tls
+  issuer: letsencrypt
+  domains:
+    - "runtime.chucksandbox.all-hands.dev"
+
+# Enable the TLSStore for Traefik to use the wildcard certificate as default
+tlsStore:
+  enabled: true
+  name: default
+  secretName: runtime-tls
+
+tls:
+  enabled: true
+
+github:
+  enabled: true
+
+sandbox:
+  apiHostname: https://runtime-api.chucksandbox.all-hands.dev
+
+env:
+  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
+  LITE_LLM_TEAM_NAME: openhands
+  LITELLM_DEFAULT_MODEL: "litellm_proxy/claude-sonnet-4-20250514"
+  ENABLE_ENTERPRISE_SSO: "true"
+  # LITE_LLM_API_URL: "URL"
+  # LITE_LLM_TEAM_ID: "teamId"
+  # RUN_AS_OPENHANDS: "true"
+  # CONVERSATION_MANAGER_CLASS: "server.saas_nested_conversation_manager.SaasNestedConversationManager"
+  MAX_CONCURRENT_CONVERSATIONS: "10"
+  RUNTIME_ROUTING_MODE: "path"
+  RUNTIME_URL_PATTERN: "https://runtime.chucksandbox.all-hands.dev/{runtime_id}"
+  DISABLE_WAITLIST: "false"
+  LOG_LEVEL: "DEBUG"
+  DEBUG: "true"
+  # SANDBOX_ENV_GRB_WLSACCESSID: "access_id"
+  # SANDBOX_ENV_GRB_WLSSECRET: "secret_key"
+  # SANDBOX_ENV_GRB_LICENSEID: "license_id"
+  DEFAULT_INITIAL_BUDGET: "1000000"
+
+  # PROMETHEUS_MULTIPROC_DIR: ""
+  # RUNTIME_USERNAME: "cbutkus"
+  # RUNTIME_UID: 1000
+
+litellm:
+  enabled: true
+  teamId: "68845e11-848a-403a-8f5d-766cd170a2a7"
+  url: "https://llm-proxy.eval.all-hands.dev"
+
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: false
+
+keycloak:
+  enabled: true
+  replicaCount: 1
+  ingress:
+    enabled: true
+    hostname: "auth.app.chucksandbox.all-hands.dev"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+
+litellm-helm:
+  # Set this to false if you are using your own litellm instance
+  enabled: false
+  ingress:
+    hosts:
+      - host: llm-proxy.chucksandbox.all-hands.dev
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: llm-proxy-tls
+        hosts:
+          - llm-proxy.chucksandbox.all-hands.dev
+  proxy_config:
+    environment_variables:
+      {
+        "OR_APP_NAME": "OpenHands",
+        "OR_SITE_URL": "https://docs.all-hands.dev",
+      }
+    # Needs to be updated with your models. If you bring your own litellm, then just point at that!
+    model_list:
+      - model_name: "prod/claude-3-5-sonnet-20241022"
+        litellm_params:
+          model: "anthropic/claude-3-5-sonnet-20241022"
+          api_key: os.environ/ANTHROPIC_API_KEY
+      - model_name: "prod/claude-3-7-sonnet-20250219"
+        litellm_params:
+          model: "anthropic/claude-3-7-sonnet-20250219"
+          api_key: os.environ/ANTHROPIC_API_KEY
+
+runtime-api:
+  enabled: true
+  image:
+    tag: sha-b4abfd9
+  ingress:
+    enabled: true
+    host: runtime-api.chucksandbox.all-hands.dev
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+  env:
+    RUNTIME_BASE_URL: "runtime.chucksandbox.all-hands.dev"
+    STORAGE_CLASS: "hyperdisk-balanced"
+    RUN_AS_OPENHANDS: "false"
+    RUNTIME_DISABLE_SSL: "false"
+    SU_TO_USER: "false"
+    RUNTIME_ROUTING_MODE: "path"
+    RUNTIME_URL_SEPARATOR: "/"
+    USE_GATEWAY_API: "true"
+    GATEWAY_NAME: "runtime-gateway"
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 2
+  warmRuntimes:
+    count: 1
+    configs:
+      - name: default
+        image: "ghcr.io/all-hands-ai/runtime:e21d0b13a443841872df6a4d039537bd01fa5494-nikolaik"
+        working_dir: "/openhands/code/"
+        environment:
+          DEBUG: "true"
+        command:
+          - /openhands/micromamba/bin/micromamba
+          - run
+          - -n
+          - openhands
+          - poetry
+          - run
+          - python
+          - -u
+          - -m
+          - openhands.runtime.action_execution_server
+          - "60000"
+          - --working-dir
+          - /workspace
+          - --plugins
+          - agent_skills
+          - jupyter
+          - vscode
+          - --username
+          - root
+          - --user-id
+          - "0"
