@@ -17,7 +17,7 @@ jobs:
       runtime-api: ${{ steps.changes.outputs.runtime-api }}
       image-loader: ${{ steps.changes.outputs.image-loader }}
       openhands: ${{ steps.changes.outputs.openhands }}
-      secrets: ${{ steps.changes.outputs.secrets }}
+      openhands-secrets: ${{ steps.changes.outputs.openhands-secrets }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,7 +36,7 @@ jobs:
           echo "$CHANGED_FILES"
 
           # Check each chart for changes
-          for chart in runtime-api image-loader openhands secrets; do
+          for chart in runtime-api image-loader openhands openhands-secrets; do
             if echo "$CHANGED_FILES" | grep -q "^charts/${chart}/"; then
               echo "${chart}=true" >> $GITHUB_OUTPUT
               echo "Changes detected in charts/${chart}"
@@ -64,8 +64,8 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
-          - name: secrets
-            path: charts/secrets
+          - name: openhands-secrets
+            path: charts/openhands-secrets
       max-parallel: 1
 
     steps:
@@ -75,11 +75,11 @@ jobs:
           HAS_CHANGES_RUNTIME_API: ${{ needs.detect-changes.outputs.runtime-api }}
           HAS_CHANGES_IMAGE_LOADER: ${{ needs.detect-changes.outputs.image-loader }}
           HAS_CHANGES_OPENHANDS: ${{ needs.detect-changes.outputs.openhands }}
-          HAS_CHANGES_SECRETS: ${{ needs.detect-changes.outputs.secrets }}
+          HAS_CHANGES_OPENHANDS_SECRETS: ${{ needs.detect-changes.outputs.openhands-secrets }}
           IS_PUBLISHABLE_RUNTIME_API: ${{ needs.validate-chart-versions.outputs.runtime-api-publishable }}
           IS_PUBLISHABLE_IMAGE_LOADER: ${{ needs.validate-chart-versions.outputs.image-loader-publishable }}
           IS_PUBLISHABLE_OPENHANDS: ${{ needs.validate-chart-versions.outputs.openhands-publishable }}
-          IS_PUBLISHABLE_SECRETS: ${{ needs.validate-chart-versions.outputs.secrets-publishable }}
+          IS_PUBLISHABLE_OPENHANDS_SECRETS: ${{ needs.validate-chart-versions.outputs.openhands-secrets-publishable }}
         run: |
           CHART_NAME="${{ matrix.chart.name }}"
           case "$CHART_NAME" in
@@ -95,9 +95,9 @@ jobs:
               HAS_CHANGES="$HAS_CHANGES_OPENHANDS"
               IS_PUBLISHABLE="$IS_PUBLISHABLE_OPENHANDS"
               ;;
-            secrets)
-              HAS_CHANGES="$HAS_CHANGES_SECRETS"
-              IS_PUBLISHABLE="$IS_PUBLISHABLE_SECRETS"
+            openhands-secrets)
+              HAS_CHANGES="$HAS_CHANGES_OPENHANDS_SECRETS"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_OPENHANDS_SECRETS"
               ;;
           esac
           
@@ -220,8 +220,8 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
-          - name: secrets
-            path: charts/secrets
+          - name: openhands-secrets
+            path: charts/openhands-secrets
 
     steps:
       - name: Checkout

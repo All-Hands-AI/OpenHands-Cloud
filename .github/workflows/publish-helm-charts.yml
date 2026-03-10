@@ -33,8 +33,8 @@ jobs:
             path: charts/image-loader
           - name: openhands
             path: charts/openhands
-          - name: secrets
-            path: charts/secrets
+          - name: openhands-secrets
+            path: charts/openhands-secrets
       # because openhands depends on runtime-api
       max-parallel: 1
     steps:
