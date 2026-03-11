@@ -18,28 +18,6 @@ appConfig:
   OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
 
-commonRoomSync:
-  enabled: false
-  schedule: "0 3 * * *" # Daily at 3 AM
-  concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 3
-  backoffLimit: 3
-  batchSize: "100"
-  maxRetries: "3"
-  initialBackoffSeconds: "1"
-  maxBackoffSeconds: "60"
-  backoffFactor: "2"
-  rateLimit: "2"
-  keycloakBatchSize: "20"
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: 100m
-    limits:
-      memory: 512Mi
-      cpu: 200m
-
 datadog:
   enabled: false
   env: "dev" # Default environment, can be overridden
