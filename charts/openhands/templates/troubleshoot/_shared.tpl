@@ -15,7 +15,7 @@
 {{- end }}
 {{- end }}
 {{- end }}
-{{- if and (not .Values.redis.enabled) .Values.externalRedis }}
+{{- if .Values.externalRedis.enabled }}
 {{- with .Values.externalRedis }}
 {{- if .host }}
 - redis:
@@ -85,7 +85,7 @@
           when: "connected == true"
           message: "External PostgreSQL database is healthy"
 {{- end }}
-{{- if and (not .Values.redis.enabled) .Values.externalRedis }}
+{{- if .Values.externalRedis.enabled }}
 - redis:
     checkName: "External Redis Cache Health"
     collectorName: external-redis

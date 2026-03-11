@@ -30,49 +30,49 @@ spec:
         includeValue: false
     - logs:
         name: app/{{ .Release.Name }}/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name={{ .Release.Name }}
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 720h
     - logs:
         name: app/{{ .Release.Name }}-postgresql/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name=postgresql
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
     - logs:
         name: app/{{ .Release.Name }}-redis/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name=redis
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
     - logs:
         name: app/{{ .Release.Name }}-keycloak/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name=keycloak
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
     - logs:
         name: app/{{ .Release.Name }}-minio/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name=minio
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
     - logs:
         name: app/{{ .Release.Name }}-runtime-api/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name=runtime-api
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
     - logs:
         name: ingress-nginx/logs
-        selector: 
+        selector:
           - app.kubernetes.io/name=ingress-nginx
         namespace: ingress-nginx
         limits:
@@ -225,21 +225,6 @@ spec:
           - pass:
               when: "== true"
               message: "OpenHands database migration job completed successfully"
-    {{- end }}
-    {{- if .Values.keycloak.enabled }}
-    - jobStatus:
-        name: keycloak-config
-        namespace: {{ .Release.Namespace }}
-        outcomes:
-          - fail:
-              when: "== false"
-              message: "OpenHands Keycloak configuration job failed"
-          - warn:
-              when: "== incomplete"
-              message: "OpenHands Keycloak configuration job is still running"
-          - pass:
-              when: "== true"
-              message: "OpenHands Keycloak configuration job completed successfully"
     {{- end }}
     {{- if index .Values "runtime-api" "enabled" }}
     - jobStatus:
