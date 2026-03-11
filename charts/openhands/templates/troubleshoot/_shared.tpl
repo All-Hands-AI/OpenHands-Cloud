@@ -1,7 +1,7 @@
 {{- define "troubleshoot.collectors.shared" -}}
 - clusterInfo: {}
 - clusterResources: {}
-{{- if and (not .Values.postgresql.enabled) .Values.externalDatabase }}
+{{- if .Values.externalDatabase.enabled }}
 {{- with .Values.externalDatabase }}
 {{- if .host }}
 - postgresql:
@@ -67,7 +67,7 @@
           message: "No default storage class found - required for PostgreSQL, Redis, and file storage"
       - pass:
           message: "Default storage class is available"
-{{- if and (not .Values.postgresql.enabled) .Values.externalDatabase }}
+{{- if .Values.externalDatabase.enabled }}
 - postgresql:
     checkName: "External PostgreSQL Database Health"
     collectorName: external-postgresql
