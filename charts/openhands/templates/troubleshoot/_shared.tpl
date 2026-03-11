@@ -15,19 +15,6 @@
 {{- end }}
 {{- end }}
 {{- end }}
-{{- if .Values.externalRedis.enabled }}
-{{- with .Values.externalRedis }}
-{{- if .host }}
-- redis:
-    collectorName: external-redis
-    uri: redis://{{ .host }}:{{ .port | default 6379 }}
-    {{- if .password }}
-    password:
-      value: "{{ .password }}"
-    {{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
 {{- end -}}
 
 {{- define "troubleshoot.analyzers.shared" -}}
@@ -84,23 +71,5 @@
       - pass:
           when: "connected == true"
           message: "External PostgreSQL database is healthy"
-{{- end }}
-{{- if .Values.externalRedis.enabled }}
-- redis:
-    checkName: "External Redis Cache Health"
-    collectorName: external-redis
-    outcomes:
-      - fail:
-          when: "connected == false"
-          message: "Cannot connect to external Redis server - check host, credentials, and network connectivity"
-      - fail:
-          when: "version == \"\""
-          message: "External Redis version could not be determined"
-      - warn:
-          when: "version < 6.0.0"
-          message: "External Redis version is older than recommended (6.0.0+)"
-      - pass:
-          when: "connected == true"
-          message: "External Redis server is healthy"
 {{- end }}
 {{- end -}}
