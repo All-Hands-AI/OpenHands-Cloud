@@ -614,6 +614,9 @@ jiraDc:
 linear:
   enabled: false
 
+replicated:
+  enabled: false
+
 global:
   security:
     # This allows using the bitnamilegacy image repo.

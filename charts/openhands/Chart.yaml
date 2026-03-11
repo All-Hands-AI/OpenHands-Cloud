@@ -39,6 +39,7 @@ dependencies:
   - name: replicated
     repository: oci://charts.shortrib.io/library
     version: 1.9.0
+    condition: replicated.enabled
   - name: runtime-api
     repository: oci://ghcr.io/all-hands-ai/helm-charts
     version: 0.1.21
