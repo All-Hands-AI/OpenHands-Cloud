@@ -304,12 +304,6 @@
 - name: DB_NAME
   value: "{{ .Values.postgresql.auth.database }}"
 {{- end }}
-{{- if .Values.env }}
-{{- range $key, $value := .Values.env }}
-- name: {{ $key }}
-  value: {{ $value | quote }}
-{{- end }}
-{{- end }}
 {{- if .Values.datadog.enabled }}
 # Datadog configuration
 - name: DD_AGENT_HOST
@@ -416,5 +410,18 @@
     secretKeyRef:
       name: bitbucket-data-center-app
       key: client-secret
+{{- end }}
+{{/*
+  ============================================================================
+  WARNING: .Values.env MUST remain the LAST block in this template.
+  It allows users to override any default env var defined above.
+  Do not add new env var definitions below this block.
+  ============================================================================
+*/}}
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+- name: {{ $key }}
+  value: {{ $value | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
