@@ -1,0 +1,58 @@
+apiVersion: kots.io/v1beta1
+kind: Application
+metadata:
+  name: openhands
+spec:
+  title: OpenHands
+  icon: https://raw.githubusercontent.com/All-Hands-AI/OpenHands/main/frontend/public/apple-touch-icon.png
+  releaseNotes: |
+    ## OpenHands v0.47.0
+    
+    OpenHands is an AI-driven autonomous software engineer that can help you build, debug, and deploy applications.
+  
+  additionalNamespaces:
+    - openhands
+  
+  statusInformers:
+    # openhands
+    - openhands/deployment/openhands
+    - openhands/service/openhands-service
+    - openhands/ingress/openhands-root-ingress
+    - openhands/deployment/openhands-integrations
+    - openhands/service/openhands-integrations-service
+    - openhands/ingress/openhands-integrations-ingress
+    - openhands/deployment/openhands-mcp
+    - openhands/service/openhands-mcp-service
+    - openhands/ingress/openhands-mcp-ingress
+   
+    # keycloak
+    - openhands/statefulset/keycloak
+    - openhands/service/keycloak
+
+    # postgres
+    - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/statefulset/openhands-postgresql{{repl end}}'
+    - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/service/openhands-postgresql{{repl end}}'
+   
+    # redis
+    - '{{repl if ConfigOptionEquals "redis_type" "embedded_redis"}}openhands/statefulset/openhands-redis-master{{repl end}}'
+    - '{{repl if ConfigOptionEquals "redis_type" "embedded_redis"}}openhands/service/openhands-redis-master{{repl end}}'
+    
+    # lite-llm
+    - '{{repl if ConfigOptionEquals "litellm_enabled" "1"}}openhands/deployment/openhands-litellm{{repl end}}'
+    - '{{repl if ConfigOptionEquals "litellm_enabled" "1"}}openhands/service/openhands-litellm{{repl end}}'
+    
+    # minio
+    - '{{repl if ConfigOptionEquals "storage_type" "embedded_minio"}}openhands/deployment/openhands-minio{{repl end}}'
+    - '{{repl if ConfigOptionEquals "storage_type" "embedded_minio"}}openhands/service/openhands-minio{{repl end}}'
+    
+    # runtime-api chart
+    - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/deployment/openhands-runtime-api{{repl end}}'
+    - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/service/openhands-runtime-api{{repl end}}'
+    - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/ingress/openhands-runtime-api-ingress{{repl end}}'
+
+    
+  ports:
+    - serviceName: openhands
+      servicePort: 3000
+      localPort: 3000
+      applicationUrl: "http://openhands"

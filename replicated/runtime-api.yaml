@@ -1,0 +1,17 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: runtime-api
+spec:
+  chart:
+    name: runtime-api
+    chartVersion: 0.1.22
+  releaseName: runtime-api
+  exclude: true
+  weight: 20
+  upgradeFlags: ["--wait"]
+  values:
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+      

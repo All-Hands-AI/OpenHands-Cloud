@@ -1,0 +1,12 @@
+apiVersion: kots.io/v1beta1
+kind: LintConfig
+metadata:
+  name: openhands-lint-config
+spec:
+  rules:
+    - name: "nonexistent-status-informer-object"
+      level: "off"
+    - name: "preflight-spec"
+      level: "off"
+    - name: "troubleshoot-spec"
+      level: "off"

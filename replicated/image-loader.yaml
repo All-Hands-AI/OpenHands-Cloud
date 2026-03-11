@@ -1,0 +1,14 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: image-loader
+spec:
+  chart:
+    name: image-loader
+    chartVersion: 0.1.0
+    releaseName: image-loader
+  helmVersion: v3
+  useHelmInstall: true
+  exclude: true
+  weight: 30
+  upgradeFlags: ["--wait"]
