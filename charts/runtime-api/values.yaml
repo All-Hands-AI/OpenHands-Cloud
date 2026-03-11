@@ -212,6 +212,9 @@ datadog:
   enabled: false
   env: "dev"
 
+replicated:
+  enabled: false
+
 global:
   security:
     # This allows using the bitnamilegacy image repo.

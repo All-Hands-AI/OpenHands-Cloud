@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "runtime-api.labels" . | nindent 4 }}
 spec:
+  {{- if and (not .Values.autoscaling.enabled) .Values.replicaCount }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "runtime-api.selectorLabels" . | nindent 6 }}

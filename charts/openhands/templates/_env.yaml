@@ -318,12 +318,6 @@
 - name: DB_NAME
   value: "{{ .Values.postgresql.auth.database }}"
 {{- end }}
-{{- if .Values.env }}
-{{- range $key, $value := .Values.env }}
-- name: {{ $key }}
-  value: {{ $value | quote }}
-{{- end }}
-{{- end }}
 {{- if .Values.datadog.enabled }}
 # Datadog configuration
 - name: DD_AGENT_HOST
@@ -396,5 +390,38 @@
     secretKeyRef:
       name: linear-app
       key: client-secret
+{{- end }}
+
+{{- $providers := list }}
+{{- if .Values.github.enabled }}
+{{- $providers = append $providers "github" }}
+{{- end }}
+{{- if .Values.gitlab.enabled }}
+{{- $providers = append $providers "gitlab" }}
+{{- end }}
+{{- if .Values.bitbucket.enabled }}
+{{- $providers = append $providers "bitbucket" }}
+{{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+{{- $providers = append $providers "bitbucket_data_center" }}
+{{- end }}
+{{- if $providers }}
+- name: OH_WEB_CLIENT_PROVIDERS_CONFIGURED
+  value: {{ $providers | toJson | quote }}
+{{- end }}
+- name: OH_APP_MODE
+  value: "saas"
+{{/*
+  ============================================================================
+  WARNING: .Values.env MUST remain the LAST block in this template.
+  It allows users to override any default env var defined above.
+  Do not add new env var definitions below this block.
+  ============================================================================
+*/}}
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+- name: {{ $key }}
+  value: {{ $value | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
