@@ -9,3 +9,40 @@ __pycache__/
 
 # Vscode files
 .vscode
+
+# Build outputs
+build
+
+# Replicated
+replicated/*.tgz
+
+# Kubernetes
+*.kubeconfig
+kubeconfig*
+.kube/
+
+# Helm
+.helm/
+**/charts/*.tgz
+Chart.lock
+*.tgz
+
+# Local values overrides
+values.local.yaml
+
+# Secrets
+*.pem
+*.key
+.env
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Secrets and work files
+secrets/*
+work/*
