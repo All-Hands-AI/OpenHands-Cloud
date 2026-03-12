@@ -34,21 +34,21 @@ spec:
     - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/service/openhands-postgresql{{repl end}}'
 
     # redis
-    - '{{repl if ConfigOptionEquals "redis_type" "embedded_redis"}}openhands/statefulset/openhands-redis-master{{repl end}}'
-    - '{{repl if ConfigOptionEquals "redis_type" "embedded_redis"}}openhands/service/openhands-redis-master{{repl end}}'
+    - openhands/statefulset/openhands-redis-master
+    - openhands/service/openhands-redis-master
 
     # lite-llm
-    - '{{repl if ConfigOptionEquals "litellm_enabled" "1"}}openhands/deployment/openhands-litellm{{repl end}}'
-    - '{{repl if ConfigOptionEquals "litellm_enabled" "1"}}openhands/service/openhands-litellm{{repl end}}'
+    - openhands/deployment/openhands-litellm
+    - openhands/service/openhands-litellm
 
     # minio
-    - '{{repl if ConfigOptionEquals "storage_type" "embedded_minio"}}openhands/deployment/openhands-minio{{repl end}}'
-    - '{{repl if ConfigOptionEquals "storage_type" "embedded_minio"}}openhands/service/openhands-minio{{repl end}}'
+    - openhands/deployment/openhands-minio
+    - openhands/service/openhands-minio
 
     # runtime-api chart
-    - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/deployment/openhands-runtime-api{{repl end}}'
-    - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/service/openhands-runtime-api{{repl end}}'
-    - '{{repl if ConfigOptionEquals "runtime_api_enabled" "1"}}openhands/ingress/openhands-runtime-api-ingress{{repl end}}'
+    - openhands/deployment/openhands-runtime-api
+    - openhands/service/openhands-runtime-api
+    - openhands/ingress/openhands-runtime-api-ingress
   ports:
     - serviceName: openhands
       servicePort: 3000

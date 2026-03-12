@@ -52,13 +52,13 @@ spec:
           help_text: The hostname for the Runtime API service
           type: text
           default: "runtime-api.example.com"
-          when: 'repl{{ and (ConfigOptionEquals "hostname_mode" "custom") (ConfigOptionEquals "runtime_api_enabled" "1") }}'
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
         - name: runtime_base_hostname
           title: Runtime Base Hostname
           help_text: The base hostname for runtime containers
           type: text
           default: "runtime.example.com"
-          when: 'repl{{ and (ConfigOptionEquals "hostname_mode" "custom") (ConfigOptionEquals "runtime_api_enabled" "1") }}'
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
 
     - name: tls_configuration
       title: Certificate Configuration
@@ -206,24 +206,10 @@ spec:
           when: 'repl{{ ConfigOptionEquals "llm_provider" "custom" }}'
           required: false
 
-    - name: litellm_configuration
-      title: LiteLLM Configuration
-      description: Configure the LiteLLM proxy service
-      items:
-        - name: litellm_enabled
-          title: Enable LiteLLM
-          help_text: Enable the embedded LiteLLM proxy service
-          type: bool
-          default: "1"
-        - name: litellm_team_name
-          title: LiteLLM Team Name
-          help_text: Team name for LiteLLM configuration
-          type: text
-          default: "openhands"
-
     - name: security_secrets
       title: Security & Authentication
       description: Configure passwords and secrets for various services
+      when: false
       items:
         - name: admin_password
           title: Admin Password
@@ -317,7 +303,7 @@ spec:
           title: Keycloak Provider Name
           help_text: Authentication provider name
           type: text
-          default: "github"
+          default: ""
         - name: keycloak_client_id
           title: Keycloak Client ID
           help_text: OAuth client ID for Keycloak
@@ -367,7 +353,6 @@ spec:
           help_text: Enable GitHub OAuth for user authentication
           type: bool
           default: "0"
-          required: true
         - name: github_oauth_client_id
           title: GitHub OAuth Client ID
           help_text: Client ID from your GitHub OAuth App
@@ -443,94 +428,6 @@ spec:
           type: text
           default: "openhands"
           when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
-
-    - name: redis_configuration
-      title: Redis Configuration
-      description: Configure Redis cache settings
-      items:
-        - name: redis_type
-          title: Redis Type
-          help_text: Choose between embedded Redis or external Redis
-          type: select_one
-          default: "embedded_redis"
-          items:
-            - name: "embedded_redis"
-              title: "Embedded Redis"
-            - name: "external_redis"
-              title: "External Redis"
-        - name: external_redis_host
-          title: External Redis Host
-          help_text: Hostname or IP address of your external Redis server
-          type: text
-          when: 'repl{{ ConfigOptionEquals "redis_type" "external_redis" }}'
-          required: true
-        - name: external_redis_port
-          title: External Redis Port
-          help_text: Port number for your external Redis server
-          type: text
-          default: "6379"
-          when: 'repl{{ ConfigOptionEquals "redis_type" "external_redis" }}'
-        - name: external_redis_password
-          title: External Redis Password
-          help_text: Password for connecting to your external Redis server
-          type: password
-          when: 'repl{{ ConfigOptionEquals "redis_type" "external_redis" }}'
-          required: false
-
-    - name: storage_configuration
-      title: Storage Configuration
-      description: Configure file storage settings
-      items:
-        - name: storage_type
-          title: Storage Type
-          help_text: Choose between embedded MinIO or external S3-compatible storage
-          type: select_one
-          default: "embedded_minio"
-          items:
-            - name: "embedded_minio"
-              title: "Embedded MinIO"
-            - name: "external_s3"
-              title: "External S3-Compatible Storage"
-        - name: external_s3_bucket
-          title: S3 Bucket Name
-          help_text: Name of your S3 bucket for file storage
-          type: text
-          when: 'repl{{ ConfigOptionEquals "storage_type" "external_s3" }}'
-          required: true
-        - name: external_s3_endpoint
-          title: S3 Endpoint
-          help_text: S3 endpoint URL (leave empty for AWS S3)
-          type: text
-          when: 'repl{{ ConfigOptionEquals "storage_type" "external_s3" }}'
-          required: false
-        - name: external_s3_region
-          title: S3 Region
-          help_text: S3 region for your bucket
-          type: text
-          default: "us-east-1"
-          when: 'repl{{ ConfigOptionEquals "storage_type" "external_s3" }}'
-        - name: external_s3_access_key
-          title: S3 Access Key
-          help_text: Your S3 access key ID
-          type: password
-          when: 'repl{{ ConfigOptionEquals "storage_type" "external_s3" }}'
-          required: true
-        - name: external_s3_secret_key
-          title: S3 Secret Key
-          help_text: Your S3 secret access key
-          type: password
-          when: 'repl{{ ConfigOptionEquals "storage_type" "external_s3" }}'
-          required: true
-
-    - name: runtime_api
-      title: Runtime API Configuration
-      description: Configure the OpenHands Runtime API component
-      items:
-        - name: runtime_api_enabled
-          title: Enable Runtime API
-          help_text: Enable the Runtime API component for managing sandboxed execution environments
-          type: bool
-          default: "1"
 
     - name: advanced_options
       title: Advanced Options

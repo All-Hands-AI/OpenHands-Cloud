@@ -22,21 +22,10 @@ spec:
       - name: '{{repl ImagePullSecretName }}'
 
     env:
-      - name: LLM_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: openhands-env-secrets
-            key: LLM_API_KEY
-      - name: LLM_MODEL
-        valueFrom:
-          secretKeyRef:
-            name: openhands-env-secrets
-            key: LLM_MODEL
-      - name: LLM_BASE_URL
-        valueFrom:
-          secretKeyRef:
-            name: openhands-env-secrets
-            key: LLM_BASE_URL
+      # NOTE: OpenHands version 0.62.0 defaults to Claude Sonnet 4.0 in user settings
+      # https://github.com/OpenHands/OpenHands/blob/0.62.0/enterprise/server/constants.py#L27
+      LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
+      LLM_BASE_URL: "http://openhands-litellm:4000"
 
     ingress:
       enabled: true
@@ -95,25 +84,138 @@ spec:
 
     litellm:
       enabled: true
+      url: 'http://openhands-litellm:4000'
 
     litellm-helm:
       enabled: true
+      db:
+        # TODO: should the fallback be openhands-postgresql here?
+        endpoint: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        secret:
+          name: postgres-password
+          usernameKey: username
+          passwordKey: password
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
+        # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
+        # see PR https://github.com/OpenHands/OpenHands/pull/12250 for more info
+        tag: "main-v1.79.1-stable"
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+      environmentSecrets:
+        - litellm-env-secrets
+      ingress:
+        enabled: true
+        className: traefik
+        hosts:
+        - host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}llm-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "llm_proxy_hostname"}}{{repl end}}'
+          paths:
+          - path: /
+            pathType: Prefix
+        tls:
+          - secretName: openhands-tls
+            hosts:
+              - '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}llm-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "llm_proxy_hostname"}}{{repl end}}'
+      proxy_config:
+        environment_variables:
+          OR_APP_NAME: "OpenHands"
+          OR_SITE_URL: "https://docs.all-hands.dev"
+        model_list:
+          - model_name: "prod/claude-sonnet-4-20250514"
+            litellm_params:
+              model: "anthropic/claude-sonnet-4-20250514"
+              api_key: os.environ/ANTHROPIC_API_KEY
 
     langfuse:
       enabled: repl{{ ConfigOptionEquals "langfuse_enabled" "1" }}
 
     runtime-api:
-      enabled: repl{{ ConfigOptionEquals "runtime_api_enabled" "1" }}
+      enabled: true
+      replicaCount: 1
+      autoscaling:
+        enabled: false
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+      ingress:
+        enabled: true
+        className: traefik
+        host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime-api.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_api_hostname"}}{{repl end}}'
+        tls: true
+        tlsSecretName: openhands-tls
+      runtimeInSameCluster: true
+      env:
+        DB_HOST: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        DB_USER: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_username"}}{{repl else}}postgres{{repl end}}'
+        DB_NAME: "runtime_api_db"
+        RUNTIME_BASE_URL: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
+        RUNTIME_IMAGE_PULL_SECRETS: '{{repl ImagePullSecretName }}'
+        STORAGE_CLASS: "openebs-hostpath"
+        INGRESS_CLASS: "traefik"
+        RUNTIME_CLASS: ""
+      warmRuntimes:
+        enabled: true
+        count: 1
+        configs:
+          - name: default
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime:70bcfb7b4ecc6f124c6d55a64f41fe66e7beaad5-nikolaik'
+            working_dir: "/openhands/code/"
+            environment: {}
+            command:
+              - /openhands/micromamba/bin/micromamba
+              - run
+              - -n
+              - openhands
+              - poetry
+              - run
+              - python
+              - -u
+              - -m
+              - openhands.runtime.action_execution_server
+              - "60000"
+              - --working-dir
+              - /workspace
+              - --plugins
+              - agent_skills
+              - jupyter
+              - vscode
+              - --username
+              - root
+              - --user-id
+              - "0"
+      ingressBase:
+        enabled: true
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: base-ingress
+          labels:
+            app: runtime-api
+          annotations:
+            kubernetes.io/ingress.class: traefik
     sandbox:
       apiHostname: 'http://openhands-runtime-api:5000'
     postgresql:
       enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
     redis:
-      enabled: repl{{ ConfigOptionEquals "redis_type" "embedded_redis" }}
+      enabled: true
+      image:
+        repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/redis'
+      auth:
+        password: '{{repl ConfigOption "redis_password" | Base64Encode }}'
     filestore:
-      ephemeral: repl{{ ConfigOptionEquals "storage_type" "embedded_minio" }}
+      ephemeral: true
+    minio:
+      persistence:
+        enabled: true
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/minio/minio'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
     bitbucketDataCenter:
       enabled: repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}
+      host: 'repl{{ ConfigOption "bitbucket_data_center_domain" }}'
     github:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
 
@@ -126,74 +228,6 @@ spec:
         repository: library/replicated-sdk-image
 
   optionalValues:
-    - when: '{{repl ConfigOptionEquals "runtime_api_enabled" "1" }}'
-      recursiveMerge: true
-      values:
-        runtime-api:
-          replicaCount: 1
-          autoscaling:
-            enabled: false
-          image:
-            repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
-          imagePullSecrets:
-            - name: '{{repl ImagePullSecretName }}'
-          ingress:
-            enabled: true
-            className: traefik
-            host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime-api.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_api_hostname"}}{{repl end}}'
-            tls: true
-            tlsSecretName: openhands-tls
-          runtimeInSameCluster: true
-          env:
-            DB_HOST: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
-            DB_USER: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_username"}}{{repl else}}postgres{{repl end}}'
-            DB_NAME: "runtime_api_db"
-            RUNTIME_BASE_URL: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
-            RUNTIME_IMAGE_PULL_SECRETS: '{{repl ImagePullSecretName }}'
-            STORAGE_CLASS: "openebs-hostpath"
-            INGRESS_CLASS: "traefik"
-            RUNTIME_CLASS: ""
-          warmRuntimes:
-            enabled: true
-            count: 1
-            configs:
-              - name: default
-                image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime:70bcfb7b4ecc6f124c6d55a64f41fe66e7beaad5-nikolaik'
-                working_dir: "/openhands/code/"
-                environment: {}
-                command:
-                  - /openhands/micromamba/bin/micromamba
-                  - run
-                  - -n
-                  - openhands
-                  - poetry
-                  - run
-                  - python
-                  - -u
-                  - -m
-                  - openhands.runtime.action_execution_server
-                  - "60000"
-                  - --working-dir
-                  - /workspace
-                  - --plugins
-                  - agent_skills
-                  - jupyter
-                  - vscode
-                  - --username
-                  - root
-                  - --user-id
-                  - "0"
-          ingressBase:
-            enabled: true
-            apiVersion: networking.k8s.io/v1
-            kind: Ingress
-            metadata:
-              name: base-ingress
-              labels:
-                app: runtime-api
-              annotations:
-                kubernetes.io/ingress.class: traefik
-
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
@@ -220,39 +254,6 @@ spec:
           # existingSecret: postgres-password
           # existingSecretUserKey: username
           # existingSecretPasswordKey: password
-    - when: '{{repl ConfigOptionEquals "redis_type" "embedded_redis" }}'
-      recursiveMerge: true
-      values:
-        redis:
-          enabled: true
-          auth:
-            password: '{{repl ConfigOption "redis_password" | Base64Encode }}'
-    - when: '{{repl ConfigOptionEquals "redis_type" "external_redis" }}'
-      recursiveMerge: true
-      values:
-        redis:
-          enabled: false
-        externalRedis:
-          host: '{{repl ConfigOption "external_redis_host"}}'
-          port: '{{repl ConfigOption "external_redis_port"}}'
-          password: '{{repl ConfigOption "external_redis_password"}}'
-    - when: '{{repl ConfigOptionEquals "storage_type" "embedded_minio" }}'
-      recursiveMerge: true
-      values:
-        filestore:
-          ephemeral: true
-        minio:
-          persistence:
-            enabled: true
-    - when: '{{repl ConfigOptionEquals "storage_type" "external_s3" }}'
-      recursiveMerge: true
-      values:
-        filestore:
-          ephemeral: false
-          bucket: '{{repl ConfigOption "external_s3_bucket"}}'
-          endpoint: '{{repl ConfigOption "external_s3_endpoint"}}'
-          region: '{{repl ConfigOption "external_s3_region"}}'
-          existingSecret: s3-credentials
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -265,60 +266,6 @@ spec:
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
 
-    - when: '{{repl ConfigOptionEquals "litellm_enabled" "1" }}'
-      recursiveMerge: true
-      values:
-        env:
-          # NOTE: OpenHands version 0.62.0 defaults to Claude Sonnet 4.0 in user settings
-          # https://github.com/OpenHands/OpenHands/blob/0.62.0/enterprise/server/constants.py#L27
-          LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
-          LLM_BASE_URL: "http://openhands-litellm:4000"
-
-        litellm:
-          url: 'http://openhands-litellm:4000'
-
-        litellm-helm:
-          db:
-            # deployStandalone: false
-            # useExisting: true
-            # database: litellm
-            # TODO: should the fallback be openhands-postgresql here?
-            endpoint: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
-            secret:
-              name: postgres-password
-              usernameKey: username
-              passwordKey: password
-          image:
-            repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
-            # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
-            # see PR https://github.com/OpenHands/OpenHands/pull/12250 for more info
-            tag: "main-v1.79.1-stable"
-          imagePullSecrets:
-            - name: '{{repl ImagePullSecretName }}'
-          environmentSecrets:
-            - litellm-env-secrets
-          ingress:
-            enabled: true
-            className: traefik
-            hosts:
-            - host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}llm-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "llm_proxy_hostname"}}{{repl end}}'
-              paths:
-              - path: /
-                pathType: Prefix
-            tls:
-              - secretName: openhands-tls
-                hosts:
-                  - '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}llm-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "llm_proxy_hostname"}}{{repl end}}'
-          proxy_config:
-            environment_variables:
-              OR_APP_NAME: "OpenHands"
-              OR_SITE_URL: "https://docs.all-hands.dev"
-            model_list:
-              - model_name: "prod/claude-sonnet-4-20250514"
-                litellm_params:
-                  model: "anthropic/claude-sonnet-4-20250514"
-                  api_key: os.environ/ANTHROPIC_API_KEY
-
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
@@ -329,20 +276,6 @@ spec:
           postgresql:
             image:
               repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
-    - when: '{{repl ConfigOptionEquals "redis_type" "embedded_redis" }}'
-      recursiveMerge: true
-      values:
-        redis:
-          image:
-            repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/redis'
-    - when: '{{repl ConfigOptionEquals "storage_type" "embedded_minio" }}'
-      recursiveMerge: true
-      values:
-        minio:
-          image:
-            repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/minio/minio'
-          imagePullSecrets:
-            - name: '{{repl ImagePullSecretName }}'
     - when: '{{repl ConfigOptionEquals "langfuse_enabled" "1" }}'
       recursiveMerge: true
       values:
