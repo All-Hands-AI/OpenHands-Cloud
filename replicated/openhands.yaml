@@ -9,7 +9,7 @@ spec:
   releaseName: openhands
   namespace: openhands
   weight: 10
-  forceConflicts: true
+  helmUpgradeFlags: ["--wait", "--timeout", "600s"]
   values:
     global:
       imageRegistry: 'images.r9.all-hands.dev'
@@ -22,8 +22,6 @@ spec:
       - name: '{{repl ImagePullSecretName }}'
 
     env:
-      # NOTE: OpenHands version 0.62.0 defaults to Claude Sonnet 4.0 in user settings
-      # https://github.com/OpenHands/OpenHands/blob/0.62.0/enterprise/server/constants.py#L27
       LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
       LLM_BASE_URL: "http://openhands-litellm:4000"
 
@@ -95,6 +93,14 @@ spec:
           name: postgres-password
           usernameKey: username
           passwordKey: password
+      migrationJob:
+        enabled: true
+        ttlSecondsAfterFinished: 3600
+        hooks:
+          argocd:
+            enabled: false
+          helm:
+            enabled: true
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
         # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
