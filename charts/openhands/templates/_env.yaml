@@ -1,4 +1,4 @@
-{{- define "openhands.env" }}
+{{- define "openhands.env.defaults" }}
 - name: RUNTIME
   value: remote
 - name: OPENHANDS_CONFIG_CLS
@@ -411,17 +411,52 @@
 {{- end }}
 - name: OH_APP_MODE
   value: "saas"
+{{- end }}
+
 {{/*
-  ============================================================================
-  WARNING: .Values.env MUST remain the LAST block in this template.
-  It allows users to override any default env var defined above.
-  Do not add new env var definitions below this block.
-  ============================================================================
+  openhands.env — Deduplicated environment variable list.
+
+  This wrapper renders the default env vars from "openhands.env.defaults",
+  then removes any entries whose name conflicts with a key in .Values.env,
+  and finally appends the .Values.env overrides. The result is a clean list
+  with no duplicate names, which prevents:
+    - Helm warnings about duplicate env vars
+    - Strategic Merge Patch conflicts during helm upgrade
+      ("The order in patch list doesn't match $setElementOrder list")
+
+  How it works:
+    1. Render "openhands.env.defaults" via include (evaluates all conditionals)
+    2. Parse the rendered YAML list into Go objects with fromYamlArray
+       (handles both "value:" and "valueFrom:" entries transparently)
+    3. Filter out any default entries whose name appears in .Values.env
+    4. Append .Values.env entries (user overrides always win)
+    5. Re-render the deduplicated list with toYaml
+
+  Note: The fromYamlArray/toYaml round-trip may normalize formatting
+  (e.g., comment removal, quote style changes). This is cosmetic only
+  and does not affect Kubernetes behavior.
 */}}
+{{- define "openhands.env" }}
+{{- $defaults := include "openhands.env.defaults" . | fromYamlArray }}
+{{- /* Build a lookup dict of override keys for O(1) membership checks */}}
+{{- $overrideKeys := dict }}
+{{- if .Values.env }}
+{{- range $key, $_ := .Values.env }}
+{{- $_ := set $overrideKeys $key true }}
+{{- end }}
+{{- end }}
+{{- /* Keep only default entries that are NOT overridden by .Values.env */}}
+{{- $filtered := list }}
+{{- range $entry := $defaults }}
+{{- if not (hasKey $overrideKeys (get $entry "name")) }}
+{{- $filtered = append $filtered $entry }}
+{{- end }}
+{{- end }}
+{{- /* Append user overrides from .Values.env (these take precedence) */}}
 {{- if .Values.env }}
 {{- range $key, $value := .Values.env }}
-- name: {{ $key }}
-  value: {{ $value | quote }}
+{{- $filtered = append $filtered (dict "name" $key "value" ($value | toString)) }}
 {{- end }}
 {{- end }}
+{{- $filtered | toYaml }}
 {{- end }}
