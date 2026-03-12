@@ -44,7 +44,7 @@ data:
           \\\"emailVerified\\\": true,
           \\\"firstName\\\": \\\"Keycloak\\\",
           \\\"lastName\\\": \\\"Admin\\\",
-          \\\"email\\\": \\\"admin@all-hands.dev\\\",
+          \\\"email\\\": \\\"admin@openhands.dev\\\",
           \\\"credentials\\\": [{
           \\\"type\\\": \\\"password\\\",
           \\\"value\\\": \\\"$KEYCLOAK_ADMIN_PASSWORD\\\",

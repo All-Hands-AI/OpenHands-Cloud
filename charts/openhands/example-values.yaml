@@ -73,7 +73,7 @@ litellm-helm:
     environment_variables:
       {
         "OR_APP_NAME": "OpenHands",
-        "OR_SITE_URL": "https://docs.all-hands.dev",
+        "OR_SITE_URL": "https://docs.openhands.dev",
       }
     # Needs to be updated with your models. If you bring your own litellm, then
     # just point at that!

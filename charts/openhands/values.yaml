@@ -400,7 +400,7 @@ litellm-helm:
     environment_variables:
       {
         "OR_APP_NAME": "OpenHands",
-        "OR_SITE_URL": "https://docs.all-hands.dev",
+        "OR_SITE_URL": "https://docs.openhands.dev",
       }
     model_list:
     # UPDATE to use models that you have access to and have an API key stored in the litellm-env-secrets secret
