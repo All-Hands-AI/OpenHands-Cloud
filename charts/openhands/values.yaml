@@ -106,7 +106,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-4ea3e4b
+  tag: 1.5.0
 
 ingress:
   enabled: false
@@ -508,7 +508,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-0c907c9
+    tag: sha-c5193e4
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
