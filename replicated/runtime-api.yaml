@@ -5,7 +5,7 @@ metadata:
 spec:
   chart:
     name: runtime-api
-    chartVersion: 0.1.22
+    chartVersion: 0.1.23
   releaseName: runtime-api
   exclude: true
   weight: 20
