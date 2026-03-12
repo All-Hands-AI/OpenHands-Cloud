@@ -1,0 +1,448 @@
+apiVersion: kots.io/v1beta1
+kind: Config
+metadata:
+  name: openhands-config
+spec:
+  groups:
+    - name: domain_configuration
+      title: Domain Configuration
+      description: Configure hostnames and domains for OpenHands services
+      items:
+        - name: hostname_mode
+          title: Hostname Configuration Mode
+          help_text: Choose how to configure hostnames for OpenHands services
+          type: select_one
+          default: "derive"
+          items:
+            - name: "derive"
+              title: "Derive hostnames from domain (recommended)"
+            - name: "custom"
+              title: "Enter all hostnames manually"
+        # Workaround for not being able to template the value of `readonly`
+        - name: base_domain
+          title: Base Domain
+          help_text: The base domain for OpenHands services (e.g., example.com)
+          type: text
+          readonly: false
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "derive" }}'
+          required: true
+        - name: app_hostname
+          title: Application Hostname
+          help_text: The hostname where OpenHands will be accessible
+          type: text
+          default: "app.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
+        - name: auth_hostname
+          title: Authentication Hostname
+          help_text: The hostname for Keycloak authentication service
+          type: text
+          default: "auth.app.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
+        - name: llm_proxy_hostname
+          title: LLM Proxy Hostname
+          help_text: The hostname for the LiteLLM proxy service
+          type: text
+          default: "llm-proxy.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
+        - name: runtime_api_hostname
+          title: Runtime API Hostname
+          help_text: The hostname for the Runtime API service
+          type: text
+          default: "runtime-api.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+        - name: runtime_base_hostname
+          title: Runtime Base Hostname
+          help_text: The base hostname for runtime containers
+          type: text
+          default: "runtime.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+
+    - name: tls_configuration
+      title: Certificate Configuration
+      description: Configure TLS certificates for secure HTTPS connections
+      items:
+        - name: tls_certificate
+          title: TLS Certificate
+          help_text: Upload your TLS certificate file (.crt or .pem)
+          type: file
+          required: true
+        - name: tls_private_key
+          title: TLS Private Key
+          help_text: Upload your TLS private key file (.key or .pem)
+          type: file
+          required: true
+        - name: tls_ca_certificate
+          title: TLS CA Certificate (Recommended)
+          help_text: Upload your CA certificate or certificate chain file (.crt or .pem) - recommended for proper certificate validation
+          type: file
+          required: false
+          recommended: true
+
+    - name: llm_configuration
+      title: LLM Configuration
+      description: Configure your Large Language Model provider
+      items:
+        - name: llm_provider
+          title: LLM Provider
+          help_text: Choose your Large Language Model provider
+          type: dropdown
+          default: "anthropic"
+          items:
+            - name: "anthropic"
+              title: "Anthropic (Claude)"
+            - name: "openai"
+              title: "OpenAI (GPT)"
+            - name: "google"
+              title: "Google"
+            - name: "deepseek"
+              title: "DeepSeek"
+            - name: "mistral"
+              title: "Mistral AI"
+            - name: "azure"
+              title: "Azure OpenAI"
+            - name: "groq"
+              title: "Groq"
+            - name: "openrouter"
+              title: "OpenRouter"
+            - name: "custom"
+              title: "Custom/Local LLM"
+        - name: anthropic_api_key
+          title: Anthropic API Key
+          help_text: Your Anthropic API key for Claude models
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "anthropic" }}'
+          required: true
+        - name: openai_api_key
+          title: OpenAI API Key
+          help_text: Your OpenAI API key for GPT models
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "openai" }}'
+          required: true
+        - name: google_api_type
+          title: Google API Type
+          help_text: Choose between Google AI Studio (Gemini API) or Google Cloud Platform (Vertex AI)
+          type: select_one
+          default: "gemini"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "google" }}'
+          items:
+            - name: "gemini"
+              title: "Google AI Studio (Gemini API)"
+            - name: "vertex"
+              title: "Google Cloud Platform (Vertex AI)"
+        - name: google_gemini_api_key
+          title: Google Gemini API Key
+          help_text: Your Google AI Studio API key for Gemini models
+          type: password
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "google") (ConfigOptionEquals "google_api_type" "gemini") }}'
+          required: true
+        - name: google_vertex_project_id
+          title: Google Cloud Project ID
+          help_text: Your Google Cloud Platform project ID for Vertex AI
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "google") (ConfigOptionEquals "google_api_type" "vertex") }}'
+          required: true
+        - name: google_vertex_location
+          title: Google Cloud Location
+          help_text: Your Google Cloud Platform location/region for Vertex AI
+          type: text
+          default: "us-central1"
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "google") (ConfigOptionEquals "google_api_type" "vertex") }}'
+          required: true
+        - name: google_vertex_credentials
+          title: Google Cloud Service Account JSON
+          help_text: Your Google Cloud service account credentials JSON content
+          type: textarea
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "google") (ConfigOptionEquals "google_api_type" "vertex") }}'
+          required: true
+        - name: deepseek_api_key
+          title: DeepSeek API Key
+          help_text: Your DeepSeek API key
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "deepseek" }}'
+          required: true
+        - name: mistral_api_key
+          title: Mistral API Key
+          help_text: Your Mistral AI API key
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "mistral" }}'
+          required: true
+        - name: azure_api_key
+          title: Azure OpenAI API Key
+          help_text: Your Azure OpenAI API key
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_endpoint
+          title: Azure OpenAI Endpoint
+          help_text: Your Azure OpenAI endpoint URL
+          type: text
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: groq_api_key
+          title: Groq API Key
+          help_text: Your Groq API key
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "groq" }}'
+          required: true
+        - name: openrouter_api_key
+          title: OpenRouter API Key
+          help_text: Your OpenRouter API key
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "openrouter" }}'
+          required: true
+        - name: custom_base_url
+          title: Custom LLM Base URL
+          help_text: Base URL for your custom or local LLM endpoint
+          type: text
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "custom" }}'
+          required: true
+        - name: custom_api_key
+          title: Custom LLM API Key
+          help_text: API key for your custom LLM (if required)
+          type: password
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "custom" }}'
+          required: false
+
+    - name: security_secrets
+      title: Security & Authentication
+      description: Configure passwords and secrets for various services
+      when: false
+      items:
+        - name: admin_password
+          title: Admin Password
+          help_text: Admin password for Runtime API
+          type: password
+          hidden: true
+        - name: postgres_username
+          title: PostgreSQL Username
+          help_text: Username for embedded PostgreSQL database
+          type: text
+          hidden: true
+          default: "postgres"
+        - name: postgres_database
+          title: PostgreSQL Database Name
+          help_text: Database name for embedded PostgreSQL
+          type: text
+          hidden: true
+          default: "openhands"
+        - name: postgres_password
+          title: PostgreSQL Password
+          help_text: Password for embedded PostgreSQL database
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: redis_password
+          title: Redis Password
+          help_text: Password for embedded Redis
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: jwt_secret
+          title: JWT Secret
+          help_text: Secret key for JWT token generation
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: keycloak_admin_password
+          title: Keycloak Admin Password
+          help_text: Admin password for Keycloak
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: keycloak_client_secret
+          title: Keycloak Client Secret
+          help_text: OAuth client secret for Keycloak
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: litellm_api_key
+          title: LiteLLM API Key
+          help_text: API key for LiteLLM service
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: langfuse_salt
+          title: Langfuse Salt
+          help_text: Salt for Langfuse password hashing
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: langfuse_nextauth_secret
+          title: Langfuse NextAuth Secret
+          help_text: NextAuth secret for Langfuse
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: clickhouse_password
+          title: ClickHouse Password
+          help_text: Password for ClickHouse database
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: default_api_key
+          title: Default API Key
+          help_text: Default API key for OpenHands
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: sandbox_api_key
+          title: Sandbox API Key
+          help_text: API key for sandbox access
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: keycloak_realm_name
+          title: Keycloak Realm Name
+          help_text: Name of the Keycloak realm
+          type: text
+          default: "allhands"
+        - name: keycloak_provider_name
+          title: Keycloak Provider Name
+          help_text: Authentication provider name
+          type: text
+          default: ""
+        - name: keycloak_client_id
+          title: Keycloak Client ID
+          help_text: OAuth client ID for Keycloak
+          type: text
+          default: "allhands"
+        - name: keycloak_smtp_password
+          title: Keycloak SMTP Password
+          help_text: SMTP password for Keycloak email services
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+
+    - name: bitbucket_data_center_authentication
+      title: Bitbucket Data Center Authentication
+      description: Configure Bitbucket Data Center OAuth for user authentication
+      items:
+        - name: bitbucket_data_center_auth_enabled
+          title: Enable Bitbucket Data Center Authentication
+          help_text: Enable Bitbucket Data Center OAuth for user authentication
+          type: bool
+          default: "1"
+        - name: bitbucket_data_center_domain
+          title: Bitbucket Data Center Domain
+          help_text: Domain of your Bitbucket Data Center instance
+          type: text
+          when: 'repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}'
+          required: true
+        - name: bitbucket_data_center_client_id
+          title: Bitbucket Data Center Client ID
+          help_text: Client ID from your Bitbucket Data Center OAuth App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}'
+          required: true
+        - name: bitbucket_data_center_client_secret
+          title: Bitbucket Data Center Client Secret
+          help_text: Client Secret from your Bitbucket Data Center OAuth App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}'
+          required: true
+
+    - name: github_authentication
+      title: GitHub Authentication
+      description: Configure GitHub OAuth and App integration for user authentication
+      items:
+        - name: github_auth_enabled
+          title: Enable GitHub Authentication
+          help_text: Enable GitHub OAuth for user authentication
+          type: bool
+          default: "0"
+        - name: github_oauth_client_id
+          title: GitHub OAuth Client ID
+          help_text: Client ID from your GitHub OAuth App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+        - name: github_oauth_client_secret
+          title: GitHub OAuth Client Secret
+          help_text: Client Secret from your GitHub OAuth App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+        - name: github_app_id
+          title: GitHub App ID
+          help_text: App ID from your GitHub App (for repository integration)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+        - name: github_app_webhook_secret
+          title: GitHub App Webhook Secret
+          help_text: Webhook secret from your GitHub App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+        - name: github_app_private_key
+          title: GitHub App Private Key
+          help_text: Upload the private key file (.pem) from your GitHub App
+          type: file
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+
+    - name: database_configuration
+      title: Database Configuration
+      description: Configure PostgreSQL database settings
+      items:
+        - name: postgres_type
+          title: PostgreSQL Type
+          help_text: Choose between embedded PostgreSQL or external PostgreSQL
+          type: select_one
+          default: "embedded_postgres"
+          items:
+            - name: "embedded_postgres"
+              title: "Embedded PostgreSQL"
+            - name: "external_postgres"
+              title: "External PostgreSQL"
+        - name: external_postgres_host
+          title: External PostgreSQL Host
+          help_text: Hostname or IP address of your external PostgreSQL server
+          type: text
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+          required: true
+        - name: external_postgres_port
+          title: External PostgreSQL Port
+          help_text: Port number for your external PostgreSQL server
+          type: text
+          default: "5432"
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+        - name: external_postgres_username
+          title: External PostgreSQL Username
+          help_text: Username for connecting to your external PostgreSQL server
+          type: text
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+          required: true
+        - name: external_postgres_password
+          title: External PostgreSQL Password
+          help_text: Password for connecting to your external PostgreSQL server
+          type: password
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+          required: true
+        - name: external_postgres_database
+          title: External PostgreSQL Database
+          help_text: Database name for OpenHands
+          type: text
+          default: "openhands"
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+
+    - name: advanced_options
+      title: Advanced Options
+      description: Optional components and advanced configuration settings
+      when: false
+      items:
+        - name: langfuse_enabled
+          title: Enable Langfuse
+          help_text: Enable Langfuse for LLM observability, tracing, and analytics
+          type: bool
+          default: "0"
+          hidden: true
+        - name: clickhouse_enabled
+          title: Enable ClickHouse
+          help_text: Enable ClickHouse for analytics and time-series data storage
+          type: bool
+          default: "0"
+          hidden: true

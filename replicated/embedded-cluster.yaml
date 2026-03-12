@@ -1,0 +1,29 @@
+apiVersion: embeddedcluster.replicated.com/v1beta1
+kind: Config
+metadata:
+  name: embedded-cluster-config
+spec:
+  version: "2.13.0+k8s-1.33"
+  domains:
+    proxyRegistryDomain: "images.r9.all-hands.dev"
+    replicatedAppDomain: "updates.r9.all-hands.dev"
+  extensions:
+    helm:
+      repositories:
+        - name: traefik
+          url: https://traefik.github.io/charts
+      charts:
+        - name: traefik
+          chartname: traefik/traefik
+          version: "37.4.0"
+          namespace: traefik
+          values: |
+            service:
+              type: NodePort
+            ports:
+              web:
+                exposedPort: 80
+                nodePort: 80
+              websecure:
+                exposedPort: 443
+                nodePort: 443
