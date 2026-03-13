@@ -85,6 +85,9 @@ bitbucket:
   auth:
     existingSecret: bitbucket-app
 
+enterpriseSSO:
+  enabled: false
+
 bitbucketDataCenter:
   enabled: false
   host: ""
