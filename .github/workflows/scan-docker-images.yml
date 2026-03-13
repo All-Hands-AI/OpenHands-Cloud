@@ -55,6 +55,7 @@ jobs:
     steps:
 
       - name: Run Trivy vulnerability scanner (SARIF)
+        if: github.event_name == 'pull_request'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ matrix.IMAGE }}
@@ -63,11 +64,13 @@ jobs:
           timeout: '10m'
           scanners: 'vuln'
       - name: Upload Trivy results to GitHub Security tab
+        if: github.event_name == 'pull_request'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy vulnerability scanner to create/update issues
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: lazy-actions/gitrivy@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
