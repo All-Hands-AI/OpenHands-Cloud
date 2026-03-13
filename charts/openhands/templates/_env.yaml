@@ -405,6 +405,9 @@
 {{- if .Values.bitbucketDataCenter.enabled }}
 {{- $providers = append $providers "bitbucket_data_center" }}
 {{- end }}
+{{- if .Values.enterpriseSSO.enabled }}
+{{- $providers = append $providers "enterprise_sso" }}
+{{- end }}
 {{- if $providers }}
 - name: OH_WEB_CLIENT_PROVIDERS_CONFIGURED
   value: {{ $providers | toJson | quote }}
