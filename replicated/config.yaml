@@ -453,31 +453,31 @@ spec:
               message: Must be a positive integer (in seconds)
         - name: sandbox_storage_size
           title: Storage Size
-          help_text: How much persistent storage each sandbox gets (e.g., 3072Mi, 5Gi)
+          help_text: How much persistent storage each sandbox gets (e.g., 10240Mi)
           type: text
-          default: "10Gi"
+          default: "10240Mi"
           validation:
             regex:
-              pattern: ^[1-9][0-9]*(Mi|Gi)$
-              message: Must be a size with Mi or Gi suffix (e.g., 3072Mi, 5Gi)
+              pattern: ^[1-9][0-9]*Mi$
+              message: Must be a size in Mi (e.g., 10240Mi)
         - name: sandbox_memory_request
           title: Memory Request
           help_text: The minimum amount of memory to reserve for each sandbox.
           type: text
-          default: "1Gi"
+          default: "1024Mi"
           validation:
             regex:
-              pattern: ^[1-9][0-9]*(Mi|Gi)$
-              message: Must be a size with Mi or Gi suffix (e.g., 3072Mi, 5Gi)
+              pattern: ^[1-9][0-9]*Mi$
+              message: Must be a size in Mi (e.g., 1024Mi)
         - name: sandbox_memory_limit
           title: Memory Limit
           help_text: This is the maximum amount of memory a sandbox can use. If a sandbox exceeds this limit, it may be terminated by the system to free up resources.
           type: text
-          default: "2Gi"
+          default: "2048Mi"
           validation:
             regex:
-              pattern: ^[1-9][0-9]*(Mi|Gi)$
-              message: Must be a size with Mi or Gi suffix (e.g., 3072Mi, 5Gi)
+              pattern: ^[1-9][0-9]*Mi$
+              message: Must be a size in Mi (e.g., 2048Mi)
         - name: sandbox_cpu_request
           title: CPU Request
           help_text: The minimum amount of CPU to reserve for each sandbox. This ensures that sandboxes have guaranteed CPU resources available to them.
