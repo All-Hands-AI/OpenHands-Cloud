@@ -46,23 +46,17 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
+      issues: write
       actions: read
     strategy:
       matrix:
         IMAGE: ${{ fromJson(needs.discover_images.outputs.images) }}
     steps:
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        # This only reports, does not fail the build on CVE.
+      - name: Run Trivy vulnerability scanner to create/update issues
+        uses: lazy-actions/gitrivy@v3
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ matrix.IMAGE }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          timeout: '10m'
-          scanners: 'vuln'  # Only scan vulnerabilities, not secrets/config
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image: ${{ env.REGISTRY }}/${{ matrix.IMAGE }}
+          issue_title: 'Trivy Finding'
+          issue_label: 'trivy,vulnerability'
+          fail_on_vulnerabilities: false
