@@ -5,7 +5,7 @@ metadata:
 spec:
   chart:
     name: openhands
-    chartVersion: 0.2.10
+    chartVersion: 0.2.11
   releaseName: openhands
   namespace: openhands
   weight: 10
@@ -24,6 +24,9 @@ spec:
     env:
       LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
       LLM_BASE_URL: "http://openhands-litellm:4000"
+      REQUIRE_PAYMENT: 0
+      OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
+      OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
 
     ingress:
       enabled: true
@@ -151,6 +154,9 @@ spec:
         tls: true
         tlsSecretName: openhands-tls
       runtimeInSameCluster: true
+      cleanup:
+        idle_seconds: repl{{ ConfigOption "sandbox_idle_seconds" }}
+        dead_seconds: repl{{ ConfigOption "sandbox_dead_seconds" }}
       env:
         DB_HOST: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
         DB_USER: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_username"}}{{repl else}}postgres{{repl end}}'
@@ -160,36 +166,39 @@ spec:
         STORAGE_CLASS: "openebs-hostpath"
         INGRESS_CLASS: "traefik"
         RUNTIME_CLASS: ""
+        RUNTIME_DISABLE_SSL: "false"
+        PERSISTENT_STORAGE_SIZE: 'repl{{ ConfigOption "sandbox_storage_size" }}'
+        MEMORY_REQUEST: 'repl{{ ConfigOption "sandbox_memory_request" }}'
+        MEMORY_LIMIT: 'repl{{ ConfigOption "sandbox_memory_limit" }}'
+        CPU_REQUEST: 'repl{{ ConfigOption "sandbox_cpu_request" }}'
+        CPU_LIMIT: 'repl{{ ConfigOption "sandbox_cpu_limit" }}'
       warmRuntimes:
         enabled: true
         count: 1
         configs:
           - name: default
-            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime:70bcfb7b4ecc6f124c6d55a64f41fe66e7beaad5-nikolaik'
-            working_dir: "/openhands/code/"
-            environment: {}
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.12.0-python'
+            working_dir: "/workspace"
+            environment:
+              LOG_JSON: "1"
+              LOG_JSON_LEVEL_KEY: "severity"
+              OH_ALLOW_CORS_ORIGINS_0: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
+              OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+              OH_CONVERSATIONS_PATH: "/workspace/conversations"
+              OH_ENABLE_VNC: "0"
+              OH_VSCODE_PORT: "60001"
+              OH_WEBHOOKS_0_BASE_URL: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/api/v1/webhooks'
+              OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+              VSCODE_PORT: "60001"
+              WORKER_1: "12000"
+              WORKER_2: "12001"
             command:
-              - /openhands/micromamba/bin/micromamba
-              - run
-              - -n
-              - openhands
-              - poetry
-              - run
-              - python
-              - -u
-              - -m
-              - openhands.runtime.action_execution_server
+              - /usr/local/bin/openhands-agent-server
+              - "--port"
               - "60000"
-              - --working-dir
-              - /workspace
-              - --plugins
-              - agent_skills
-              - jupyter
-              - vscode
-              - --username
-              - root
-              - --user-id
-              - "0"
+            run_as_user: 10001
+            run_as_group: 10001
+            fs_group: 10001
       ingressBase:
         enabled: true
         apiVersion: networking.k8s.io/v1
@@ -322,31 +331,28 @@ spec:
           warmRuntimes:
             configs:
               - name: default
-                image: '{LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/runtime:70bcfb7b4ecc6f124c6d55a64f41fe66e7beaad5-nikolaik'
-                working_dir: "/openhands/code/"
-                environment: {}
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.12.0-python'
+                working_dir: "/workspace"
+                environment:
+                  LOG_JSON: "1"
+                  LOG_JSON_LEVEL_KEY: "severity"
+                  OH_ALLOW_CORS_ORIGINS_0: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
+                  OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+                  OH_CONVERSATIONS_PATH: "/workspace/conversations"
+                  OH_ENABLE_VNC: "0"
+                  OH_VSCODE_PORT: "60001"
+                  OH_WEBHOOKS_0_BASE_URL: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/api/v1/webhooks'
+                  OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+                  VSCODE_PORT: "60001"
+                  WORKER_1: "12000"
+                  WORKER_2: "12001"
                 command:
-                  - /openhands/micromamba/bin/micromamba
-                  - run
-                  - -n
-                  - openhands
-                  - poetry
-                  - run
-                  - python
-                  - -u
-                  - -m
-                  - openhands.runtime.action_execution_server
+                  - /usr/local/bin/openhands-agent-server
+                  - "--port"
                   - "60000"
-                  - --working-dir
-                  - /workspace
-                  - --plugins
-                  - agent_skills
-                  - jupyter
-                  - vscode
-                  - --username
-                  - root
-                  - --user-id
-                  - "0"
+                run_as_user: 10001
+                run_as_group: 10001
+                fs_group: 10001
         keycloak:
           image:
             repository: '{{repl LocalRegistryNamespace }}/keycloak'
