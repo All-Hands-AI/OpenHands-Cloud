@@ -71,8 +71,8 @@ jobs:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Trivy vulnerability scanner to create/update issues
-        # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: aquasecurity/trivy-action@0.33.1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ matrix.IMAGE }}
           format: 'json'
@@ -81,7 +81,7 @@ jobs:
           scanners: 'vuln'
 
       - name: Create GitHub Issues from Trivy results
-        # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: periphery-security/action-trissue@1.2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
