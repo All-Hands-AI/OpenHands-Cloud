@@ -5,7 +5,7 @@ metadata:
 spec:
   chart:
     name: openhands
-    chartVersion: 0.2.9
+    chartVersion: 0.2.10
   releaseName: openhands
   namespace: openhands
   weight: 10
