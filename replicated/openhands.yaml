@@ -24,6 +24,7 @@ spec:
     env:
       LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
       LLM_BASE_URL: "http://openhands-litellm:4000"
+      ENABLE_BILLING: false
 
     ingress:
       enabled: true
@@ -160,6 +161,7 @@ spec:
         STORAGE_CLASS: "openebs-hostpath"
         INGRESS_CLASS: "traefik"
         RUNTIME_CLASS: ""
+        RUNTIME_DISABLE_SSL: "true"
       warmRuntimes:
         enabled: true
         count: 1
