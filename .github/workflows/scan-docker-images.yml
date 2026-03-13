@@ -82,7 +82,7 @@ jobs:
 
       - name: Create GitHub Issues from Trivy results
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: periphery-security/action-trissue@v1
+        uses: periphery-security/action-trissue@1.2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filename: 'trivy-results.json'
