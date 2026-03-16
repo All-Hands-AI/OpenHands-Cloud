@@ -89,7 +89,7 @@ resource "aws_security_group" "instance" {
 
   # --- Web traffic (open to all) ---
   ingress {
-    description = "HTTP — app + ACME challenges"
+    description = "HTTP - app + ACME challenges"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -97,7 +97,7 @@ resource "aws_security_group" "instance" {
   }
 
   ingress {
-    description = "HTTPS — app traffic"
+    description = "HTTPS - app traffic"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"

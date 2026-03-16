@@ -1,6 +1,6 @@
 TFVARS ?= terraform.tfvars
 
-.PHONY: init plan apply destroy ssh urls fmt validate clean
+.PHONY: init plan apply destroy destroy-vm ssh copy-files urls fmt validate clean
 
 init:
 	terraform init
@@ -14,8 +14,26 @@ apply:
 destroy:
 	terraform destroy -var-file=$(TFVARS)
 
+destroy-vm:
+	terraform destroy -var-file=$(TFVARS) \
+		-target=aws_eip_association.instance \
+		-target=aws_instance.openhands \
+		-target=aws_security_group.instance \
+		-target=aws_route_table_association.public \
+		-target=aws_route_table.public \
+		-target=aws_subnet.public \
+		-target=aws_internet_gateway.main \
+		-target=aws_vpc.main
+
 ssh:
 	@terraform output -raw ssh_command
+
+copy-files:
+	scp \
+		$$(terraform output -raw config_values_file) \
+		$$(terraform output -raw certificate_file) \
+		$$(terraform output -raw private_key_file) \
+		ubuntu@$$(terraform output -raw instance_public_ip):~/
 
 urls:
 	@echo "Admin Console: $$(terraform output -raw admin_console_url)"

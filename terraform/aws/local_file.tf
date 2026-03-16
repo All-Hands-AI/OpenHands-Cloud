@@ -31,7 +31,7 @@ resource "local_sensitive_file" "config_values" {
     github_oauth_client_secret = var.github_oauth_client_secret
     github_app_id              = var.github_app_id
     github_app_webhook_secret  = var.github_app_webhook_secret
-    github_app_private_key     = var.github_app_private_key
+    github_app_private_key     = local.github_app_private_key_b64
     tls_certificate            = base64encode(local.certificate_pem)
     tls_private_key            = base64encode(local.private_key_pem)
     tls_ca_certificate         = base64encode(local.ca_pem)

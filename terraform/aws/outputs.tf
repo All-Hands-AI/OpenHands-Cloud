@@ -32,3 +32,13 @@ output "config_values_file" {
   description = "Path to the generated config-values.yaml"
   value       = local_sensitive_file.config_values.filename
 }
+
+output "certificate_file" {
+  description = "Path to the generated certificate PEM"
+  value       = local_file.certificate_pem.filename
+}
+
+output "private_key_file" {
+  description = "Path to the generated private key PEM"
+  value       = local_sensitive_file.private_key_pem.filename
+}

@@ -67,7 +67,7 @@ acme_email      = "admin@example.com"
 # GitHub App
 # github_app_id              = ""
 # github_app_webhook_secret  = ""
-# github_app_private_key     = ""
+# github_app_private_key_path = "/path/to/github-app.pem"
 
 # =============================================================================
 # Tags

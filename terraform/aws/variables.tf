@@ -163,11 +163,10 @@ variable "github_app_webhook_secret" {
   sensitive   = true
 }
 
-variable "github_app_private_key" {
-  description = "GitHub App private key (PEM contents)"
+variable "github_app_private_key_path" {
+  description = "Path to the GitHub App private key .pem file"
   type        = string
   default     = ""
-  sensitive   = true
 }
 
 # -----------------------------------------------------------------------------
