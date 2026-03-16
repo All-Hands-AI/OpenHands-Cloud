@@ -1,0 +1,7 @@
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate*
+*.pem
+*.config-values.yaml
+*.tfvars
+!example.tfvars
