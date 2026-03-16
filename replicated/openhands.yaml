@@ -25,6 +25,7 @@ spec:
       LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
       LLM_BASE_URL: "http://openhands-litellm:4000"
       REQUIRE_PAYMENT: 0
+      ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
 
