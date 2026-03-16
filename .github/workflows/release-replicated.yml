@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'replicated/**'
+      - 'charts/**'
+      - 'Makefile'
   workflow_dispatch:
 
 jobs:

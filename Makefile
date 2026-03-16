@@ -5,6 +5,7 @@ CHARTS      := $(shell find $(CHARTDIR) -mindepth 1 -maxdepth 1 -type d -exec ba
 
 MANIFESTDIR := $(PROJECTDIR)/replicated
 MANIFESTS   := $(shell find $(MANIFESTDIR) -name '*.yaml' -o -name '*.yml')
+CHART_YAMLS := $(shell find $(CHARTDIR) -name 'Chart.yaml')
 
 VERSION     ?= $(shell yq .version $(CHARTDIR)/openhands/Chart.yaml)
 REPLICATED_APP ?= openhands
@@ -17,8 +18,14 @@ BUILDDIR      := $(PROJECTDIR)/build
 RELEASE_FILES :=
 
 define make-manifest-target
-$(BUILDDIR)/$(notdir $1): $1 | $$(BUILDDIR)
+$(BUILDDIR)/$(notdir $1): $1 $(CHART_YAMLS) | $$(BUILDDIR)
 	cp $1 $$(BUILDDIR)/$$(notdir $1)
+	@CHART_NAME=$$(yq '.spec.chart.name // ""' $$(BUILDDIR)/$$(notdir $1)); \
+	if [ -n "$$CHART_NAME" ] && [ -f $(CHARTDIR)/$$CHART_NAME/Chart.yaml ]; then \
+		CHART_VER=$$(yq .version $(CHARTDIR)/$$CHART_NAME/Chart.yaml); \
+		yq -i ".spec.chart.chartVersion = \"$$CHART_VER\"" $$(BUILDDIR)/$$(notdir $1); \
+		echo "Updated $$(notdir $1) chartVersion to $$CHART_VER"; \
+	fi
 RELEASE_FILES := $(RELEASE_FILES) $(BUILDDIR)/$(notdir $1)
 manifests:: $(BUILDDIR)/$(notdir $1)
 endef
@@ -36,12 +43,16 @@ $(foreach element,$(CHARTS),$(eval $(call make-chart-target,$(element))))
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
 
+.PHONY: clean
+clean:
+	rm -rf $(BUILDDIR)
+
 .PHONY: lint
-lint: $(RELEASE_FILES)
+lint: clean $(RELEASE_FILES)
 	replicated release lint --yaml-dir $(BUILDDIR)
 
 .PHONY: release
-release: $(RELEASE_FILES) lint
+release: clean $(RELEASE_FILES) lint
 	replicated release create \
 	 	--app $(REPLICATED_APP) \
 		--version $(VERSION) \
