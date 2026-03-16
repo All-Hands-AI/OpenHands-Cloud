@@ -451,6 +451,74 @@ spec:
           default: "openhands"
           when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
 
+    - name: sandbox_configuration
+      title: Sandbox Configuration
+      description: OpenHands conversations run in isolated sandboxes. Configure sandbox resources and lifecycle settings here. Adjust these settings based on your expected workload and the size of your cluster.
+      items:
+        - name: sandbox_idle_seconds
+          title: Idle Time (seconds)
+          help_text: How long (in seconds) before idle conversations are paused. Pausing a conversation frees up memory and CPU resources.
+          type: text
+          default: "3600"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*$
+              message: Must be a positive integer (in seconds)
+        - name: sandbox_dead_seconds
+          title: Deletion Time (seconds)
+          help_text: How long (in seconds) before paused conversations are permanently deleted. Once deleted, the conversation's storage is freed and it can no longer be accessed.
+          type: text
+          default: "86400"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*$
+              message: Must be a positive integer (in seconds)
+        - name: sandbox_storage_size
+          title: Storage Size
+          help_text: How much persistent storage each sandbox gets.
+          type: text
+          default: "10240Mi"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*Mi$
+              message: Must be a size in Mi (e.g., 10240Mi)
+        - name: sandbox_memory_request
+          title: Memory Request
+          help_text: The minimum amount of memory to reserve for each sandbox.
+          type: text
+          default: "1024Mi"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*Mi$
+              message: Must be a size in Mi (e.g., 1024Mi)
+        - name: sandbox_memory_limit
+          title: Memory Limit
+          help_text: The maximum amount of memory a sandbox can use. If exceeded, the sandbox may be terminated to free up resources.
+          type: text
+          default: "2048Mi"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*Mi$
+              message: Must be a size in Mi (e.g., 2048Mi)
+        - name: sandbox_cpu_request
+          title: CPU Request
+          help_text: The minimum amount of CPU to reserve for each sandbox.
+          type: text
+          default: "100m"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*m$
+              message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+        - name: sandbox_cpu_limit
+          title: CPU Limit
+          help_text: The maximum amount of CPU a sandbox can use. If exceeded, the sandbox may be throttled.
+          type: text
+          default: "1000m"
+          validation:
+            regex:
+              pattern: ^[1-9][0-9]*m$
+              message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
