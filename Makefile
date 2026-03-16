@@ -20,11 +20,11 @@ RELEASE_FILES :=
 define make-manifest-target
 $(BUILDDIR)/$(notdir $1): $1 $(CHART_YAMLS) | $$(BUILDDIR)
 	cp $1 $$(BUILDDIR)/$$(notdir $1)
-	@CHART_NAME=$$(yq '.spec.chart.name // ""' $$(BUILDDIR)/$$(notdir $1)); \
-	if [ -n "$$CHART_NAME" ] && [ -f $(CHARTDIR)/$$CHART_NAME/Chart.yaml ]; then \
-		CHART_VER=$$(yq .version $(CHARTDIR)/$$CHART_NAME/Chart.yaml); \
-		yq -i ".spec.chart.chartVersion = \"$$CHART_VER\"" $$(BUILDDIR)/$$(notdir $1); \
-		echo "Updated $$(notdir $1) chartVersion to $$CHART_VER"; \
+	@CHART_NAME=$$$$(yq '.spec.chart.name // ""' $$(BUILDDIR)/$$(notdir $1)); \
+	if [ -n "$$$$CHART_NAME" ] && [ -f $(CHARTDIR)/$$$$CHART_NAME/Chart.yaml ]; then \
+		CHART_VER=$$$$(yq .version $(CHARTDIR)/$$$$CHART_NAME/Chart.yaml); \
+		yq -i ".spec.chart.chartVersion = \"$$$$CHART_VER\"" $$(BUILDDIR)/$$(notdir $1); \
+		echo "Updated $$(notdir $1) chartVersion to $$$$CHART_VER"; \
 	fi
 RELEASE_FILES := $(RELEASE_FILES) $(BUILDDIR)/$(notdir $1)
 manifests:: $(BUILDDIR)/$(notdir $1)

@@ -5,7 +5,6 @@ metadata:
 spec:
   chart:
     name: image-loader
-    chartVersion: 0.1.2
     releaseName: image-loader
   helmVersion: v3
   useHelmInstall: true
