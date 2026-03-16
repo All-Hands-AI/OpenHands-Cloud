@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'replicated/**'
+      - 'charts/**'
+      - 'Makefile'
 
 jobs:
   lint:
