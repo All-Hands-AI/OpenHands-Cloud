@@ -10,6 +10,8 @@ spec:
       value: "${base_domain}"
     postgres_type:
       value: "${postgres_type}"
+    github_auth_enabled:
+      value: "${github_auth_enabled}"
     github_oauth_client_id:
       value: "${github_oauth_client_id}"
     github_oauth_client_secret:

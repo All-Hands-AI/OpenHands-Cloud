@@ -27,6 +27,7 @@ resource "local_sensitive_file" "config_values" {
     anthropic_api_key          = var.anthropic_api_key
     base_domain                = var.base_domain
     postgres_type              = "embedded_postgres"
+    github_auth_enabled        = var.github_oauth_client_id != "" ? "1" : "0"
     github_oauth_client_id     = var.github_oauth_client_id
     github_oauth_client_secret = var.github_oauth_client_secret
     github_app_id              = var.github_app_id
