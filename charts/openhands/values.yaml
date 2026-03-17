@@ -109,7 +109,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: 3c5023a
+  tag: sha-3c5023a
 
 ingress:
   enabled: false
