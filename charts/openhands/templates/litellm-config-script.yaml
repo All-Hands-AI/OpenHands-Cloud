@@ -43,12 +43,15 @@ data:
         exit 0
     elif [ "$HTTP_CODE" = "404" ]; then
         echo "Team does not exist, creating new team with ID: $LITE_LLM_TEAM_ID"
+        # Set max_budget to null to disable budget enforcement for enterprise deployments
+        # When max_budget is null, LiteLLM will not enforce any budget limits on the team
         curl --fail -s -X POST "$LITE_LLM_API_URL/team/new" \
           -H "Authorization: Bearer $LITE_LLM_API_KEY" \
           -H "Content-Type: application/json" \
           -d "{
             \"team_id\": \"$LITE_LLM_TEAM_ID\",
-            \"team_alias\": \"$LITE_LLM_TEAM_ID\"
+            \"team_alias\": \"$LITE_LLM_TEAM_ID\",
+            \"max_budget\": null
           }"
         echo ""
         echo "Created team with ID: $LITE_LLM_TEAM_ID"
