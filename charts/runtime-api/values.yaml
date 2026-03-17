@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-c5193e4
+  tag: sha-ad2657f
   pullPolicy: Always
 
 imagePullSecrets:
@@ -162,7 +162,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:1.5.0-nikolaik"
+      image: "ghcr.io/openhands/runtime:3c5023ac021cfc075f2d6b5ff7f345f375bded47-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:
