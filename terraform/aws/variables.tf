@@ -39,11 +39,6 @@ variable "ami_id" {
 # SSH
 # -----------------------------------------------------------------------------
 
-variable "ssh_key_name" {
-  description = "Name of an existing EC2 key pair for SSH access"
-  type        = string
-}
-
 variable "allowed_cidrs" {
   description = "CIDR blocks allowed for SSH and admin ports. Recommend restricting to your IP."
   type        = list(string)
@@ -54,14 +49,26 @@ variable "allowed_cidrs" {
 # Network
 # -----------------------------------------------------------------------------
 
+variable "vpc_id" {
+  description = "ID of an existing VPC. If empty, a new VPC is created."
+  type        = string
+  default     = ""
+}
+
+variable "subnet_id" {
+  description = "ID of an existing public subnet. If empty, a new subnet is created."
+  type        = string
+  default     = ""
+}
+
 variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
+  description = "CIDR block for the VPC (ignored when vpc_id is set)"
   type        = string
   default     = "10.0.0.0/16"
 }
 
 variable "subnet_cidr" {
-  description = "CIDR block for the public subnet"
+  description = "CIDR block for the public subnet (ignored when subnet_id is set)"
   type        = string
   default     = "10.0.1.0/24"
 }
@@ -71,8 +78,9 @@ variable "subnet_cidr" {
 # -----------------------------------------------------------------------------
 
 variable "route53_zone_id" {
-  description = "Route 53 hosted zone ID for DNS records"
+  description = "Route 53 hosted zone ID for DNS records. If empty, no DNS records are created."
   type        = string
+  default     = ""
 }
 
 variable "base_domain" {
@@ -122,49 +130,6 @@ variable "user_private_key_path" {
 
 variable "user_ca_path" {
   description = "Path to user-provided CA certificate (when provision_cert = false)"
-  type        = string
-  default     = ""
-}
-
-# -----------------------------------------------------------------------------
-# App — Replicated ConfigValues
-# -----------------------------------------------------------------------------
-
-variable "anthropic_api_key" {
-  description = "Anthropic API key for Claude models"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "github_oauth_client_id" {
-  description = "GitHub OAuth App client ID"
-  type        = string
-  default     = ""
-}
-
-variable "github_oauth_client_secret" {
-  description = "GitHub OAuth App client secret"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "github_app_id" {
-  description = "GitHub App ID"
-  type        = string
-  default     = ""
-}
-
-variable "github_app_webhook_secret" {
-  description = "GitHub App webhook secret"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "github_app_private_key_path" {
-  description = "Path to the GitHub App private key .pem file"
   type        = string
   default     = ""
 }

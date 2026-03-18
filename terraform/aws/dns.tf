@@ -14,7 +14,7 @@ locals {
 }
 
 resource "aws_route53_record" "records" {
-  for_each = local.dns_records
+  for_each = var.route53_zone_id != "" ? local.dns_records : {}
 
   zone_id = var.route53_zone_id
   name    = each.value

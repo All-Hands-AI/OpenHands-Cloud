@@ -1,26 +1,30 @@
 # AWS Terraform for Replicated OpenHands VM
 
-Provisions a single AWS EC2 instance with all supporting infrastructure needed to install OpenHands via Replicated's embedded cluster.
+This Terraform module provisions a single AWS EC2 instance with all supporting infrastructure needed to install OpenHands via Replicated's embedded cluster.
 
-## What Gets Created
-
-- **VPC** with a public subnet, internet gateway, and route table
-- **EC2 instance** (default `m6i.4xlarge` — 16 vCPU, 64 GB) with 200 GB encrypted gp3 volume
-- **Elastic IP** for a stable public address across stop/start cycles
-- **Security group** with tiered access (web open, admin restricted)
-- **Route 53 A records** for the base domain + all subdomains
-- **TLS certificate** via Let's Encrypt (or bring your own)
-- **config-values.yaml** ready for the Replicated installer
+<!---
+TODO: Update the link to our docs once the replicated installation guide is live.
+-->
+Once your instance is up, you can follow the instructions on our [docs](https://docs.openhands.dev/enterprise) to install the Replicated embedded cluster and deploy OpenHands.
 
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5.0
 - AWS CLI configured with credentials (`aws configure` or environment variables)
-- An existing **EC2 key pair** in the target region
-- A **Route 53 hosted zone** for your domain
-- A Replicated license file (`.yaml`)
+- A registered domain name
 
-## Quick Start
+## Quick Start (Recommended)
+
+In our recommended setup, Terraform will provision a VPC, the EC2 instance, set up DNS records in Route 53, and automatically provision TLS certificates with Let's Encrypt.
+
+To follow the quick start, you will need the following in addition to the prerequisites:
+- An AWS hosted zone in Route 53 for your domain
+- An email address for ACME registration (for TLS certificates)
+
+If you want to configure your own VPC, DNS provider, or TLS certificates, there are additional instructions after the quick start guide:
+- [Manual VPC instructions](#manual-vpc-configuration).
+- [Manual DNS instructions](#manual-dns-configuration).
+- [Manual TLS instructions](#manual-tls-certificate-provisioning).
 
 1. **Clone the repo and navigate here:**
 
@@ -34,14 +38,11 @@ Provisions a single AWS EC2 instance with all supporting infrastructure needed t
    cp example.tfvars terraform.tfvars
    ```
 
-3. **Edit `terraform.tfvars`** with your values. At minimum set:
-
+3. **Edit `terraform.tfvars`** with your values.
    - `instance_name` — a name for your instance
-   - `ssh_key_name` — your EC2 key pair name
-   - `route53_zone_id` — your hosted zone ID
-   - `base_domain` — e.g. `openhands.example.com`
+   - `base_domain` — the base domain for your instance (e.g. `openhands.example.com`)
+   - `route53_zone_id` — your Route 53 hosted zone ID
    - `acme_email` — for Let's Encrypt registration
-   - `allowed_cidrs` — restrict to your IP for security
 
 4. **Initialize Terraform:**
 
@@ -60,63 +61,53 @@ Provisions a single AWS EC2 instance with all supporting infrastructure needed t
    ```bash
    make apply
    ```
-
-7. **SSH into the instance:**
-
-   ```bash
-   $(terraform output -raw ssh_command)
-   ```
-
-8. **Install Replicated embedded cluster** (on the VM):
+   
+7. **Copy your certificates to the instance:**
 
    ```bash
-   curl -f https://replicated.app/embedded/YOUR_APP_SLUG/YOUR_CHANNEL | sudo bash -s join
+   make copy-files
    ```
 
-9. **Open the KOTS Admin Console:**
+8. **SSH into the instance:**
 
+   ```bash
+   make ssh
    ```
-   http://<instance-ip>:30000
-   ```
+   
+## Manual VPC Configuration
 
-10. **Upload your license and config-values.yaml**, then deploy OpenHands.
+To deploy into an existing VPC instead, set `vpc_id` and `subnet_id` in your `terraform.tfvars`:
 
-## Configuration Reference
+```hcl
+vpc_id    = "vpc-0123456789abcdef0"
+subnet_id = "subnet-0123456789abcdef0"
+```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `instance_name` | *(required)* | Name tag for EC2 instance and resources |
-| `ssh_key_name` | *(required)* | Existing EC2 key pair name |
-| `route53_zone_id` | *(required)* | Route 53 hosted zone ID |
-| `base_domain` | *(required)* | Base domain (e.g. `openhands.example.com`) |
-| `aws_region` | `us-east-1` | AWS region |
-| `instance_type` | `m6i.4xlarge` | EC2 instance type |
-| `root_volume_size` | `200` | Root volume size in GB |
-| `ami_id` | *(auto)* | AMI override; defaults to Ubuntu 24.04 LTS |
-| `allowed_cidrs` | `["0.0.0.0/0"]` | CIDRs for SSH + admin access |
-| `vpc_cidr` | `10.0.0.0/16` | VPC CIDR block |
-| `subnet_cidr` | `10.0.1.0/24` | Public subnet CIDR block |
-| `dns_ttl` | `300` | DNS record TTL in seconds |
-| `provision_cert` | `true` | Use Let's Encrypt; set `false` for BYO cert |
-| `acme_email` | `""` | Email for Let's Encrypt account |
-| `acme_server` | LE production | ACME directory URL |
-| `anthropic_api_key` | `""` | Anthropic API key |
-| `github_oauth_client_id` | `""` | GitHub OAuth client ID |
-| `github_oauth_client_secret` | `""` | GitHub OAuth client secret |
-| `github_app_id` | `""` | GitHub App ID |
-| `github_app_webhook_secret` | `""` | GitHub App webhook secret |
-| `github_app_private_key` | `""` | GitHub App private key (PEM) |
-| `default_tags` | `{}` | Additional tags for all AWS resources |
+The provided subnet must be public (i.e. it has an internet gateway and a route to `0.0.0.0/0`). When these are set, `vpc_cidr` and `subnet_cidr` are ignored.
 
-## Certificate Modes
+## Manual DNS Configuration
 
-### Let's Encrypt (default)
+Follow this section if you want to manage your own DNS records instead of having Terraform manage them for you. Simply omit `route53_zone_id` from your `terraform.tfvars`.
 
-Set `provision_cert = true` and provide `acme_email`. The ACME provider uses Route 53 DNS challenges — your AWS credentials are reused automatically. Ports 80/443 must be open (they are by default).
+> **Note:** Automatic TLS certificate provisioning uses Route 53 DNS challenges. If you are not using Route 53, you will also need to [bring your own TLS certificates](#manual-tls-certificate-provisioning).
 
-### Bring Your Own Certificate
+Create A records pointing to the instance's Elastic IP for the following domains:
+- `<your-domain>`
+- `app.<your-domain>`
+- `auth.app.<your-domain>`
+- `llm-proxy.<your-domain>`
+- `runtime-api.<your-domain>`
+- `*.runtime.<your-domain>`
 
-Set `provision_cert = false` and provide paths to your certificate files:
+You can retrieve your instance's public IP with:
+
+```bash
+make ip
+```
+
+## Manual TLS Certificate Provisioning
+
+In your `terraform.tfvars` set `provision_cert = false` and provide paths to your certificate files:
 
 ```hcl
 provision_cert        = false
@@ -125,35 +116,18 @@ user_private_key_path = "/path/to/private-key.pem"
 user_ca_path          = "/path/to/ca.pem"
 ```
 
-The certificate must cover the base domain and all subdomains: `app.`, `auth.app.`, `llm-proxy.`, `runtime-api.`, and `*.runtime.`.
+The certificate SANs must cover the base domain and all subdomains:
+- `<your-domain>`
+- `app.<your-domain>`
+- `auth.app.<your-domain>`
+- `llm-proxy.<your-domain>`
+- `runtime-api.<your-domain>`
+- `*.runtime.<your-domain>`
 
 ## Cleanup
+
+You can destroy all resources created by Terraform with:
 
 ```bash
 make destroy
 ```
-
-This removes all AWS resources created by Terraform.
-
-## Troubleshooting
-
-**`terraform plan` fails with credential errors:**
-Ensure AWS credentials are configured (`aws sts get-caller-identity` should succeed).
-
-**ACME certificate fails:**
-- Verify the Route 53 zone ID is correct
-- Ensure `acme_email` is set
-- Check that DNS records are resolvable: `dig app.<your-domain>`
-- If hitting rate limits, switch to the staging server: `acme_server = "https://acme-staging-v02.api.letsencrypt.org/directory"`
-
-**Cannot SSH into instance:**
-- Verify `ssh_key_name` matches a key pair in the target region
-- Check `allowed_cidrs` includes your IP
-- The default user is `ubuntu`
-
-**KOTS Admin Console not reachable:**
-- Port 30000 must be allowed from your IP (check `allowed_cidrs`)
-- The Replicated installer must have completed on the VM first
-
-**Instance not reachable after stop/start:**
-The Elastic IP remains associated across stop/start cycles, so the IP should not change. If networking issues persist, check the security group and route table.

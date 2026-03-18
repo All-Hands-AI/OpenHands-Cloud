@@ -40,7 +40,15 @@ data "aws_ami" "ubuntu" {
 # VPC
 # -----------------------------------------------------------------------------
 
+locals {
+  create_vpc = var.vpc_id == ""
+  vpc_id     = local.create_vpc ? aws_vpc.main[0].id : var.vpc_id
+  subnet_id  = var.subnet_id != "" ? var.subnet_id : aws_subnet.public[0].id
+}
+
 resource "aws_vpc" "main" {
+  count = local.create_vpc ? 1 : 0
+
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
@@ -49,13 +57,17 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+  count = local.create_vpc ? 1 : 0
+
+  vpc_id = aws_vpc.main[0].id
 
   tags = { Name = "${var.instance_name}-igw" }
 }
 
 resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
+  count = local.create_vpc ? 1 : 0
+
+  vpc_id                  = aws_vpc.main[0].id
   cidr_block              = var.subnet_cidr
   map_public_ip_on_launch = true
 
@@ -63,19 +75,23 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  count = local.create_vpc ? 1 : 0
+
+  vpc_id = aws_vpc.main[0].id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = aws_internet_gateway.main[0].id
   }
 
   tags = { Name = "${var.instance_name}-rt" }
 }
 
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
+  count = local.create_vpc ? 1 : 0
+
+  subnet_id      = aws_subnet.public[0].id
+  route_table_id = aws_route_table.public[0].id
 }
 
 # -----------------------------------------------------------------------------
@@ -85,7 +101,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_security_group" "instance" {
   name_prefix = "${var.instance_name}-"
   description = "OpenHands Replicated VM"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   # --- Web traffic (open to all) ---
   ingress {
@@ -172,8 +188,8 @@ resource "aws_eip_association" "instance" {
 resource "aws_instance" "openhands" {
   ami           = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu.id
   instance_type = var.instance_type
-  key_name      = var.ssh_key_name
-  subnet_id     = aws_subnet.public.id
+  key_name      = aws_key_pair.generated.key_name
+  subnet_id     = local.subnet_id
 
   vpc_security_group_ids = [aws_security_group.instance.id]
 
@@ -187,17 +203,6 @@ resource "aws_instance" "openhands" {
     http_tokens   = "required"
     http_endpoint = "enabled"
   }
-
-  user_data = <<-USERDATA
-    #!/bin/bash
-    set -euo pipefail
-
-    # Install kubectl
-    snap install kubectl --classic
-
-    # Install k9s
-    snap install k9s --classic
-  USERDATA
 
   tags = { Name = var.instance_name }
 

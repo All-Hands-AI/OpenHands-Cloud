@@ -10,7 +10,12 @@ output "instance_id" {
 
 output "ssh_command" {
   description = "SSH command to connect to the instance"
-  value       = "ssh ubuntu@${aws_eip.instance.public_ip}"
+  value       = "ssh -i ${local_sensitive_file.ssh_private_key.filename} ubuntu@${aws_eip.instance.public_ip}"
+}
+
+output "ssh_key_file" {
+  description = "Path to the generated SSH private key"
+  value       = local_sensitive_file.ssh_private_key.filename
 }
 
 output "admin_console_url" {
@@ -28,9 +33,9 @@ output "base_url" {
   value       = "https://${var.base_domain}"
 }
 
-output "config_values_file" {
-  description = "Path to the generated config-values.yaml"
-  value       = local_sensitive_file.config_values.filename
+output "scp_command" {
+  description = "SCP command to copy certificates to the instance"
+  value       = "scp -i ${local_sensitive_file.ssh_private_key.filename} ${local_file.certificate_pem.filename} ${local_sensitive_file.private_key_pem.filename} ubuntu@${aws_eip.instance.public_ip}:~/"
 }
 
 output "certificate_file" {

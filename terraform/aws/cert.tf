@@ -65,6 +65,4 @@ locals {
   certificate_pem = var.provision_cert ? "${acme_certificate.cert[0].certificate_pem}${acme_certificate.cert[0].issuer_pem}" : data.local_file.user_cert[0].content
   private_key_pem = var.provision_cert ? acme_certificate.cert[0].private_key_pem : data.local_sensitive_file.user_key[0].content
   ca_pem          = var.provision_cert ? acme_certificate.cert[0].issuer_pem : data.local_file.user_ca[0].content
-
-  github_app_private_key_b64 = var.github_app_private_key_path != "" ? base64encode(file(var.github_app_private_key_path)) : ""
 }

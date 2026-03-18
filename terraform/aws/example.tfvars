@@ -1,11 +1,10 @@
 # =============================================================================
-# Required
+# Required for Quick Start
 # =============================================================================
 
 instance_name   = "my-openhands"
-ssh_key_name    = "my-key-pair"
-route53_zone_id = "Z0123456789ABCDEFGHIJ"
 base_domain     = "openhands.example.com"
+route53_zone_id = "Z0123456789ABCDEFGHIJ"
 acme_email      = "admin@example.com"
 
 # =============================================================================
@@ -33,6 +32,11 @@ acme_email      = "admin@example.com"
 # Network
 # =============================================================================
 
+# Use an existing VPC and subnet instead of creating new ones.
+# vpc_id    = "vpc-0123456789abcdef0"
+# subnet_id = "subnet-0123456789abcdef0"
+
+# Only used when creating a new VPC (vpc_id is not set).
 # vpc_cidr    = "10.0.0.0/16"
 # subnet_cidr = "10.0.1.0/24"
 
@@ -53,21 +57,6 @@ acme_email      = "admin@example.com"
 # user_cert_path        = "/path/to/certificate.pem"
 # user_private_key_path = "/path/to/private-key.pem"
 # user_ca_path          = "/path/to/ca.pem"
-
-# =============================================================================
-# App credentials (optional)
-# =============================================================================
-
-# anthropic_api_key = ""
-
-# GitHub OAuth App
-# github_oauth_client_id     = ""
-# github_oauth_client_secret = ""
-
-# GitHub App
-# github_app_id              = ""
-# github_app_webhook_secret  = ""
-# github_app_private_key_path = "/path/to/github-app.pem"
 
 # =============================================================================
 # Tags
