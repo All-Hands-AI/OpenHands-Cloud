@@ -324,7 +324,7 @@ spec:
           title: Enable Bitbucket Data Center Authentication
           help_text: Enable Bitbucket Data Center OAuth for user authentication
           type: bool
-          default: "1"
+          default: "0"
         - name: bitbucket_data_center_domain
           title: Bitbucket Data Center Domain
           help_text: Domain of your Bitbucket Data Center instance
