@@ -5,7 +5,7 @@ This Terraform module provisions a single AWS EC2 instance with all supporting i
 <!---
 TODO: Update the link to our docs once the replicated installation guide is live.
 -->
-Once your instance is up, you can follow the instructions on our [docs](https://docs.openhands.dev/enterprise) to install the Replicated embedded cluster and deploy OpenHands.
+Once your instance is up, you can follow the instructions on our [docs site](https://docs.openhands.dev/enterprise) to install the Replicated embedded cluster and deploy OpenHands.
 
 ## Prerequisites
 
@@ -73,6 +73,10 @@ If you want to configure your own VPC, DNS provider, or TLS certificates, there 
    ```bash
    make ssh
    ```
+   
+9. **Install Openhands:**
+
+    Follow the instructions on our [docs site](https://docs.openhands.dev/enterprise) to install the Replicated embedded cluster and deploy OpenHands.
    
 ## Manual VPC Configuration
 
