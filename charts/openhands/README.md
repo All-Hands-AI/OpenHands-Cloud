@@ -539,6 +539,44 @@ volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
 
+### VolumeSnapshotClass Configuration (Optional)
+
+To enable PVC snapshots for cost optimization (snapshotting paused runtime PVCs instead of keeping them active), you need to create a VolumeSnapshotClass. This is optional but recommended for production deployments to reduce storage costs.
+
+```bash
+# For AWS EKS
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: ebs-snapshot-class
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+EOF
+
+# For GKE
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: pd-snapshot-class
+driver: pd.csi.storage.gke.io
+deletionPolicy: Delete
+parameters:
+  storage-locations: us-central1  # Replace with your cluster's region
+EOF
+```
+
+Then configure the runtime-api to use the snapshot class:
+
+```yaml
+runtime-api:
+  env:
+    VOLUME_SNAPSHOT_CLASS: "pd-snapshot-class"  # or "ebs-snapshot-class" for AWS
+```
+
+> **Note:** The VolumeSnapshot CRDs must be installed in your cluster. Most managed Kubernetes services (GKE, EKS) include these by default. If not, see the [Kubernetes VolumeSnapshot documentation](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
+
 ## Upgrading
 
 To upgrade the chart:
