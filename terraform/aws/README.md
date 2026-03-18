@@ -26,6 +26,7 @@ If you want to configure your own VPC, DNS provider, or TLS certificates, there 
 - [Manual DNS instructions](#manual-dns-configuration).
 - [Manual TLS instructions](#manual-tls-certificate-provisioning).
 
+
 1. **Clone the repo and navigate here:**
 
    ```bash
@@ -38,7 +39,7 @@ If you want to configure your own VPC, DNS provider, or TLS certificates, there 
    cp example.tfvars terraform.tfvars
    ```
 
-3. **Edit `terraform.tfvars`** with your values.
+3. **Edit `terraform.tfvars` with your values:**
    - `instance_name` — a name for your instance
    - `base_domain` — the base domain for your instance (e.g. `openhands.example.com`)
    - `route53_zone_id` — your Route 53 hosted zone ID
