@@ -26,7 +26,7 @@ If you want to configure your own VPC, DNS provider, or TLS certificates, there 
 - [Manual DNS instructions](#manual-dns-configuration)
 - [Manual TLS instructions](#manual-tls-certificate-provisioning)
 
-
+---
 
 1. **Clone the repo and navigate here:**
 
