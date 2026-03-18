@@ -14,8 +14,8 @@ output "ssh_key_file" {
 }
 
 output "admin_console_url" {
-  description = "KOTS Admin Console URL"
-  value       = "http://${aws_eip.instance.public_ip}:30000"
+  description = "Replicated Admin Console URL"
+  value       = "https://${var.base_domain}:30000"
 }
 
 output "app_url" {

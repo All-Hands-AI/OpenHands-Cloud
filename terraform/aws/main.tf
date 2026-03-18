@@ -130,7 +130,7 @@ resource "aws_security_group" "instance" {
   }
 
   ingress {
-    description = "KOTS Admin Console"
+    description = "Replicated Admin Console"
     from_port   = 30000
     to_port     = 30000
     protocol    = "tcp"
