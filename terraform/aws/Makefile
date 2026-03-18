@@ -1,6 +1,6 @@
 TFVARS ?= terraform.tfvars
 
-.PHONY: init plan apply destroy destroy-vm ssh copy-files urls fmt validate clean
+.PHONY: init plan apply destroy ssh copy-files ip fmt validate clean
 
 init:
 	terraform init
@@ -15,10 +15,18 @@ destroy:
 	terraform destroy -var-file=$(TFVARS)
 
 ssh:
-	@$$(terraform output -raw ssh_command)
+	ssh -i $$(terraform output -raw ssh_key_file) ubuntu@$$(terraform output -raw instance_public_ip)
 
 copy-files:
-	@$$(terraform output -raw scp_command)
+	scp -i $$(terraform output -raw ssh_key_file) \
+		$$(terraform output -raw certificate_file) \
+		ubuntu@$$(terraform output -raw instance_public_ip):~/certificate.pem
+	scp -i $$(terraform output -raw ssh_key_file) \
+		$$(terraform output -raw private_key_file) \
+		ubuntu@$$(terraform output -raw instance_public_ip):~/private-key.pem
+	scp -i $$(terraform output -raw ssh_key_file) \
+		$$(terraform output -raw ca_file) \
+		ubuntu@$$(terraform output -raw instance_public_ip):~/ca.pem
 
 ip:
 	@terraform output -raw instance_public_ip

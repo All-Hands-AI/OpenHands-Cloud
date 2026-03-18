@@ -50,13 +50,18 @@ variable "allowed_cidrs" {
 # -----------------------------------------------------------------------------
 
 variable "vpc_id" {
-  description = "ID of an existing VPC. If empty, a new VPC is created."
+  description = "ID of an existing VPC. If empty, a new VPC is created. Must be set together with subnet_id."
   type        = string
   default     = ""
+
+  validation {
+    condition     = var.vpc_id == "" || var.subnet_id != ""
+    error_message = "subnet_id is required when vpc_id is set."
+  }
 }
 
 variable "subnet_id" {
-  description = "ID of an existing public subnet. If empty, a new subnet is created."
+  description = "ID of an existing public subnet. Required when vpc_id is set."
   type        = string
   default     = ""
 }

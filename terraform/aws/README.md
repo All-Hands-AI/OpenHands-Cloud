@@ -74,9 +74,9 @@ If you want to configure your own VPC, DNS provider, or TLS certificates, there 
    make ssh
    ```
    
-9. **Install Openhands:**
+9. **Install OpenHands:**
 
-    Follow the instructions on our [docs site](https://docs.openhands.dev/enterprise) to install the Replicated embedded cluster and deploy OpenHands.
+   Follow the instructions on our [docs site](https://docs.openhands.dev/enterprise) to install the Replicated embedded cluster and deploy OpenHands.
    
 ## Manual VPC Configuration
 
