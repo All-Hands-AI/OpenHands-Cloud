@@ -15,16 +15,17 @@ Once your instance is up, you can follow the instructions on our [docs site](htt
 
 ## Quick Start (Recommended)
 
-In our recommended setup, Terraform will provision a VPC, the EC2 instance, set up DNS records in Route 53, and automatically provision TLS certificates with Let's Encrypt.
+In our recommended setup, Terraform will provision a VPC and EC2 instance, set up DNS records in Route 53, and automatically provision TLS certificates with Let's Encrypt.
 
 To follow the quick start, you will need the following in addition to the prerequisites:
 - An AWS hosted zone in Route 53 for your domain
 - An email address for ACME registration (for TLS certificates)
 
 If you want to configure your own VPC, DNS provider, or TLS certificates, there are additional instructions after the quick start guide:
-- [Manual VPC instructions](#manual-vpc-configuration).
-- [Manual DNS instructions](#manual-dns-configuration).
-- [Manual TLS instructions](#manual-tls-certificate-provisioning).
+- [Manual VPC instructions](#manual-vpc-configuration)
+- [Manual DNS instructions](#manual-dns-configuration)
+- [Manual TLS instructions](#manual-tls-certificate-provisioning)
+
 
 
 1. **Clone the repo and navigate here:**
