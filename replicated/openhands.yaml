@@ -22,7 +22,7 @@ spec:
       - name: '{{repl ImagePullSecretName }}'
 
     env:
-      LLM_DEFAULT_MODEL: 'prod/claude-sonnet-4-20250514'
+      LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
       LLM_BASE_URL: "http://openhands-litellm:4000"
       REQUIRE_PAYMENT: 0
       ENABLE_BILLING: false
@@ -131,9 +131,9 @@ spec:
           OR_APP_NAME: "OpenHands"
           OR_SITE_URL: "https://docs.all-hands.dev"
         model_list:
-          - model_name: "prod/claude-sonnet-4-20250514"
+          - model_name: "claude-sonnet-4-5-20250929"
             litellm_params:
-              model: "anthropic/claude-sonnet-4-20250514"
+              model: "anthropic/claude-sonnet-4-5-20250929"
               api_key: os.environ/ANTHROPIC_API_KEY
 
     langfuse:
