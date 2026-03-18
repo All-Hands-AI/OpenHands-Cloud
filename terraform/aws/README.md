@@ -92,7 +92,9 @@ The provided subnet must be public (i.e. it has an internet gateway and a route 
 
 ## Manual DNS Configuration
 
-Follow this section if you want to manage your own DNS records instead of having Terraform manage them for you. Simply omit `route53_zone_id` from your `terraform.tfvars`.
+To provision your own DNS records instead of having Terraform manage them for you. 
+
+Simply omit `route53_zone_id` from your `terraform.tfvars`.
 
 > **Note:** Automatic TLS certificate provisioning uses Route 53 DNS challenges. If you are not using Route 53, you will also need to [bring your own TLS certificates](#manual-tls-certificate-provisioning).
 
@@ -112,7 +114,7 @@ make ip
 
 ## Manual TLS Certificate Provisioning
 
-In your `terraform.tfvars` set `provision_cert = false` and provide paths to your certificate files:
+To bring your own certificates, set `provision_cert = false` in your `terraform.tfvars` and provide paths to your certificate files:
 
 ```hcl
 provision_cert        = false
