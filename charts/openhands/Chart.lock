@@ -27,4 +27,4 @@ dependencies:
   repository: oci://ghcr.io/all-hands-ai/helm-charts
   version: 0.1.24
 digest: sha256:bca3722cdd4840a4557955ea2b80e38991cc2d0a0211855a791cf98e37410e45
-generated: "2026-03-19T00:03:26.46735-05:00"
+generated: "2026-03-18T00:28:58.972983917-04:00"
