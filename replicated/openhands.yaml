@@ -235,6 +235,8 @@ spec:
       host: 'repl{{ ConfigOption "bitbucket_data_center_domain" }}'
     github:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
+    gitlab:
+      enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
 
     clickhouse:
       enabled: repl{{ ConfigOptionEquals "clickhouse_enabled" "1" }}

@@ -384,6 +384,28 @@ spec:
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
 
+    - name: gitlab_authentication
+      title: GitLab Authentication
+      description: Configure GitLab OAuth and App integration for user authentication
+      items:
+        - name: gitlab_auth_enabled
+          title: Enable GitLab Authentication
+          help_text: Enable GitLab OAuth for user authentication
+          type: bool
+          default: "0"
+        - name: gitlab_oauth_client_id
+          title: GitLab OAuth Client ID
+          help_text: Client ID from your GitLab OAuth App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+          required: true
+        - name: gitlab_oauth_client_secret
+          title: GitLab OAuth Client Secret
+          help_text: Client Secret from your GitLab OAuth App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+          required: true
+
     - name: database_configuration
       title: Database Configuration
       description: Configure PostgreSQL database settings
