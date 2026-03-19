@@ -603,3 +603,8 @@ global:
     # This allows using the bitnamilegacy image repo.
     # See: https://github.com/bitnami/containers/issues/83267
     allowInsecureImages: true
+
+vertexAI:
+  enabled: false
+  project: ""
+  location: ""
