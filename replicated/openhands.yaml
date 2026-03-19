@@ -401,13 +401,13 @@ spec:
       recursiveMerge: true
       values:
         env:
-          LLM_DEFAULT_MODEL: 'prod/gemini-2.5-flash'
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/gemini-2.5-flash'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
         litellm-helm:
           volumes:
             - name: google-application-credentials
               secret:
-                secretName: openhands-env-secrets
+                secretName: litellm-env-secrets
                 items:
                   - key: "GOOGLE_APPLICATION_CREDENTIALS_JSON"
                     path: "vertex_credentials.json"
@@ -420,7 +420,7 @@ spec:
             GOOGLE_APPLICATION_CREDENTIALS: "/etc/gcloud/vertex_credentials.json"
           proxy_config:
             model_list:
-              - model_name: "prod/gemini-2.5-flash"
+              - model_name: "gemini-2.5-flash"
                 litellm_params:
                   model: "vertex_ai/gemini-2.5-flash"
                   vertex_project: os.environ/VERTEXAI_PROJECT
