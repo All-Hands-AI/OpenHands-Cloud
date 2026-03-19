@@ -317,6 +317,13 @@
   value: "{{ .Values.postgresql.auth.username }}"
 - name: DB_NAME
   value: "{{ .Values.postgresql.auth.database }}"
+{{- else }}
+- name: DB_HOST
+  value: "{{ .Values.externalDatabase.host }}"
+- name: DB_USER
+  value: "{{ .Values.externalDatabase.username }}"
+- name: DB_NAME
+  value: "{{ .Values.externalDatabase.database }}"
 {{- end }}
 {{- if .Values.datadog.enabled }}
 # Datadog configuration

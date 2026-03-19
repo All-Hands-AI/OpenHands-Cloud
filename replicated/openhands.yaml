@@ -214,6 +214,7 @@ spec:
       apiHostname: 'http://openhands-runtime-api:5000'
     postgresql:
       enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
+      postMigrate: true
     redis:
       enabled: true
       image:
