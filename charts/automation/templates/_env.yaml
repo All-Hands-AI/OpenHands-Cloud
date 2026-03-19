@@ -1,0 +1,55 @@
+{{- define "automation.env" }}
+# Database configuration
+{{- if eq .Values.database.backend "sqlite" }}
+- name: AUTOMATION_SQLITE_PATH
+  value: {{ .Values.database.sqlitePath | quote }}
+{{- else }}
+- name: AUTOMATION_DB_HOST
+  value: {{ .Values.database.host | quote }}
+- name: AUTOMATION_DB_PORT
+  value: {{ .Values.database.port | quote }}
+- name: AUTOMATION_DB_USER
+  value: {{ .Values.database.user | quote }}
+- name: AUTOMATION_DB_NAME
+  value: {{ .Values.database.name | quote }}
+- name: AUTOMATION_DB_PASS
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
+{{- end }}
+{{- if .Values.gcp.dbInstance }}
+- name: AUTOMATION_GCP_DB_INSTANCE
+  value: {{ .Values.gcp.dbInstance | quote }}
+- name: AUTOMATION_GCP_PROJECT
+  value: {{ .Values.gcp.project | quote }}
+- name: AUTOMATION_GCP_REGION
+  value: {{ .Values.gcp.region | quote }}
+{{- end }}
+# Admin API key for issuing per-user automation API keys
+{{- if .Values.adminApiKeyFromSecret }}
+- name: AUTOMATION_ADMIN_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.adminApiKeyFromSecret.name }}
+      key: {{ .Values.adminApiKeyFromSecret.key }}
+{{- end }}
+# Datadog configuration
+- name: DD_AGENT_HOST
+  value: "datadog-agent.all-hands-system.svc.cluster.local"
+- name: DD_TRACE_AGENT_PORT
+  value: "8126"
+- name: DD_SERVICE
+  value: "automation"
+- name: DD_ENV
+  value: {{ .Values.datadog.env | quote }}
+- name: DD_TRACE_ENABLED
+  value: "true"
+# Additional env vars
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+- name: {{ $key }}
+  value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- end }}

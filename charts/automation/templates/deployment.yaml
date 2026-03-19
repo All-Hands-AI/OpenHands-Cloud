@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: automation
+  labels:
+    app: automation
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: automation
+  template:
+    metadata:
+      labels:
+        app: automation
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if ne .Values.database.backend "sqlite" }}
+      initContainers:
+      {{- if .Values.postgresql.enabled }}
+      - name: wait-for-postgres
+        image: bitnamilegacy/postgresql:latest
+        command: ['sh', '-c']
+        args:
+          - |
+            DB_HOST="{{ .Values.database.host }}"
+            echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
+            until PGPASSWORD=$AUTOMATION_DB_PASS psql -h $DB_HOST -p {{ .Values.database.port }} -U {{ .Values.database.user }} -c '\q' > /dev/null 2>&1; do
+              echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+              sleep 2
+            done
+            echo "PostgreSQL is up and running!"
+        env:
+        {{- include "automation.env" . | nindent 8 }}
+      {{- end }}
+      - name: migrate
+        image: '{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}'
+        command: ["alembic", "upgrade", "head"]
+        env:
+        {{- include "automation.env" . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: automation
+        imagePullPolicy: Always
+        image: '{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}'
+        command: ["ddtrace-run"]
+        args:
+          - "uvicorn"
+          - "automation.app:app"
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "8000"
+        ports:
+        - containerPort: 8000
+        resources:
+          {{- toYaml .Values.deployment.resources | nindent 12 }}
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+        env:
+        {{- include "automation.env" . | nindent 8 }}

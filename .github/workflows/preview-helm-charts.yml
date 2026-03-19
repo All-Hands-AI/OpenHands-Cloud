@@ -16,6 +16,7 @@ jobs:
     outputs:
       runtime-api: ${{ steps.changes.outputs.runtime-api }}
       image-loader: ${{ steps.changes.outputs.image-loader }}
+      automation: ${{ steps.changes.outputs.automation }}
       openhands: ${{ steps.changes.outputs.openhands }}
       openhands-secrets: ${{ steps.changes.outputs.openhands-secrets }}
     steps:
@@ -36,7 +37,7 @@ jobs:
           echo "$CHANGED_FILES"
 
           # Check each chart for changes
-          for chart in runtime-api image-loader openhands openhands-secrets; do
+          for chart in runtime-api image-loader automation openhands openhands-secrets; do
             if echo "$CHANGED_FILES" | grep -q "^charts/${chart}/"; then
               echo "${chart}=true" >> $GITHUB_OUTPUT
               echo "Changes detected in charts/${chart}"
@@ -62,6 +63,8 @@ jobs:
             path: charts/runtime-api
           - name: image-loader
             path: charts/image-loader
+          - name: automation
+            path: charts/automation
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
@@ -74,10 +77,12 @@ jobs:
         env:
           HAS_CHANGES_RUNTIME_API: ${{ needs.detect-changes.outputs.runtime-api }}
           HAS_CHANGES_IMAGE_LOADER: ${{ needs.detect-changes.outputs.image-loader }}
+          HAS_CHANGES_AUTOMATION: ${{ needs.detect-changes.outputs.automation }}
           HAS_CHANGES_OPENHANDS: ${{ needs.detect-changes.outputs.openhands }}
           HAS_CHANGES_OPENHANDS_SECRETS: ${{ needs.detect-changes.outputs.openhands-secrets }}
           IS_PUBLISHABLE_RUNTIME_API: ${{ needs.validate-chart-versions.outputs.runtime-api-publishable }}
           IS_PUBLISHABLE_IMAGE_LOADER: ${{ needs.validate-chart-versions.outputs.image-loader-publishable }}
+          IS_PUBLISHABLE_AUTOMATION: ${{ needs.validate-chart-versions.outputs.automation-publishable }}
           IS_PUBLISHABLE_OPENHANDS: ${{ needs.validate-chart-versions.outputs.openhands-publishable }}
           IS_PUBLISHABLE_OPENHANDS_SECRETS: ${{ needs.validate-chart-versions.outputs.openhands-secrets-publishable }}
         run: |
@@ -90,6 +95,10 @@ jobs:
             image-loader)
               HAS_CHANGES="$HAS_CHANGES_IMAGE_LOADER"
               IS_PUBLISHABLE="$IS_PUBLISHABLE_IMAGE_LOADER"
+              ;;
+            automation)
+              HAS_CHANGES="$HAS_CHANGES_AUTOMATION"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_AUTOMATION"
               ;;
             openhands)
               HAS_CHANGES="$HAS_CHANGES_OPENHANDS"
@@ -218,6 +227,8 @@ jobs:
             path: charts/runtime-api
           - name: image-loader
             path: charts/image-loader
+          - name: automation
+            path: charts/automation
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
