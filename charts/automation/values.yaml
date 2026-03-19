@@ -48,12 +48,8 @@ tls:
   enabled: false
   env: "dev"
 
-# Database (defaults to PostgreSQL)
+# PostgreSQL database configuration
 database:
-  # Set "sqlite" to use SQLite, "postgres" to use PostgreSQL
-  backend: "postgres"
-  sqlitePath: "/tmp/automations.db"
-  # PostgreSQL settings (used when backend=postgres)
   host: ""
   port: "5432"
   user: "automation_user"

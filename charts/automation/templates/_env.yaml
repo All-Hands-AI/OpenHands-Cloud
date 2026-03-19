@@ -1,9 +1,5 @@
 {{- define "automation.env" }}
-# Database configuration
-{{- if eq .Values.database.backend "sqlite" }}
-- name: AUTOMATION_SQLITE_PATH
-  value: {{ .Values.database.sqlitePath | quote }}
-{{- else }}
+# PostgreSQL database configuration
 - name: AUTOMATION_DB_HOST
   value: {{ .Values.database.host | quote }}
 - name: AUTOMATION_DB_PORT
@@ -17,7 +13,6 @@
     secretKeyRef:
       name: {{ .Values.database.secretName }}
       key: {{ .Values.database.secretKey }}
-{{- end }}
 {{- if .Values.gcp.dbInstance }}
 - name: AUTOMATION_GCP_DB_INSTANCE
   value: {{ .Values.gcp.dbInstance | quote }}

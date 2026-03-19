@@ -23,7 +23,6 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if ne .Values.database.backend "sqlite" }}
       initContainers:
       {{- if .Values.postgresql.enabled }}
       - name: wait-for-postgres
@@ -46,7 +45,6 @@ spec:
         command: ["alembic", "upgrade", "head"]
         env:
         {{- include "automation.env" . | nindent 8 }}
-      {{- end }}
       containers:
       - name: automation
         imagePullPolicy: Always
