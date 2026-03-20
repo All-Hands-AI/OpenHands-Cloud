@@ -399,6 +399,14 @@
       key: client-secret
 {{- end }}
 
+{{- if .Values.automationServiceKey.enabled }}
+- name: AUTOMATION_SERVICE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationServiceKey.existingSecret }}
+      key: {{ .Values.automationServiceKey.secretKey }}
+{{- end }}
+
 {{- $providers := list }}
 {{- if .Values.github.enabled }}
 {{- $providers = append $providers "github" }}

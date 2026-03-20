@@ -70,6 +70,12 @@ gcp:
 #   name: automation-secrets
 #   key: admin-api-key
 
+# Service key from K8s secret (for staging/production)
+# Used by OpenHands SaaS to authenticate requests to the automation service
+# serviceKeyFromSecret:
+#   name: automation-service-key
+#   key: automation-service-key
+
 # Datadog configuration
 datadog:
   env: "dev"

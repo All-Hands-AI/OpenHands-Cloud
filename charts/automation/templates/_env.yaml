@@ -29,6 +29,14 @@
       name: {{ .Values.adminApiKeyFromSecret.name }}
       key: {{ .Values.adminApiKeyFromSecret.key }}
 {{- end }}
+# Service key for authenticating requests from OpenHands SaaS
+{{- if .Values.serviceKeyFromSecret }}
+- name: AUTOMATION_SERVICE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.serviceKeyFromSecret.name }}
+      key: {{ .Values.serviceKeyFromSecret.key }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
