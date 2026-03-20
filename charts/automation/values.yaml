@@ -63,6 +63,12 @@ gcp:
   project: ""
   region: ""
 
+# GCS bucket storage configuration
+# When enabled, provides GCS_BUCKET_NAME env var for the automation service
+gcs:
+  enabled: false
+  bucket: ""
+
 # Service key from K8s secret (for staging/production)
 # Used by OpenHands SaaS to authenticate requests to the automation service
 serviceKeyFromSecret:

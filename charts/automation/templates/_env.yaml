@@ -21,6 +21,11 @@
 - name: AUTOMATION_GCP_REGION
   value: {{ .Values.gcp.region | quote }}
 {{- end }}
+# GCS bucket configuration
+{{- if .Values.gcs.enabled }}
+- name: GCS_BUCKET_NAME
+  value: {{ .Values.gcs.bucket | quote }}
+{{- end }}
 # Admin API key for issuing per-user automation API keys
 {{- if .Values.adminApiKeyFromSecret }}
 - name: AUTOMATION_ADMIN_API_KEY
