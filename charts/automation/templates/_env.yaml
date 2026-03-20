@@ -26,6 +26,13 @@
 - name: GCS_BUCKET_NAME
   value: {{ .Values.gcs.bucket | quote }}
 {{- end }}
+# GCS Emulator configuration (for ephemeral/feature environments)
+{{- if .Values.gcsEmulator.enabled }}
+- name: STORAGE_EMULATOR_HOST
+  value: "http://localhost:{{ .Values.gcsEmulator.port }}"
+- name: GCS_BUCKET_NAME
+  value: {{ .Values.gcsEmulator.bucket | quote }}
+{{- end }}
 # Admin API key for issuing per-user automation API keys
 {{- if .Values.adminApiKeyFromSecret }}
 - name: AUTOMATION_ADMIN_API_KEY

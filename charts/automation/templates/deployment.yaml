@@ -83,3 +83,19 @@ spec:
           failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
         env:
         {{- include "automation.env" . | nindent 8 }}
+      {{- if .Values.gcsEmulator.enabled }}
+      # GCS Emulator sidecar for ephemeral/feature environments
+      - name: fake-gcs-server
+        image: '{{ .Values.gcsEmulator.image.repository }}:{{ .Values.gcsEmulator.image.tag }}'
+        args:
+          - "-scheme"
+          - "http"
+          - "-port"
+          - "{{ .Values.gcsEmulator.port }}"
+          - "-backend"
+          - "memory"
+        ports:
+        - containerPort: {{ .Values.gcsEmulator.port }}
+        resources:
+          {{- toYaml .Values.gcsEmulator.resources | nindent 10 }}
+      {{- end }}
