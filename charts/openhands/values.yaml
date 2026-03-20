@@ -277,6 +277,8 @@ clickhouse:
   replicaCount: 1
   keeper:
     enabled: true
+    image:
+      repository: bitnamilegacy/clickhouse-keeper
   auth:
     username: default
     existingSecret: clickhouse-password
@@ -331,6 +333,9 @@ keycloak:
 langfuse:
   # Enable this if you want to use langfuse for tracing
   enabled: false
+  s3:
+    image:
+      repository: bitnamilegacy/minio
   langfuse:
     salt:
       secretKeyRef:
