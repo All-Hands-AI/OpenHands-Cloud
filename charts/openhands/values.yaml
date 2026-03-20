@@ -220,6 +220,12 @@ sandbox:
   # apiHostname: https://runtime-api.example.com
   apiHostname: "https://dummy-runtime-api.example.com"
 
+automations:
+  enabled: false
+  auth:
+    existingSecret: automation-service-key
+    secretKey: automation-service-key
+
 serviceAccount:
   create: true
   name: openhands-sa

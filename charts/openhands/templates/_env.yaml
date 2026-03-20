@@ -79,6 +79,13 @@
     secretKeyRef:
       name: sandbox-api-key
       key: sandbox-api-key
+{{- if .Values.automations.enabled }}
+- name: AUTOMATIONS_SERVICE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automations.auth.existingSecret }}
+      key: {{ .Values.automations.auth.secretKey }}
+{{- end }}
 {{- if .Values.sessions.existingSecret }}
 - name: JWT_SECRET
   valueFrom:
