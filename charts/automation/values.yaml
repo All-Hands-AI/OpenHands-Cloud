@@ -72,9 +72,9 @@ gcp:
 
 # Service key from K8s secret (for staging/production)
 # Used by OpenHands SaaS to authenticate requests to the automation service
-# serviceKeyFromSecret:
-#   name: automation-service-key
-#   key: automation-service-key
+serviceKeyFromSecret:
+  name: automation-service-key
+  key: automation-service-key
 
 # Datadog configuration
 datadog:
