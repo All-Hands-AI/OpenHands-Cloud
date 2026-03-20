@@ -235,6 +235,8 @@ spec:
       host: 'repl{{ ConfigOption "bitbucket_data_center_domain" }}'
     github:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
+    gitlab:
+      enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
 
     clickhouse:
       enabled: repl{{ ConfigOptionEquals "clickhouse_enabled" "1" }}
@@ -398,6 +400,38 @@ spec:
           image:
             registry: '{{repl LocalRegistryHost }}'
             repository: '{{repl LocalRegistryNamespace }}/replicated-sdk-image'
+    - when: '{{repl ConfigOptionEquals "google_api_type" "vertex" }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/gemini-2.5-flash'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
+        litellm-helm:
+          volumes:
+            - name: google-application-credentials
+              secret:
+                secretName: litellm-env-secrets
+                items:
+                  - key: "GOOGLE_APPLICATION_CREDENTIALS_JSON"
+                    path: "vertex_credentials.json"
+          volumeMounts:
+            - name: google-application-credentials
+              mountPath: /etc/gcloud/vertex_credentials.json
+              subPath: vertex_credentials.json
+              readOnly: true
+          envVars:
+            GOOGLE_APPLICATION_CREDENTIALS: "/etc/gcloud/vertex_credentials.json"
+          proxy_config:
+            model_list:
+              - model_name: "gemini-2.5-flash"
+                litellm_params:
+                  model: "vertex_ai/gemini-2.5-flash"
+                  vertex_project: os.environ/VERTEXAI_PROJECT
+                  vertex_location: os.environ/VERTEXAI_LOCATION
+          vertexAI:
+            enabled: true
+            project: '{{repl ConfigOption "google_vertex_project_id"}}'
+            location: '{{repl ConfigOption "google_vertex_location"}}'
 
   builder:
     clickhouse:

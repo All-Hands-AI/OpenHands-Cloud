@@ -152,9 +152,9 @@ spec:
           when: 'repl{{ and (ConfigOptionEquals "llm_provider" "google") (ConfigOptionEquals "google_api_type" "vertex") }}'
           required: true
         - name: google_vertex_credentials
-          title: Google Cloud Service Account JSON
-          help_text: Your Google Cloud service account credentials JSON content
-          type: textarea
+          title: Google Cloud Service Account JSON file
+          help_text: Upload your Google Cloud service account credentials JSON file (downloaded from GCP Console)
+          type: file
           when: 'repl{{ and (ConfigOptionEquals "llm_provider" "google") (ConfigOptionEquals "google_api_type" "vertex") }}'
           required: true
         - name: deepseek_api_key
@@ -382,6 +382,28 @@ spec:
           help_text: Upload the private key file (.pem) from your GitHub App
           type: file
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+
+    - name: gitlab_authentication
+      title: GitLab Authentication
+      description: Configure GitLab OAuth and App integration for user authentication
+      items:
+        - name: gitlab_auth_enabled
+          title: Enable GitLab Authentication
+          help_text: Enable GitLab OAuth for user authentication
+          type: bool
+          default: "0"
+        - name: gitlab_oauth_client_id
+          title: GitLab OAuth Client ID
+          help_text: Client ID from your GitLab OAuth App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+          required: true
+        - name: gitlab_oauth_client_secret
+          title: GitLab OAuth Client Secret
+          help_text: Client Secret from your GitLab OAuth App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
           required: true
 
     - name: database_configuration
