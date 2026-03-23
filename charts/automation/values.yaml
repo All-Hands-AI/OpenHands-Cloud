@@ -44,6 +44,17 @@ ingress:
   prefixWithBranch: false
   annotations: {}
 
+# OpenHands API configuration (where the automation service dispatches sandbox runs)
+# For feature environments, set prefixWithBranch: true and host to auto-construct the URL
+# For staging/production, set baseUrl directly
+openhandsApi:
+  # Explicit base URL (takes precedence over host + prefixWithBranch)
+  baseUrl: ""
+  # Host for constructing the URL dynamically
+  host: ""
+  # If true, prepends branchSanitized to the host (e.g., {branch}.staging.all-hands.dev)
+  prefixWithBranch: false
+
 tls:
   enabled: false
   env: "dev"
