@@ -328,6 +328,10 @@ keycloak:
   image:
     repository: bitnamilegacy/keycloak
 
+laminar:
+  # Enable this if you want to use laminar
+  enabled: false
+
 langfuse:
   # Enable this if you want to use langfuse for tracing
   enabled: false

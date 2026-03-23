@@ -16,6 +16,10 @@ dependencies:
     version: 24.7.5
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: keycloak.enabled
+  - name: laminar
+    repository: https://github.com/lmnr-ai/lmnr-helm
+    version: 0.1.2
+    condition: laminar.enabled
   - name: langfuse
     repository: https://langfuse.github.io/langfuse-k8s
     version: 1.2.13
