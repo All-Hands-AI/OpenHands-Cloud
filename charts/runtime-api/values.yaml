@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-ad2657f
+  tag: sha-753f232
   pullPolicy: Always
 
 imagePullSecrets:
