@@ -444,12 +444,6 @@ spec:
               value: '{{repl ConfigOption "https_proxy"}}'
             - name: NO_PROXY
               value: '{{repl $computedNoProxy}}'
-        runtime-api:
-          env:
-            HTTP_PROXY: '{{repl ConfigOption "http_proxy"}}'
-            HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
-            NO_PROXY: '{{repl $computedNoProxy}}'
-            SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
         litellm-helm:
           envVars:
             HTTP_PROXY: '{{repl ConfigOption "http_proxy"}}'
