@@ -595,6 +595,11 @@ jiraDc:
 linear:
   enabled: false
 
+automationServiceKey:
+  enabled: false
+  existingSecret: automation-service-key
+  secretKey: automation-service-key
+
 replicated:
   enabled: false
 
