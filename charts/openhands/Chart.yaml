@@ -18,7 +18,7 @@ dependencies:
     condition: keycloak.enabled
   - name: laminar
     repository: https://lmnr-ai.github.io/lmnr-helm
-    version: 0.1.2
+    version: 0.1.6
     condition: laminar.enabled
   - name: langfuse
     repository: https://langfuse.github.io/langfuse-k8s
