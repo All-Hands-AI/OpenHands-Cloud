@@ -521,7 +521,7 @@ spec:
 
     - name: proxy_configuration
       title: Proxy Configuration
-      description: Configure HTTP proxy settings for outbound connections to LLM providers
+      description: Configure HTTP proxy settings for outbound connections
       items:
         - name: proxy_enabled
           title: Enable HTTP Proxy
