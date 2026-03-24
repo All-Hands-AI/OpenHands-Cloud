@@ -41,22 +41,14 @@ jobs:
           # For PR validation, we need to use file:// dependencies instead of OCI
           # because the updated chart versions don't exist in the registry yet.
           #
+          # Note: openhands-secrets and image-loader are NOT dependencies of any chart.
+          # They are standalone Replicated HelmChart resources (see replicated/secrets.yaml
+          # and replicated/image-loader.yaml). Only runtime-api is a dependency of openhands.
+          #
           # Check if runtime-api is a dependency in openhands chart and update it to use local path
           if yq -e '.dependencies[] | select(.name == "runtime-api")' charts/openhands/Chart.yaml > /dev/null 2>&1; then
             echo "Updating openhands chart to use local runtime-api dependency"
             yq -i '(.dependencies[] | select(.name == "runtime-api")).repository = "file://../runtime-api"' charts/openhands/Chart.yaml
-          fi
-
-          # Check if openhands-secrets is a dependency in openhands chart and update it to use local path
-          if yq -e '.dependencies[] | select(.name == "openhands-secrets")' charts/openhands/Chart.yaml > /dev/null 2>&1; then
-            echo "Updating openhands chart to use local openhands-secrets dependency"
-            yq -i '(.dependencies[] | select(.name == "openhands-secrets")).repository = "file://../openhands-secrets"' charts/openhands/Chart.yaml
-          fi
-
-          # Check if image-loader is a dependency in openhands chart and update it to use local path
-          if yq -e '.dependencies[] | select(.name == "image-loader")' charts/openhands/Chart.yaml > /dev/null 2>&1; then
-            echo "Updating openhands chart to use local image-loader dependency"
-            yq -i '(.dependencies[] | select(.name == "image-loader")).repository = "file://../image-loader"' charts/openhands/Chart.yaml
           fi
 
       - name: Lint Replicated release
