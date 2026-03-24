@@ -8,7 +8,7 @@ spec:
   releaseName: openhands
   namespace: openhands
   weight: 10
-  helmUpgradeFlags: ["--wait", "--timeout", "300s"]
+  helmUpgradeFlags: ["--wait", "--timeout", "600s"]
   values:
     global:
       imageRegistry: 'images.r9.all-hands.dev'
@@ -462,7 +462,7 @@ spec:
               secret:
                 secretName: litellm-env-secrets
                 items:
-                    key: "GOOGLE_APPLICATION_CREDENTIALS_JSON"
+                  - key: "GOOGLE_APPLICATION_CREDENTIALS_JSON"
                     path: "vertex_credentials.json"
           volumeMounts:
             - name: google-application-credentials
