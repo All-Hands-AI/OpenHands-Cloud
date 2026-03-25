@@ -38,11 +38,11 @@ probes:
     failureThreshold: 3
 
 # Host configuration for URL construction
-# Automation is always deployed under /automation subpath
-# Example: staging.all-hands.dev -> https://staging.all-hands.dev/automation
+# Automation is always deployed under /api/automation subpath
+# Example: staging.all-hands.dev -> https://staging.all-hands.dev/api/automation
 host: ""
 # If true, prepends branchSanitized to host (for feature environments)
-# Example: true + host=staging.all-hands.dev -> https://{branch}.staging.all-hands.dev/automation
+# Example: true + host=staging.all-hands.dev -> https://{branch}.staging.all-hands.dev/api/automation
 prefixWithBranch: false
 
 # PostgreSQL database configuration

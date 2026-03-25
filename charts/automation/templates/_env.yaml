@@ -9,13 +9,13 @@
   value: "https://{{ .Values.host }}"
 {{- end }}
 # Automation service base URL (for completion callbacks from sandboxes)
-# Always deployed under /automation subpath
+# Always deployed under /api/automation subpath
 {{- if and .Values.host .Values.prefixWithBranch }}
 - name: AUTOMATION_BASE_URL
-  value: "https://{{ .Values.branchSanitized }}.{{ .Values.host }}/automation"
+  value: "https://{{ .Values.branchSanitized }}.{{ .Values.host }}/api/automation"
 {{- else if .Values.host }}
 - name: AUTOMATION_BASE_URL
-  value: "https://{{ .Values.host }}/automation"
+  value: "https://{{ .Values.host }}/api/automation"
 {{- end }}
 # PostgreSQL database configuration
 # When useSharedPostgres=true, construct host from branchSanitized

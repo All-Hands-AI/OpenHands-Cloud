@@ -647,7 +647,7 @@ automation:
       failureThreshold: 3
   
   # Host configuration for URL construction
-  # Automation is always deployed under /automation subpath
+  # Automation is always deployed under /api/automation subpath
   # Set by deploy repo values (e.g., staging.all-hands.dev, app.all-hands.dev)
   host: ""
   # If true, prepends branchSanitized to host (for feature environments)
