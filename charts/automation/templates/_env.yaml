@@ -1,15 +1,21 @@
 {{- define "automation.env" }}
 # OpenHands API base URL (for dispatching sandbox runs)
-# Must be provided by parent chart
-{{- if .Values.openhandsApi.baseUrl }}
+# Constructed from host config - automation talks to parent OpenHands service
+{{- if and .Values.host .Values.prefixWithBranch }}
 - name: AUTOMATION_OPENHANDS_API_BASE_URL
-  value: {{ .Values.openhandsApi.baseUrl | quote }}
+  value: "https://{{ .Values.branchSanitized }}.{{ .Values.host }}"
+{{- else if .Values.host }}
+- name: AUTOMATION_OPENHANDS_API_BASE_URL
+  value: "https://{{ .Values.host }}"
 {{- end }}
 # Automation service base URL (for completion callbacks from sandboxes)
-# Must be provided by parent chart (e.g., https://staging.all-hands.dev/automation)
-{{- if .Values.automationBaseUrl }}
+# Always deployed under /automation subpath
+{{- if and .Values.host .Values.prefixWithBranch }}
 - name: AUTOMATION_BASE_URL
-  value: {{ .Values.automationBaseUrl | quote }}
+  value: "https://{{ .Values.branchSanitized }}.{{ .Values.host }}/automation"
+{{- else if .Values.host }}
+- name: AUTOMATION_BASE_URL
+  value: "https://{{ .Values.host }}/automation"
 {{- end }}
 # PostgreSQL database configuration
 - name: AUTOMATION_DB_HOST

@@ -646,16 +646,12 @@ automation:
       periodSeconds: 10
       failureThreshold: 3
   
-  # Automation service base URL (for completion callbacks from sandboxes)
-  # Set by deploy repo values - must include /automation subpath
-  # Example: https://staging.all-hands.dev/automation
-  automationBaseUrl: ""
-  
-  # OpenHands API base URL (where the automation service dispatches sandbox runs)
-  # Set by deploy repo values
-  # Example: https://staging.all-hands.dev
-  openhandsApi:
-    baseUrl: ""
+  # Host configuration for URL construction
+  # Automation is always deployed under /automation subpath
+  # Set by deploy repo values (e.g., staging.all-hands.dev, app.all-hands.dev)
+  host: ""
+  # If true, prepends branchSanitized to host (for feature environments)
+  prefixWithBranch: false
   
   # PostgreSQL database configuration
   # When deployed as subchart, share parent's PostgreSQL or use Cloud SQL
