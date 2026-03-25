@@ -1,10 +1,7 @@
 {{- define "automation.env" }}
 # OpenHands API base URL (for dispatching sandbox runs)
-# Constructed from host config - automation talks to parent OpenHands service
-{{- if and .Values.host .Values.prefixWithBranch }}
-- name: AUTOMATION_OPENHANDS_API_BASE_URL
-  value: "https://{{ .Values.branchSanitized }}.{{ .Values.host }}"
-{{- else if .Values.host }}
+# Always points to the main environment (staging/production), not branch-specific
+{{- if .Values.host }}
 - name: AUTOMATION_OPENHANDS_API_BASE_URL
   value: "https://{{ .Values.host }}"
 {{- end }}
