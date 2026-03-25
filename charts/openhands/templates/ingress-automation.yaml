@@ -35,7 +35,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: {{ .Release.Name }}-automation
+            name: automation
             port:
               number: 80
 {{- end }}
