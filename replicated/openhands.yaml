@@ -143,6 +143,9 @@ spec:
       replicaCount: 1
       autoscaling:
         enabled: false
+      postgresql:
+        enabled: false
+        postMigrate: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
       imagePullSecrets:
@@ -212,8 +215,11 @@ spec:
     sandbox:
       apiHostname: 'http://openhands-runtime-api:5000'
     postgresql:
-      enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
-      postMigrate: true
+      enabled: false
+    migrationJob:
+      enabled: true
+      initContainer:
+        enabled: false
     redis:
       enabled: true
       image:
@@ -249,15 +255,12 @@ spec:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
-        postgresql:
+        externalDatabase:
           enabled: true
-          auth:
-            username: '{{repl ConfigOption "postgres_username"}}'
-            password: '{{repl ConfigOption "postgres_password" | Base64Encode }}'
-            postgresPassword: '{{repl ConfigOption "postgres_password" | Base64Encode }}'
-            database: '{{repl ConfigOption "postgres_database"}}'
-          persistence:
-            enabled: true
+          host: oh-main-postgresql
+          database: '{{repl ConfigOption "postgres_database"}}'
+          username: '{{repl ConfigOption "postgres_username"}}'
+          password: '{{repl ConfigOption "postgres_password"}}'
     - when: '{{repl ConfigOptionEquals "postgres_type" "external_postgres" }}'
       recursiveMerge: true
       values:
@@ -284,16 +287,6 @@ spec:
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
 
-    - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
-      recursiveMerge: true
-      values:
-        postgresql:
-          image:
-            repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
-        keycloak:
-          postgresql:
-            image:
-              repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
     - when: '{{repl ConfigOptionEquals "langfuse_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -362,9 +355,6 @@ spec:
           keycloakConfigCli:
             image:
               repository: '{{repl LocalRegistryNamespace }}/keycloak-config-cli'
-        postgresql:
-          image:
-            repository: '{{repl LocalRegistryNamespace }}/postgresql'
         redis:
           image:
             repository: '{{repl LocalRegistryNamespace }}/redis'
@@ -444,8 +434,6 @@ spec:
     litellm-helm:
       enabled: true
     minio:
-      enabled: true
-    postgresql:
       enabled: true
     redis:
       enabled: true

@@ -1,0 +1,8 @@
+apiVersion: v2
+name: openhands-postgresql
+description: Standalone PostgreSQL for OpenHands (deployed before the main chart)
+version: 0.1.0
+dependencies:
+  - name: postgresql
+    version: 15.x.x
+    repository: https://charts.bitnami.com/bitnami

@@ -1,0 +1,18 @@
+postgresql:
+  auth:
+    username: postgres
+    existingSecret: postgres-password
+  primary:
+    initdb:
+      scriptsConfigMap: oh-psql-scripts-configmap
+    persistence:
+      enabled: true
+  service:
+    ports:
+      postgresql: 5432
+  image:
+    repository: bitnamilegacy/postgresql
+
+global:
+  security:
+    allowInsecureImages: true

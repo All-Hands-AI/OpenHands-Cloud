@@ -1,0 +1,33 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: openhands-postgresql
+spec:
+  chart:
+    name: openhands-postgresql
+  releaseName: oh-main
+  namespace: openhands
+  weight: 5
+  helmUpgradeFlags: ["--wait", "--timeout", "600s"]
+  exclude: '{{repl ConfigOptionEquals "postgres_type" "external_postgres" }}'
+  values:
+    postgresql:
+      auth:
+        username: '{{repl ConfigOption "postgres_username"}}'
+        password: '{{repl ConfigOption "postgres_password" | Base64Encode }}'
+        postgresPassword: '{{repl ConfigOption "postgres_password" | Base64Encode }}'
+        database: '{{repl ConfigOption "postgres_database"}}'
+      image:
+        repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
+
+  optionalValues:
+    - when: '{{repl HasLocalRegistry }}'
+      recursiveMerge: true
+      values:
+        postgresql:
+          image:
+            repository: '{{repl LocalRegistryNamespace }}/postgresql'
+
+  builder:
+    postgresql:
+      enabled: true
