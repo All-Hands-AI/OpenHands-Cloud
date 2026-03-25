@@ -38,6 +38,8 @@ spec:
             name: {{ include "runtime-api.fullname" . }}-ingress-base
         {{- end }}
       {{- end }}
+      initContainers:
+      {{- include "runtime-api.dbInitContainers" . | nindent 6 }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"

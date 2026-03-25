@@ -96,14 +96,6 @@ spec:
           name: postgres-password
           usernameKey: username
           passwordKey: password
-      migrationJob:
-        enabled: true
-        ttlSecondsAfterFinished: 3600
-        hooks:
-          argocd:
-            enabled: false
-          helm:
-            enabled: true
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
         # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
@@ -213,7 +205,6 @@ spec:
       apiHostname: 'http://openhands-runtime-api:5000'
     postgresql:
       enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
-      postMigrate: true
     redis:
       enabled: true
       image:

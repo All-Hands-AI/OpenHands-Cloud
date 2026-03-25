@@ -167,11 +167,6 @@ mcpEvents:
   uvicorn:
     workers: 2
 
-migrationJob:
-  enabled: true
-  initContainer:
-    enabled: true
-
 proactiveConvoClean:
   enabled: false
   schedule: "0 2 * * *" # Daily at 2 AM
@@ -562,7 +557,6 @@ runtime-api:
           - --user-id
           - "0"
   postgresql:
-    postMigrate: true
     auth:
       username: postgres
       existingSecret: postgres-password
