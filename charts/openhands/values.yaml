@@ -654,14 +654,21 @@ automation:
   prefixWithBranch: false
   
   # PostgreSQL database configuration
-  # When deployed as subchart, share parent's PostgreSQL or use Cloud SQL
   database:
-    host: "oh-main-postgresql"
+    # Use the parent chart's shared PostgreSQL instance
+    # When true, host is constructed as openhands-{branchSanitized}-postgresql
+    useSharedPostgres: false
+    # Explicit host (used when useSharedPostgres=false, e.g., for Cloud SQL)
+    host: ""
     port: "5432"
     user: "automation_user"
     name: "automations"
-    secretName: "postgres-password"
-    secretKey: "password"
+    # Secret containing the automation database password
+    secretName: "automation-db-secret"
+    secretKey: "db-password"
+    # Secret containing the postgres superuser password (for creating the automation user)
+    superuserSecretName: "postgres-password"
+    superuserSecretKey: "password"
   
   # GCP Cloud SQL (leave empty for non-GCP)
   gcp:

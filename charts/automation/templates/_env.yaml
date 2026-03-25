@@ -18,8 +18,18 @@
   value: "https://{{ .Values.host }}/automation"
 {{- end }}
 # PostgreSQL database configuration
+# When useSharedPostgres=true, construct host from branchSanitized
+# Otherwise use the explicit host value
 - name: AUTOMATION_DB_HOST
+{{- if .Values.database.useSharedPostgres }}
+{{- if .Values.prefixWithBranch }}
+  value: "openhands-{{ .Values.branchSanitized }}-postgresql"
+{{- else }}
+  value: "oh-main-postgresql"
+{{- end }}
+{{- else }}
   value: {{ .Values.database.host | quote }}
+{{- end }}
 - name: AUTOMATION_DB_PORT
   value: {{ .Values.database.port | quote }}
 - name: AUTOMATION_DB_USER
