@@ -59,12 +59,14 @@ jobs:
     strategy:
       matrix:
         chart:
+          # Order matters! Charts that are dependencies must be published first.
+          # automation and runtime-api are dependencies of openhands
+          - name: automation
+            path: charts/automation
           - name: runtime-api
             path: charts/runtime-api
           - name: image-loader
             path: charts/image-loader
-          - name: automation
-            path: charts/automation
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
@@ -161,6 +163,14 @@ jobs:
           
           helm dependency update charts/openhands
 
+      - name: Update automation dependency version
+        if: steps.check.outputs.should_publish == 'true' && matrix.chart.name == 'openhands' && needs.detect-changes.outputs.automation == 'true'
+        run: |
+          AUTOMATION_VERSION=$(yq '.version' charts/automation/Chart.yaml)
+          AUTOMATION_PREVIEW="${AUTOMATION_VERSION}-alpha.${{ github.event.pull_request.number }}"
+          
+          yq -i "(.dependencies[] | select(.name == \"automation\")).version = \"${AUTOMATION_PREVIEW}\"" charts/openhands/Chart.yaml
+
       - name: Test ${{ matrix.chart.name }} chart with default values
         if: steps.check.outputs.should_publish == 'true'
         run: |
@@ -253,6 +263,15 @@ jobs:
 
           echo "Updating openhands runtime-api dependency to ${RUNTIME_API_PREVIEW}"
           yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
+
+      - name: Update automation dependency version for openhands
+        if: matrix.chart.name == 'openhands' && needs.detect-changes.outputs.automation == 'true'
+        run: |
+          AUTOMATION_VERSION=$(yq '.version' charts/automation/Chart.yaml)
+          AUTOMATION_PREVIEW="${AUTOMATION_VERSION}-alpha.${{ github.event.pull_request.number }}"
+
+          echo "Updating openhands automation dependency to ${AUTOMATION_PREVIEW}"
+          yq -i "(.dependencies[] | select(.name == \"automation\")).version = \"${AUTOMATION_PREVIEW}\"" charts/openhands/Chart.yaml
 
       - name: Lint ${{ matrix.chart.name }} chart
         run: |
