@@ -3,6 +3,10 @@ fullnameOverride: ""
 
 replicaCount: 1
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 image:
   repository: ghcr.io/openhands/runtime-api
   tag: sha-753f232

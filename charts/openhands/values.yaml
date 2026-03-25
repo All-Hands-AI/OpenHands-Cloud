@@ -27,6 +27,10 @@ datadog:
 debuggingRoutes:
   enabled: false
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 deployment:
   replicas: 1
   resources:
@@ -556,6 +560,9 @@ runtime-api:
           - root
           - --user-id
           - "0"
+  databaseMigrations:
+    createDatabases: false
+    migrate: true
   postgresql:
     auth:
       username: postgres

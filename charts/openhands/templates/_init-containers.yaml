@@ -1,5 +1,4 @@
 {{- define "openhands.dbInitContainers" }}
-{{- if .Values.postgresql.enabled }}
 - name: wait-for-db
   image: "bitnamilegacy/postgresql:latest"
   command: ['sh', '-c']
@@ -13,29 +12,13 @@
       echo "PostgreSQL is up and running!"
   env:
     {{- include "openhands.env" . | nindent 4 }}
-- name: migrate-db
-  image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-  command: ["/bin/sh", "-c"]
-  workingDir: /app
-  args:
-    - |
-      echo "Running migrations..."
-      alembic upgrade head
-  env:
-    {{- include "openhands.env" . | nindent 4 }}
-{{- else if .Values.externalDatabase.enabled }}
-- name: wait-for-db
+{{- if .Values.databaseMigrations.createDatabases }}
+- name: create-db
   image: "bitnamilegacy/postgresql:latest"
   command: ['sh', '-c']
   args:
     - |
-      echo "Waiting for RDS PostgreSQL at $DB_HOST to be ready..."
       export PGPASSWORD=$DB_ADMIN_PASSWORD
-      until psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c '\q' > /dev/null 2>&1; do
-        echo "PostgreSQL is unavailable - sleeping for 2 seconds"
-        sleep 2
-      done
-      echo "PostgreSQL is up and running!"
 
       echo "Checking if the keycloak DB \"$KEYCLOAK_DB_NAME\" and keycloak user \"$KEYCLOAK_DB_USER\" exist..."
       # Create the keycloak database if it doesn't exist
@@ -86,6 +69,8 @@
           name: {{ .Values.keycloak.externalDatabase.existingSecret }}
           key: db-port
     {{- include "openhands.env" . | nindent 4 }}
+{{- end }}
+{{- if .Values.databaseMigrations.migrate }}
 - name: migrate-db
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
   command: ["/bin/sh", "-c"]
