@@ -11,6 +11,17 @@
 - name: AUTOMATION_OPENHANDS_API_BASE_URL
   value: "https://{{ .Values.openhandsApi.host }}"
 {{- end }}
+# Automation service base URL (for completion callbacks from sandboxes)
+# Auto-constructed from ingress settings when ingress is enabled
+{{- if .Values.ingress.enabled }}
+{{- if .Values.ingress.prefixWithBranch }}
+- name: AUTOMATION_BASE_URL
+  value: "https://automation-{{ .Values.branchSanitized }}.{{ .Values.ingress.host }}"
+{{- else }}
+- name: AUTOMATION_BASE_URL
+  value: "https://{{ .Values.ingress.host }}"
+{{- end }}
+{{- end }}
 # PostgreSQL database configuration
 - name: AUTOMATION_DB_HOST
   value: {{ .Values.database.host | quote }}
