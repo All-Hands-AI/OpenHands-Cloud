@@ -1,0 +1,41 @@
+{{- if and .Values.ingress.enabled .Values.automation.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openhands-automation-ingress
+  annotations:
+    {{- if .Values.ingress.root.annotations }}
+    {{ .Values.ingress.root.annotations | toYaml | nindent 4 }}
+    {{- else }}
+    {{ .Values.ingress.annotations | toYaml | nindent 4 }}
+    {{- end }}
+    # Traefik middleware for stripping /automation prefix
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-strip-automation-prefix@kubernetescrd
+spec:
+  ingressClassName: {{ .Values.ingress.class }}
+  {{- if .Values.tls.enabled }}
+  tls:
+  - hosts:
+    {{- if .Values.ingress.prefixWithBranch }}
+    - {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
+    {{- else }}
+    - {{ .Values.ingress.host }}
+    {{- end }}
+    secretName: app-all-hands-{{ .Values.tls.env }}-tls
+  {{- end }}
+  rules:
+  {{- if .Values.ingress.prefixWithBranch }}
+  - host: {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
+  {{- else }}
+  - host: {{ .Values.ingress.host }}
+  {{- end }}
+    http:
+      paths:
+      - path: /automation
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Release.Name }}-automation
+            port:
+              number: 80
+{{- end }}

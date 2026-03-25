@@ -600,6 +600,116 @@ automationServiceKey:
   existingSecret: automation-service-key
   secretKey: automation-service-key
 
+# Automation subchart configuration
+# When enabled, deploys the automation service as a subchart
+# The automation service handles scheduled and event-driven automation execution
+automation:
+  enabled: false
+  
+  image:
+    repository: ghcr.io/openhands/automation
+    # tag: set via helm args or override
+  
+  imagePullSecrets: []
+  
+  deployment:
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  
+  securityContext:
+    runAsUser: 42420
+    runAsGroup: 42420
+    runAsNonRoot: true
+  
+  serviceAccount:
+    create: true
+    name: automation-sa
+    annotations: {}
+  
+  probes:
+    startup:
+      failureThreshold: 30
+      periodSeconds: 10
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      failureThreshold: 3
+  
+  # Ingress is disabled - routing handled by parent chart via /automation path
+  ingress:
+    enabled: false
+  
+  # OpenHands API configuration (where the automation service dispatches sandbox runs)
+  openhandsApi:
+    baseUrl: ""
+  
+  tls:
+    enabled: false
+    env: "dev"
+  
+  # PostgreSQL database configuration
+  # When deployed as subchart, share parent's PostgreSQL
+  database:
+    host: "oh-main-postgresql"
+    port: "5432"
+    user: "automation_user"
+    name: "automations"
+    secretName: "postgres-password"
+    secretKey: "password"
+  
+  # GCP Cloud SQL (leave empty for non-GCP)
+  gcp:
+    dbInstance: ""
+    project: ""
+    region: ""
+  
+  # GCS bucket storage configuration
+  gcs:
+    enabled: false
+    bucket: ""
+  
+  # GCS Emulator for ephemeral/feature environments
+  gcsEmulator:
+    enabled: false
+    image:
+      repository: fsouza/fake-gcs-server
+      tag: "1.49.0"
+    bucket: "test-bucket"
+    port: 4443
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 50m
+      limits:
+        memory: 256Mi
+        cpu: 100m
+  
+  # Service key from K8s secret
+  serviceKeyFromSecret:
+    name: automation-service-key
+    key: automation-service-key
+  
+  # Datadog configuration
+  datadog:
+    env: "dev"
+  
+  # Env vars passed directly to the container
+  env: {}
+  
+  # PostgreSQL subchart - disabled when using parent's PostgreSQL
+  postgresql:
+    enabled: false
+
 replicated:
   enabled: false
 

@@ -44,3 +44,7 @@ dependencies:
     repository: oci://ghcr.io/all-hands-ai/helm-charts
     version: 0.1.25
     condition: runtime-api.enabled
+  - name: automation
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.x
+    condition: automation.enabled
