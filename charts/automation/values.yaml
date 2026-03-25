@@ -37,27 +37,16 @@ probes:
     periodSeconds: 10
     failureThreshold: 3
 
-ingress:
-  enabled: false
-  host: ""
-  class: traefik
-  prefixWithBranch: false
-  annotations: {}
+# Automation service base URL (for completion callbacks from sandboxes)
+# Must be provided by parent chart - automation is always deployed under a subpath
+# Example: https://staging.all-hands.dev/automation
+automationBaseUrl: ""
 
-# OpenHands API configuration (where the automation service dispatches sandbox runs)
-# For feature environments, set prefixWithBranch: true and host to auto-construct the URL
-# For staging/production, set baseUrl directly
+# OpenHands API base URL (where the automation service dispatches sandbox runs)
+# Must be provided by parent chart
+# Example: https://staging.all-hands.dev
 openhandsApi:
-  # Explicit base URL (takes precedence over host + prefixWithBranch)
   baseUrl: ""
-  # Host for constructing the URL dynamically
-  host: ""
-  # If true, prepends branchSanitized to the host (e.g., {branch}.staging.all-hands.dev)
-  prefixWithBranch: false
-
-tls:
-  enabled: false
-  env: "dev"
 
 # PostgreSQL database configuration
 database:

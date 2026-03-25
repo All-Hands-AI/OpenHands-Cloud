@@ -603,6 +603,7 @@ automationServiceKey:
 # Automation subchart configuration
 # When enabled, deploys the automation service as a subchart
 # The automation service handles scheduled and event-driven automation execution
+# Routing is handled by parent chart via /automation subpath
 automation:
   enabled: false
   
@@ -645,20 +646,19 @@ automation:
       periodSeconds: 10
       failureThreshold: 3
   
-  # Ingress is disabled - routing handled by parent chart via /automation path
-  ingress:
-    enabled: false
+  # Automation service base URL (for completion callbacks from sandboxes)
+  # Set by deploy repo values - must include /automation subpath
+  # Example: https://staging.all-hands.dev/automation
+  automationBaseUrl: ""
   
-  # OpenHands API configuration (where the automation service dispatches sandbox runs)
+  # OpenHands API base URL (where the automation service dispatches sandbox runs)
+  # Set by deploy repo values
+  # Example: https://staging.all-hands.dev
   openhandsApi:
     baseUrl: ""
   
-  tls:
-    enabled: false
-    env: "dev"
-  
   # PostgreSQL database configuration
-  # When deployed as subchart, share parent's PostgreSQL
+  # When deployed as subchart, share parent's PostgreSQL or use Cloud SQL
   database:
     host: "oh-main-postgresql"
     port: "5432"
