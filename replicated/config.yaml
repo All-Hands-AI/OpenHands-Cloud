@@ -519,6 +519,37 @@ spec:
               pattern: ^[1-9][0-9]*m$
               message: Must be a CPU value in millicores (e.g., 500m, 1000m)
 
+    - name: proxy_configuration
+      title: Proxy Configuration
+      description: Configure HTTP proxy settings for outbound connections
+      items:
+        - name: proxy_enabled
+          title: Enable HTTP Proxy
+          help_text: Enable HTTP proxy for outbound connections
+          type: bool
+          default: "0"
+        - name: http_proxy
+          title: HTTP_PROXY
+          help_text: HTTP proxy URL (e.g., http://proxy.example.com:8080)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
+        - name: https_proxy
+          title: HTTPS_PROXY
+          help_text: HTTPS proxy URL (e.g., http://proxy.example.com:8080)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
+        - name: no_proxy
+          title: NO_PROXY
+          help_text: Additional hosts to bypass the proxy (comma-separated). Internal services and configured domain hostnames are automatically included.
+          type: text
+          when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
+        - name: ssl_verify
+          title: SSL Verification
+          help_text: Enable SSL certificate verification for outbound connections. Disable if using a proxy with a self-signed certificate.
+          type: bool
+          default: "1"
+          when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
+
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
