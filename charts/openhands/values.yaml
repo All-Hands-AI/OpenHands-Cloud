@@ -378,6 +378,7 @@ litellm-helm:
   # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
   # envVars:
   #   LANGFUSE_HOST: "http://oh-main-langfuse"
+  # Migrations run automatically when litellm starts. This disables running them separately as a job.
   migrationJob:
     enabled: false
   db:

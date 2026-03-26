@@ -96,6 +96,7 @@ spec:
           name: postgres-password
           usernameKey: username
           passwordKey: password
+      # Migrations run automatically when litellm starts. This disables running them separately as a job.
       migrationJob:
         enabled: false
       image:
