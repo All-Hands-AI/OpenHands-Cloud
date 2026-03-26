@@ -96,6 +96,8 @@ spec:
           name: postgres-password
           usernameKey: username
           passwordKey: password
+      migrationJob:
+        enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
         # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
