@@ -49,6 +49,7 @@ spec:
             defaultMode: 0755
         {{- end }}
       initContainers:
+      {{- include "openhands.dbInitContainers" . | nindent 6 }}
       - name: keycloak-config
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'

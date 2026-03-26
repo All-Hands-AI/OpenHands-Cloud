@@ -55,7 +55,17 @@ $(foreach element,$(MANIFESTS),$(eval $(call make-manifest-target,$(element))))
 define make-chart-target
 $(eval VER := $(shell yq .version $(CHARTDIR)/$1/Chart.yaml))
 $(BUILDDIR)/$1-$(VER).tgz : $(CHARTDIR)/$1 $(shell find $(CHARTDIR)/$1 -name '*.yaml' -o -name '*.yml' -o -name "*.tpl" -o -name "NOTES.txt" -o -name "values.schema.json") | $$(BUILDDIR)
+	@# Rewrite any dependency that points to a remote registry but exists as a
+	@# sibling chart to use a local file:// reference instead. This lets
+	@# `helm package -u` resolve unpublished chart versions during local builds.
+	@cp $(CHARTDIR)/$1/Chart.yaml $(CHARTDIR)/$1/Chart.yaml.bak
+	@for dep in $$$$(yq -r '.dependencies[].name // ""' $(CHARTDIR)/$1/Chart.yaml); do \
+		if [ -d $(CHARTDIR)/$$$$dep ]; then \
+			yq -i "(.dependencies[] | select(.name == \"$$$$dep\")).repository = \"file://../$$$$dep\"" $(CHARTDIR)/$1/Chart.yaml; \
+		fi; \
+	done
 	helm package -u $(CHARTDIR)/$1 -d $(BUILDDIR)/
+	@mv $(CHARTDIR)/$1/Chart.yaml.bak $(CHARTDIR)/$1/Chart.yaml
 RELEASE_FILES := $(RELEASE_FILES) $(BUILDDIR)/$1-$(VER).tgz
 charts:: $(BUILDDIR)/$1-$(VER).tgz
 endef

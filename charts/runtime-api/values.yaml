@@ -3,9 +3,13 @@ fullnameOverride: ""
 
 replicaCount: 1
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-753f232
+  tag: sha-20ec8b3
   pullPolicy: Always
 
 imagePullSecrets:
@@ -71,9 +75,6 @@ affinity: {}
 postgresql:
   enabled: false
   isFeatureDeploy: false
-  # Set to true when deployed as subchart and parent chart owns PostgreSQL
-  # This ensures migrate-db runs as post-install hook (after postgres is ready)
-  postMigrate: false
   primary:
     persistence:
       enabled: false

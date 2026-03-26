@@ -31,6 +31,8 @@ jobs:
             path: charts/runtime-api
           - name: image-loader
             path: charts/image-loader
+          - name: automation
+            path: charts/automation
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets

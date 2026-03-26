@@ -1,0 +1,87 @@
+{{- define "openhands.dbInitContainers" }}
+- name: wait-for-db
+  image: "bitnamilegacy/postgresql:latest"
+  command: ['sh', '-c']
+  args:
+    - |
+      echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
+      # pg_isready succeeds even if the database doesn't exist yet;
+      # we pass credentials and database to avoid failed auth log entries.
+      until PGPASSWORD=$DB_PASS pg_isready -h $DB_HOST -p 5432 -U $DB_USER -d $DB_NAME > /dev/null 2>&1; do
+        echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+        sleep 2
+      done
+      echo "PostgreSQL is up and running!"
+  env:
+    {{- include "openhands.env" . | nindent 4 }}
+{{- if .Values.databaseMigrations.createDatabases }}
+- name: create-db
+  image: "bitnamilegacy/postgresql:latest"
+  command: ['sh', '-c']
+  args:
+    - |
+      export PGPASSWORD=$DB_ADMIN_PASSWORD
+
+      echo "Checking if the keycloak DB \"$KEYCLOAK_DB_NAME\" and keycloak user \"$KEYCLOAK_DB_USER\" exist..."
+      # Create the keycloak database if it doesn't exist
+      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$KEYCLOAK_DB_NAME'" | grep -q 1 || \
+      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $KEYCLOAK_DB_NAME;"
+
+      # Create the keycloak user if it doesn't exist
+      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$KEYCLOAK_DB_USER'" | grep -q 1 || \
+      (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -c "CREATE USER $KEYCLOAK_DB_USER WITH PASSWORD '$KEYCLOAK_DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $KEYCLOAK_DB_NAME TO $KEYCLOAK_DB_USER;")
+
+      echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
+      # Create the database if it doesn't exist
+      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
+      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
+
+      # Create the user if it doesn't exist
+      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
+      (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;")
+  env:
+    - name: DB_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.externalDatabase.existingSecret }}
+          key: admin_password
+    - name: KEYCLOAK_DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+          key: db-user
+    - name: KEYCLOAK_DB_PASS
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+          key: db-password
+    - name: KEYCLOAK_DB_NAME
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+          key: db-name
+    - name: KEYCLOAK_DB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+          key: db-host
+    - name: KEYCLOAK_DB_PORT
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
+          key: db-port
+    {{- include "openhands.env" . | nindent 4 }}
+{{- end }}
+{{- if .Values.databaseMigrations.migrate }}
+- name: migrate-db
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+  command: ["/bin/sh", "-c"]
+  workingDir: /app
+  args:
+    - |
+      echo "Running migrations..."
+      alembic upgrade head
+  env:
+    {{- include "openhands.env" . | nindent 4 }}
+{{- end }}
+{{- end }}

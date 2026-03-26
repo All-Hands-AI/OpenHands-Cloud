@@ -34,6 +34,8 @@ spec:
           configMap:
             name: user-waitlist
         {{- end }}
+      initContainers:
+      {{- include "openhands.dbInitContainers" . | nindent 6 }}
       containers:
       - name: openhands-integrations
         imagePullPolicy: Always

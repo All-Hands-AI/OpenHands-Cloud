@@ -27,6 +27,10 @@ datadog:
 debuggingRoutes:
   enabled: false
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 deployment:
   replicas: 1
   resources:
@@ -167,11 +171,6 @@ mcpEvents:
   uvicorn:
     workers: 2
 
-migrationJob:
-  enabled: true
-  initContainer:
-    enabled: true
-
 proactiveConvoClean:
   enabled: false
   schedule: "0 2 * * *" # Daily at 2 AM
@@ -277,6 +276,8 @@ clickhouse:
   replicaCount: 1
   keeper:
     enabled: true
+    image:
+      repository: bitnamilegacy/clickhouse-keeper
   auth:
     username: default
     existingSecret: clickhouse-password
@@ -331,6 +332,9 @@ keycloak:
 langfuse:
   # Enable this if you want to use langfuse for tracing
   enabled: false
+  s3:
+    image:
+      repository: bitnamilegacy/minio
   langfuse:
     salt:
       secretKeyRef:
@@ -374,6 +378,9 @@ litellm-helm:
   # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
   # envVars:
   #   LANGFUSE_HOST: "http://oh-main-langfuse"
+  # Migrations run automatically when litellm starts. This disables running them separately as a job.
+  migrationJob:
+    enabled: false
   db:
     deployStandalone: false
     useExisting: true
@@ -511,7 +518,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-753f232
+    tag: sha-20ec8b3
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -556,8 +563,10 @@ runtime-api:
           - root
           - --user-id
           - "0"
+  databaseMigrations:
+    createDatabases: false
+    migrate: true
   postgresql:
-    postMigrate: true
     auth:
       username: postgres
       existingSecret: postgres-password
@@ -599,6 +608,125 @@ automationServiceKey:
   enabled: false
   existingSecret: automation-service-key
   secretKey: automation-service-key
+
+# Automation subchart configuration
+# When enabled, deploys the automation service as a subchart
+# The automation service handles scheduled and event-driven automation execution
+# Routing is handled by parent chart via /api/automation subpath
+automation:
+  enabled: false
+  
+  image:
+    repository: ghcr.io/openhands/automation
+    # tag: set via helm args or override
+  
+  imagePullSecrets: []
+  
+  deployment:
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  
+  securityContext:
+    runAsUser: 42420
+    runAsGroup: 42420
+    runAsNonRoot: true
+  
+  serviceAccount:
+    create: true
+    name: automation-sa
+    annotations: {}
+  
+  probes:
+    startup:
+      failureThreshold: 30
+      periodSeconds: 10
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      failureThreshold: 3
+  
+  # URL configuration
+  # OpenHands API URL for dispatching sandbox runs (e.g., https://staging.all-hands.dev)
+  openhandsApiUrl: ""
+  # Automation service base URL for completion callbacks (e.g., https://staging.all-hands.dev/api/automation)
+  automationBaseUrl: ""
+  
+  # PostgreSQL database configuration
+  database:
+    # Full hostname of the PostgreSQL server
+    # Examples:
+    #   - Cloud SQL: "my-project:us-central1:my-instance"
+    #   - In-cluster: "openhands-main-postgresql"
+    #   - Feature env: "openhands-feature-branch-postgresql"
+    host: ""
+    port: "5432"
+    user: "automation_user"
+    name: "automations"
+    # Secret containing the automation database password
+    secretName: "automation-db-secret"
+    secretKey: "db-password"
+    # Create database and user in an existing PostgreSQL instance
+    # When true, runs an init container to create the database and user
+    # Useful when sharing a PostgreSQL instance with other services
+    createDatabaseUser: false
+    # Secret containing the postgres superuser password (for creating the automation user)
+    # Only used when createDatabaseUser=true
+    superuserSecretName: "postgres-password"
+    superuserSecretKey: "password"
+  
+  # GCP Cloud SQL (leave empty for non-GCP)
+  gcp:
+    dbInstance: ""
+    project: ""
+    region: ""
+  
+  # File storage configuration (aligned with openhands chart pattern)
+  # Supports multiple backends: gcs, s3, or in-cluster minio for ephemeral environments
+  filestore:
+    # When true, uses S3-compatible storage (minio) for ephemeral/feature environments
+    # When false, uses cloud storage specified by 'type' (for production)
+    ephemeral: false
+    # Bucket name for storing automation data
+    bucket: automation-data
+    # Storage type when ephemeral=false (e.g., gcs, s3)
+    type: gcs
+  
+  # Minio configuration for ephemeral storage
+  # When deployed as subchart of openhands, automation uses parent's minio instance
+  minio:
+    # Don't deploy minio as subchart - use parent's minio instance
+    enabled: false
+    # External minio configuration (points to parent chart's minio)
+    external:
+      endpoint: "minio:9000"
+      accessKey: "default"
+      secretKey: "notasecret"
+  
+  # Service key from K8s secret
+  serviceKeyFromSecret:
+    name: automation-service-key
+    key: automation-service-key
+  
+  # Datadog configuration
+  datadog:
+    env: "dev"
+  
+  # Env vars passed directly to the container (overrides defaults)
+  env: {}
+  
+  # PostgreSQL subchart - disabled when using parent's PostgreSQL
+  postgresql:
+    enabled: false
 
 replicated:
   enabled: false
