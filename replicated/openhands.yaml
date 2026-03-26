@@ -241,6 +241,7 @@ spec:
       enabled: repl{{ ConfigOptionEquals "clickhouse_enabled" "1" }}
 
     replicated:
+      enabled: true
       image:
         registry: images.r9.all-hands.dev
         repository: library/replicated-sdk-image
