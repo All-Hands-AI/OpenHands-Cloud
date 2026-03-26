@@ -518,7 +518,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-753f232
+    tag: sha-20ec8b3
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
