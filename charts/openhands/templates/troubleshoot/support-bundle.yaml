@@ -205,18 +205,6 @@ spec:
               when: ">= 1"
               message: "OpenHands MinIO deployment is ready"
     {{- end }}
-    {{- if .Values.keycloak.enabled }}
-    - deploymentStatus:
-        name: {{ .Release.Name }}-keycloak
-        namespace: {{ .Release.Namespace }}
-        outcomes:
-          - fail:
-              when: "< 1"
-              message: "OpenHands Keycloak deployment is not ready"
-          - pass:
-              when: ">= 1"
-              message: "OpenHands Keycloak deployment is ready"
-    {{- end }}
     {{- if index .Values "runtime-api" "enabled" }}
     - deploymentStatus:
         name: {{ .Release.Name }}-runtime-api
@@ -255,7 +243,7 @@ spec:
     {{- end }}
     {{- if .Values.keycloak.enabled }}
     - statefulsetStatus:
-        name: {{ .Release.Name }}-keycloak
+        name: keycloak
         namespace: {{ .Release.Namespace }}
         outcomes:
           - fail:
