@@ -5,7 +5,9 @@
   args:
     - |
       echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
-      until PGPASSWORD=$DB_PASS pg_isready -h $DB_HOST -p 5432 -U $DB_USER > /dev/null 2>&1; do
+      # pg_isready succeeds even if the database doesn't exist yet;
+      # we pass credentials and database to avoid failed auth log entries.
+      until PGPASSWORD=$DB_PASS pg_isready -h $DB_HOST -p 5432 -U $DB_USER -d $DB_NAME > /dev/null 2>&1; do
         echo "PostgreSQL is unavailable - sleeping for 2 seconds"
         sleep 2
       done
