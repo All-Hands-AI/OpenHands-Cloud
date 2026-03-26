@@ -5,7 +5,7 @@
   args:
     - |
       echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
-      until PGPASSWORD=$DB_PASS psql -h $DB_HOST -p 5432 -U $DB_USER -d postgres -c '\q' > /dev/null 2>&1; do
+      until pg_isready -h $DB_HOST -p 5432 > /dev/null 2>&1; do
         echo "PostgreSQL is unavailable - sleeping for 2 seconds"
         sleep 2
       done
