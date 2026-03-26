@@ -214,30 +214,6 @@ spec:
               when: ">= 1"
               message: "OpenHands Keycloak statefulset is ready"
     {{- end }}
-    {{- if .Values.migrationJob.enabled }}
-    - jobStatus:
-        name: migrate-db
-        namespace: {{ .Release.Namespace }}
-        outcomes:
-          - fail:
-              when: "== false"
-              message: "OpenHands database migration job failed"
-          - pass:
-              when: "== true"
-              message: "OpenHands database migration job completed successfully"
-    {{- end }}
-    {{- if index .Values "runtime-api" "enabled" }}
-    - jobStatus:
-        name: {{ .Release.Name }}-runtime-api-migrate-db
-        namespace: {{ .Release.Namespace }}
-        outcomes:
-          - fail:
-              when: "== false"
-              message: "OpenHands Runtime API database migration job failed"
-          - pass:
-              when: "== true"
-              message: "OpenHands Runtime API database migration job completed successfully"
-    {{- end }}
     - deploymentStatus:
         name: ingress-nginx-controller
         namespace: ingress-nginx

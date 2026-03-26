@@ -27,6 +27,10 @@ datadog:
 debuggingRoutes:
   enabled: false
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 deployment:
   replicas: 1
   resources:
@@ -166,11 +170,6 @@ mcpEvents:
     replicas: 2
   uvicorn:
     workers: 2
-
-migrationJob:
-  enabled: true
-  initContainer:
-    enabled: true
 
 proactiveConvoClean:
   enabled: false
@@ -379,6 +378,9 @@ litellm-helm:
   # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
   # envVars:
   #   LANGFUSE_HOST: "http://oh-main-langfuse"
+  # Migrations run automatically when litellm starts. This disables running them separately as a job.
+  migrationJob:
+    enabled: false
   db:
     deployStandalone: false
     useExisting: true
@@ -516,7 +518,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-753f232
+    tag: sha-20ec8b3
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -561,8 +563,10 @@ runtime-api:
           - root
           - --user-id
           - "0"
+  databaseMigrations:
+    createDatabases: false
+    migrate: true
   postgresql:
-    postMigrate: true
     auth:
       username: postgres
       existingSecret: postgres-password
