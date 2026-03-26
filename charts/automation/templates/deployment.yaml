@@ -24,8 +24,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
-      {{- if .Values.database.useSharedPostgres }}
-      # Create automation database and user in the shared PostgreSQL instance
+      {{- if .Values.database.createDatabaseUser }}
+      # Create automation database and user in an existing PostgreSQL instance
       - name: create-db-user
         image: postgres:14
         env:
@@ -35,11 +35,7 @@ spec:
                 name: {{ .Values.database.superuserSecretName }}
                 key: {{ .Values.database.superuserSecretKey }}
           - name: DB_HOST
-            {{- if .Values.prefixWithBranch }}
-            value: "openhands-{{ .Values.branchSanitized }}-postgresql"
-            {{- else }}
-            value: "oh-main-postgresql"
-            {{- end }}
+            value: {{ .Values.database.host | quote }}
           - name: DB_PORT
             value: {{ .Values.database.port | quote }}
           - name: DB_NAME
@@ -135,19 +131,3 @@ spec:
           failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
         env:
         {{- include "automation.env" . | nindent 8 }}
-      {{- if .Values.gcsEmulator.enabled }}
-      # GCS Emulator sidecar for ephemeral/feature environments
-      - name: fake-gcs-server
-        image: '{{ .Values.gcsEmulator.image.repository }}:{{ .Values.gcsEmulator.image.tag }}'
-        args:
-          - "-scheme"
-          - "http"
-          - "-port"
-          - "{{ .Values.gcsEmulator.port }}"
-          - "-backend"
-          - "memory"
-        ports:
-        - containerPort: {{ .Values.gcsEmulator.port }}
-        resources:
-          {{- toYaml .Values.gcsEmulator.resources | nindent 10 }}
-      {{- end }}

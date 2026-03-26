@@ -1,32 +1,17 @@
-{{- define "automation.env" }}
+{{- define "automation.env.defaults" }}
 # OpenHands API base URL (for dispatching sandbox runs)
-# Always points to the main environment (staging/production), not branch-specific
-{{- if .Values.host }}
+{{- if .Values.openhandsApiUrl }}
 - name: AUTOMATION_OPENHANDS_API_BASE_URL
-  value: "https://{{ .Values.host }}"
+  value: {{ .Values.openhandsApiUrl | quote }}
 {{- end }}
 # Automation service base URL (for completion callbacks from sandboxes)
-# Always deployed under /api/automation subpath
-{{- if and .Values.host .Values.prefixWithBranch }}
+{{- if .Values.automationBaseUrl }}
 - name: AUTOMATION_BASE_URL
-  value: "https://{{ .Values.branchSanitized }}.{{ .Values.host }}/api/automation"
-{{- else if .Values.host }}
-- name: AUTOMATION_BASE_URL
-  value: "https://{{ .Values.host }}/api/automation"
+  value: {{ .Values.automationBaseUrl | quote }}
 {{- end }}
 # PostgreSQL database configuration
-# When useSharedPostgres=true, construct host from branchSanitized
-# Otherwise use the explicit host value
 - name: AUTOMATION_DB_HOST
-{{- if .Values.database.useSharedPostgres }}
-{{- if .Values.prefixWithBranch }}
-  value: "openhands-{{ .Values.branchSanitized }}-postgresql"
-{{- else }}
-  value: "oh-main-postgresql"
-{{- end }}
-{{- else }}
   value: {{ .Values.database.host | quote }}
-{{- end }}
 - name: AUTOMATION_DB_PORT
   value: {{ .Values.database.port | quote }}
 - name: AUTOMATION_DB_USER
@@ -46,17 +31,27 @@
 - name: AUTOMATION_GCP_REGION
   value: {{ .Values.gcp.region | quote }}
 {{- end }}
-# GCS bucket configuration
-{{- if .Values.gcs.enabled }}
-- name: GCS_BUCKET_NAME
-  value: {{ .Values.gcs.bucket | quote }}
-{{- end }}
-# GCS Emulator configuration (for ephemeral/feature environments)
-{{- if .Values.gcsEmulator.enabled }}
-- name: STORAGE_EMULATOR_HOST
-  value: "http://localhost:{{ .Values.gcsEmulator.port }}"
-- name: GCS_BUCKET_NAME
-  value: {{ .Values.gcsEmulator.bucket | quote }}
+# File storage configuration
+- name: FILE_STORE_PATH
+  value: {{ .Values.filestore.bucket }}
+{{- if .Values.filestore.ephemeral }}
+# Ephemeral mode: use in-cluster minio with S3 API
+- name: FILE_STORE
+  value: s3
+- name: AWS_ACCESS_KEY_ID
+  value: {{ (index .Values.minio.svcaccts 0).accessKey }}
+- name: AWS_SECRET_ACCESS_KEY
+  value: {{ (index .Values.minio.svcaccts 0).secretKey }}
+- name: AWS_S3_ENDPOINT
+  value: {{ printf "%s-%s" $.Release.Name "minio:9000" }}
+- name: AWS_S3_BUCKET
+  value: {{ .Values.filestore.bucket }}
+- name: AWS_S3_SECURE
+  value: 'false'
+{{- else }}
+# Production mode: use cloud storage (gcs, s3, etc.)
+- name: FILE_STORE
+  value: {{ .Values.filestore.type }}
 {{- end }}
 # Admin API key for issuing per-user automation API keys
 {{- if .Values.adminApiKeyFromSecret }}
@@ -85,11 +80,47 @@
   value: {{ .Values.datadog.env | quote }}
 - name: DD_TRACE_ENABLED
   value: "true"
-# Additional env vars
+{{- end }}
+
+{{/*
+  automation.env — Deduplicated environment variable list.
+
+  This wrapper renders the default env vars from "automation.env.defaults",
+  then removes any entries whose name conflicts with a key in .Values.env,
+  and finally appends the .Values.env overrides. The result is a clean list
+  with no duplicate names, which prevents:
+    - Helm warnings about duplicate env vars
+    - Strategic Merge Patch conflicts during helm upgrade
+      ("The order in patch list doesn't match $setElementOrder list")
+
+  How it works:
+    1. Render "automation.env.defaults" via include (evaluates all conditionals)
+    2. Parse the rendered YAML list into Go objects with fromYamlArray
+    3. Filter out any default entries whose name appears in .Values.env
+    4. Append .Values.env entries (user overrides always win)
+    5. Re-render the deduplicated list with toYaml
+*/}}
+{{- define "automation.env" }}
+{{- $defaults := include "automation.env.defaults" . | fromYamlArray }}
+{{- /* Build a lookup dict of override keys for O(1) membership checks */}}
+{{- $overrideKeys := dict }}
+{{- if .Values.env }}
+{{- range $key, $_ := .Values.env }}
+{{- $_ := set $overrideKeys $key true }}
+{{- end }}
+{{- end }}
+{{- /* Keep only default entries that are NOT overridden by .Values.env */}}
+{{- $filtered := list }}
+{{- range $entry := $defaults }}
+{{- if not (hasKey $overrideKeys (get $entry "name")) }}
+{{- $filtered = append $filtered $entry }}
+{{- end }}
+{{- end }}
+{{- /* Append user overrides from .Values.env (these take precedence) */}}
 {{- if .Values.env }}
 {{- range $key, $value := .Values.env }}
-- name: {{ $key }}
-  value: {{ $value | quote }}
+{{- $filtered = append $filtered (dict "name" $key "value" ($value | toString)) }}
 {{- end }}
 {{- end }}
+{{- $filtered | toYaml }}
 {{- end }}
