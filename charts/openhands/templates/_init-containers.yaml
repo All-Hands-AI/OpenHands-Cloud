@@ -20,56 +20,17 @@
   command: ['sh', '-c']
   args:
     - |
-      export PGPASSWORD=$DB_ADMIN_PASSWORD
+      export PGPASSWORD=$DB_PASS
+      PSQL="psql -h $DB_HOST -p 5432 -U $DB_USER"
 
-      echo "Checking if the keycloak DB \"$KEYCLOAK_DB_NAME\" and keycloak user \"$KEYCLOAK_DB_USER\" exist..."
-      # Create the keycloak database if it doesn't exist
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$KEYCLOAK_DB_NAME'" | grep -q 1 || \
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $KEYCLOAK_DB_NAME;"
-
-      # Create the keycloak user if it doesn't exist
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$KEYCLOAK_DB_USER'" | grep -q 1 || \
-      (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $KEYCLOAK_DB_NAME -c "CREATE USER $KEYCLOAK_DB_USER WITH PASSWORD '$KEYCLOAK_DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $KEYCLOAK_DB_NAME TO $KEYCLOAK_DB_USER;")
-
-      echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
-      # Create the database if it doesn't exist
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
-
-      # Create the user if it doesn't exist
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
-      (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;")
+      for db in $DB_NAME $DATABASES; do
+        echo "Ensuring database \"$db\" exists..."
+        $PSQL -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 || \
+        $PSQL -d postgres -c "CREATE DATABASE $db;"
+      done
   env:
-    - name: DB_ADMIN_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.externalDatabase.existingSecret }}
-          key: admin_password
-    - name: KEYCLOAK_DB_USER
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
-          key: db-user
-    - name: KEYCLOAK_DB_PASS
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
-          key: db-password
-    - name: KEYCLOAK_DB_NAME
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
-          key: db-name
-    - name: KEYCLOAK_DB_HOST
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
-          key: db-host
-    - name: KEYCLOAK_DB_PORT
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.keycloak.externalDatabase.existingSecret }}
-          key: db-port
+    - name: DATABASES
+      value: "{{ .Values.keycloak.externalDatabase.database }}{{- if (index .Values "litellm-helm").enabled }} {{ (index .Values "litellm-helm").db.database }}{{- end }}{{- if .Values.langfuse.enabled }} {{ .Values.langfuse.postgresql.auth.database }}{{- end }}"
     {{- include "openhands.env" . | nindent 4 }}
 {{- end }}
 {{- if .Values.databaseMigrations.migrate }}

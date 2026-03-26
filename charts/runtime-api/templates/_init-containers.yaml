@@ -20,21 +20,13 @@
   command: ['sh', '-c']
   args:
     - |
-      export PGPASSWORD=$DB_ADMIN_PASSWORD
+      export PGPASSWORD=$DB_PASS
+      PSQL="psql -h $DB_HOST -p 5432 -U $DB_USER"
 
-      echo "Checking if the DB \"$DB_NAME\" and user \"$DB_USER\" exist..."
-      # Create the database if it doesn't exist
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
-      # Create the user if it doesn't exist
-      psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
-      (psql -h $DB_HOST -p 5432 -U $DB_ADMIN_USER -d $DB_NAME -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS'; GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;")
+      echo "Ensuring database \"$DB_NAME\" exists..."
+      $PSQL -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
+      $PSQL -d postgres -c "CREATE DATABASE $DB_NAME;"
   env:
-    - name: DB_ADMIN_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: {{ .Values.externalDatabase.existingSecret }}
-          key: admin_password
     {{- include "runtime-api.env" . | nindent 4 }}
 {{- end }}
 {{- if .Values.databaseMigrations.migrate }}

@@ -262,6 +262,8 @@ spec:
     - when: '{{repl ConfigOptionEquals "postgres_type" "external_postgres" }}'
       recursiveMerge: true
       values:
+        databaseMigrations:
+          createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
         postgresql:
           enabled: false
         externalDatabase:
@@ -273,6 +275,15 @@ spec:
           # existingSecret: postgres-password
           # existingSecretUserKey: username
           # existingSecretPasswordKey: password
+        keycloak:
+          externalDatabase:
+            database: '{{repl ConfigOption "external_postgres_keycloak_database"}}'
+        litellm-helm:
+          db:
+            database: '{{repl ConfigOption "external_postgres_litellm_database"}}'
+        runtime-api:
+          env:
+            DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:

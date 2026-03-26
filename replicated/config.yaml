@@ -450,6 +450,30 @@ spec:
           type: text
           default: "openhands"
           when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+        - name: external_postgres_keycloak_database
+          title: Keycloak Database Name
+          help_text: Database name for Keycloak authentication
+          type: text
+          default: "bitnami_keycloak"
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+        - name: external_postgres_litellm_database
+          title: LiteLLM Database Name
+          help_text: Database name for the LiteLLM proxy
+          type: text
+          default: "litellm"
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+        - name: external_postgres_runtime_api_database
+          title: Runtime API Database Name
+          help_text: Database name for the Runtime API
+          type: text
+          default: "runtime_api_db"
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
+        - name: external_postgres_create_databases
+          title: Create Databases Automatically
+          help_text: Automatically create databases on startup if they don't exist. Requires the configured user to have CREATE privileges.
+          type: bool
+          default: "1"
+          when: 'repl{{ ConfigOptionEquals "postgres_type" "external_postgres" }}'
 
     - name: sandbox_configuration
       title: Sandbox Configuration

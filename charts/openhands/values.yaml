@@ -314,6 +314,7 @@ keycloak:
     enabled: false
   externalDatabase:
     host: oh-main-postgresql
+    database: bitnami_keycloak
     existingSecret: postgres-password
     existingSecretUserKey: username
     existingSecretPasswordKey: password
@@ -357,6 +358,7 @@ langfuse:
     host: oh-main-postgresql
     auth:
       username: postgres
+      database: postgres_langfuse
       existingSecret: postgres-password
       existingSecretKey: password
   redis:
