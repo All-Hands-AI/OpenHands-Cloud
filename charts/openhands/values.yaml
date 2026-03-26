@@ -109,7 +109,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-3c5023a
+  tag: sha-94b45c6
 
 ingress:
   enabled: false
@@ -516,7 +516,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-ad2657f
+    tag: sha-753f232
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -599,6 +599,11 @@ jiraDc:
 
 linear:
   enabled: false
+
+automationServiceKey:
+  enabled: false
+  existingSecret: automation-service-key
+  secretKey: automation-service-key
 
 replicated:
   enabled: false

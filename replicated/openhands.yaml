@@ -17,7 +17,6 @@ spec:
 
     image:
       repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/enterprise-server'
-      tag: 'sha-855ef7b'
     imagePullSecrets:
       - name: '{{repl ImagePullSecretName }}'
 
@@ -400,6 +399,57 @@ spec:
           image:
             registry: '{{repl LocalRegistryHost }}'
             repository: '{{repl LocalRegistryNamespace }}/replicated-sdk-image'
+    # Compute NO_PROXY variable, then evaluate proxy_enabled gate.
+    # Assignments produce no output; the when value resolves to just the boolean.
+    - when: >-
+        {{repl $derive := ConfigOptionEquals "hostname_mode" "derive" }}
+        {{repl $bd := ConfigOption "base_domain" }}
+        {{repl $appDomain := $derive | ternary (printf "app.%s" $bd) (ConfigOption "app_hostname") }}
+        {{repl $authDomain := $derive | ternary (printf "auth.app.%s" $bd) (ConfigOption "auth_hostname") }}
+        {{repl $llmDomain := $derive | ternary (printf "llm-proxy.%s" $bd) (ConfigOption "llm_proxy_hostname") }}
+        {{repl $runtimeApiDomain := $derive | ternary (printf "runtime-api.%s" $bd) (ConfigOption "runtime_api_hostname") }}
+        {{repl $runtimeBaseDomain := $derive | ternary (printf "runtime.%s" $bd) (ConfigOption "runtime_base_hostname") }}
+        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak,keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
+        {{repl if ne $bd "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $bd }}{{repl end }}
+        {{repl if ne $appDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $appDomain }}{{repl end }}
+        {{repl if ne $authDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $authDomain }}{{repl end }}
+        {{repl if ne $llmDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $llmDomain }}{{repl end }}
+        {{repl if ne $runtimeApiDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $runtimeApiDomain }}{{repl end }}
+        {{repl if ne $runtimeBaseDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $runtimeBaseDomain }}{{repl end }}
+        {{repl if ne (ConfigOption "no_proxy") "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy (ConfigOption "no_proxy") }}{{repl end }}
+        {{repl ConfigOptionEquals "proxy_enabled" "1" }}
+      recursiveMerge: true
+      values:
+        env:
+          HTTP_PROXY: '{{repl ConfigOption "http_proxy"}}'
+          HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
+          NO_PROXY: '{{repl $computedNoProxy}}'
+          SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
+        keycloak:
+          extraEnvVars:
+            # Existing KC env vars (must be repeated because recursiveMerge replaces arrays)
+            - name: KC_FEATURES
+              value: token-exchange,admin-fine-grained-authz
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+              value: "true"
+            # Proxy env vars
+            - name: HTTP_PROXY
+              value: '{{repl ConfigOption "http_proxy"}}'
+            - name: HTTPS_PROXY
+              value: '{{repl ConfigOption "https_proxy"}}'
+            - name: NO_PROXY
+              value: '{{repl $computedNoProxy}}'
+        litellm-helm:
+          envVars:
+            HTTP_PROXY: '{{repl ConfigOption "http_proxy"}}'
+            HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
+            NO_PROXY: '{{repl $computedNoProxy}}'
+            SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
     - when: '{{repl ConfigOptionEquals "google_api_type" "vertex" }}'
       recursiveMerge: true
       values:
