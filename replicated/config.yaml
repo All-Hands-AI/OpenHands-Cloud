@@ -550,6 +550,21 @@ spec:
           default: "1"
           when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
 
+    - name: troubleshooting
+      title: Troubleshooting
+      description: Options to help diagnose issues with your OpenHands installation
+      items:
+        - name: log_level
+          title: Log Level
+          help_text: Set the server log level. DEBUG produces significantly more log output and should only be used when troubleshooting issues.
+          type: select_one
+          default: "INFO"
+          items:
+            - name: "INFO"
+              title: "Info (default)"
+            - name: "DEBUG"
+              title: "Debug"
+
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
