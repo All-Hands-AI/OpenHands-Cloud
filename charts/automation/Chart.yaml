@@ -12,4 +12,4 @@ dependencies:
   - name: minio
     version: 5.0.10
     repository: https://charts.min.io/
-    condition: filestore.ephemeral
+    condition: minio.enabled

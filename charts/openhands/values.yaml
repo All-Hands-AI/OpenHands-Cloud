@@ -689,7 +689,7 @@ automation:
   # File storage configuration (aligned with openhands chart pattern)
   # Supports multiple backends: gcs, s3, or in-cluster minio for ephemeral environments
   filestore:
-    # When true, uses in-cluster minio with S3 API (for ephemeral/feature environments)
+    # When true, uses S3-compatible storage (minio) for ephemeral/feature environments
     # When false, uses cloud storage specified by 'type' (for production)
     ephemeral: false
     # Bucket name for storing automation data
@@ -697,28 +697,16 @@ automation:
     # Storage type when ephemeral=false (e.g., gcs, s3)
     type: gcs
   
-  # Minio configuration (used when filestore.ephemeral=true)
+  # Minio configuration for ephemeral storage
+  # When deployed as subchart of openhands, automation uses parent's minio instance
   minio:
-    replicas: 1
-    mode: standalone
-    persistence:
-      enabled: false
-    buckets:
-      - name: automation-data
-        policy: none
-        purge: true
-    svcaccts:
-      - accessKey: "automationkey"
-        secretKey: "automationsecret"
-        user: root
-    rootUser: "root"
-    resources:
-      requests:
-        memory: 256Mi
-        cpu: 50m
-      limits:
-        memory: 512Mi
-        cpu: 100m
+    # Don't deploy minio as subchart - use parent's minio instance
+    enabled: false
+    # External minio configuration (points to parent chart's minio)
+    external:
+      endpoint: "minio:9000"
+      accessKey: "default"
+      secretKey: "notasecret"
   
   # Service key from K8s secret
   serviceKeyFromSecret:
