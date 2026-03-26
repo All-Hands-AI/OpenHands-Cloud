@@ -4,6 +4,22 @@ image:
 
 imagePullSecrets: []
 
+# Migration job configuration
+# When enabled, runs migrations as a separate Helm pre-upgrade/pre-install Job
+# instead of as an init container on every pod
+migrationJob:
+  enabled: false
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 200m
+
 deployment:
   replicas: 1
   resources:
