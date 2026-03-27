@@ -236,6 +236,10 @@ spec:
     clickhouse:
       enabled: repl{{ ConfigOptionEquals "clickhouse_enabled" "1" }}
 
+    automation:
+      image:
+        tag: "sha-36b5df4"
+
     replicated:
       image:
         registry: images.r9.all-hands.dev
