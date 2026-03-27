@@ -241,6 +241,7 @@ spec:
         tag: "sha-36b5df4"
 
     replicated:
+      enabled: true
       image:
         registry: images.r9.all-hands.dev
         repository: library/replicated-sdk-image
