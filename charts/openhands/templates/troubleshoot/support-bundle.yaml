@@ -129,19 +129,19 @@ spec:
     {{- if .Values.postgresql.enabled }}
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://postgres:@{{ .Release.Name }}-postgresql:5432/openhands?sslmode=disable
+        uri: postgresql://postgres:@{{ .Release.Name }}-postgresql.{{ .Release.Namespace }}.svc.cluster.local:5432/openhands?sslmode=disable
         tls:
           disabled: true
         password:
-          secretName: {{ .Release.Name }}-postgresql
+          secretName: {{ .Values.postgresql.auth.existingSecret }}
           secretKey: postgres-password
     {{- end }}
     {{- if .Values.redis.enabled }}
     - redis:
         collectorName: redis
-        uri: redis://{{ .Release.Name }}-redis-master:6379
+        uri: redis://{{ .Release.Name }}-redis-master.{{ .Release.Namespace }}.svc.cluster.local:6379
         password:
-          secretName: {{ .Release.Name }}-redis
+          secretName: {{ .Values.redis.auth.existingSecret }}
           secretKey: redis-password
     {{- end }}
   analyzers: {{- include "troubleshoot.analyzers.shared" .  | nindent 4 }}

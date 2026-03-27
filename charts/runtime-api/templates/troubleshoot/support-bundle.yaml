@@ -26,11 +26,11 @@ spec:
           maxAge: 168h
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://postgres:@{{ include "runtime-api.postgresql.host" . }}:5432/{{ .Values.postgresql.auth.database | default "runtime_api" }}?sslmode=disable
+        uri: postgresql://postgres:@{{ include "runtime-api.postgresql.host" . }}.{{ .Release.Namespace }}.svc.cluster.local:5432/{{ .Values.postgresql.auth.database | default "runtime_api" }}?sslmode=disable
         tls:
           disabled: true
         password:
-          secretName: {{ .Release.Name }}-postgresql
+          secretName: {{ .Values.postgresql.auth.existingSecret }}
           secretKey: postgres-password
     {{- end }}
   analyzers: {{- include "runtime.troubleshoot.analyzers.shared" .  | nindent 4 }}
