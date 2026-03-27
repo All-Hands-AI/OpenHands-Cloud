@@ -27,6 +27,7 @@ spec:
       ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
+      LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
 
     ingress:
       enabled: true
@@ -167,6 +168,7 @@ spec:
         MEMORY_LIMIT: 'repl{{ ConfigOption "sandbox_memory_limit" }}'
         CPU_REQUEST: 'repl{{ ConfigOption "sandbox_cpu_request" }}'
         CPU_LIMIT: 'repl{{ ConfigOption "sandbox_cpu_limit" }}'
+        LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
       warmRuntimes:
         enabled: true
         count: 1
