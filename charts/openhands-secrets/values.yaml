@@ -22,7 +22,6 @@ config:
   
   # Keycloak configuration
   keycloak_realm_name: "openhands"
-  keycloak_provider_name: "email"
   keycloak_client_id: "openhands"
   keycloak_smtp_password: ""
   

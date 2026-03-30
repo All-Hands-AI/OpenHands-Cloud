@@ -80,7 +80,6 @@ kubectl create secret generic jwt-secret -n openhands --from-literal=jwt-secret=
 
 kubectl create secret generic keycloak-realm -n openhands \
   --from-literal=realm-name=allhands \
-  --from-literal=provider-name=email \
   --from-literal=server-url=http://keycloak \
   --from-literal=client-id=allhands \
   --from-literal=client-secret=$GLOBAL_SECRET \
