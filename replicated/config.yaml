@@ -486,7 +486,7 @@ spec:
           title: Memory Request
           help_text: The minimum amount of memory to reserve for each sandbox.
           type: text
-          default: "1024Mi"
+          default: "100Mi"
           validation:
             regex:
               pattern: ^[1-9][0-9]*Mi$
@@ -508,7 +508,7 @@ spec:
           validation:
             regex:
               pattern: ^[1-9][0-9]*m$
-              message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+              message: Must be a CPU value in millicores (e.g., 100m, 500m)
         - name: sandbox_cpu_limit
           title: CPU Limit
           help_text: The maximum amount of CPU a sandbox can use. If exceeded, the sandbox may be throttled.

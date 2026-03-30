@@ -45,8 +45,8 @@ resources:
     cpu: 1
     memory: 4Gi
   requests:
-    cpu: 1
-    memory: 4Gi
+    cpu: 100m
+    memory: 100Mi
 
 # Unified job settings for both jobs and cronjobs
 jobSettings:
@@ -56,8 +56,8 @@ jobSettings:
       cpu: 1
       memory: 3Gi
     requests:
-      cpu: 1
-      memory: 3Gi
+      cpu: 100m
+      memory: 100Mi
   # Timeout settings (30 minutes)
   activeDeadlineSeconds: 1800
   # History limits
