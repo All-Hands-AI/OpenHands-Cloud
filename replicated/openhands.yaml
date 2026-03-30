@@ -58,7 +58,7 @@ spec:
     keycloak:
       enabled: true
       url: 'http://keycloak'
-      resourcesPreset: large
+      resourcesPreset: small
       ingress:
         enabled: true
         ingressClassName: traefik
