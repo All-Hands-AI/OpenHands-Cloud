@@ -5,9 +5,7 @@ kind: Ingress
 metadata:
   name: laminar-frontend-gcp-ingress
   annotations:
-    {{- if .Values.laminar.frontend.ingress.externalDns.enabled }}
     external-dns.alpha.kubernetes.io/hostname: {{ $hostname }}
-    {{- end }}
     {{- with .Values.laminar.frontend.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
