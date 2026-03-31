@@ -1,0 +1,27 @@
+{{- if and .Values.laminar.enabled (eq (default "aws" .Values.laminar.global.cloudProvider) "gcp") .Values.laminar.frontend.ingress.hostname }}
+{{- $hostname := .Values.laminar.frontend.ingress.hostname }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: laminar-frontend-gcp-ingress
+  annotations:
+    {{- if .Values.laminar.frontend.ingress.externalDns.enabled }}
+    external-dns.alpha.kubernetes.io/hostname: {{ $hostname }}
+    {{- end }}
+    {{- with .Values.laminar.frontend.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.laminar.frontend.ingress.className | default "gce" }}
+  rules:
+    - host: {{ $hostname }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: laminar-frontend-service
+                port:
+                  number: {{ .Values.laminar.frontend.service.port | default 80 }}
+{{- end }}

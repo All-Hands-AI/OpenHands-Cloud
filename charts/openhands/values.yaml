@@ -332,6 +332,23 @@ keycloak:
 laminar:
   # Enable this if you want to use laminar
   enabled: false
+  global:
+    # Cloud provider: "aws" or "gcp"
+    cloudProvider: "aws"
+  frontend:
+    service:
+      port: 80
+    ingress:
+      # Hostname for the frontend ingress (required for GCP ingress with external-dns)
+      hostname: ""
+      # Ingress class name (defaults to "gce" for GCP)
+      className: ""
+      # Annotations for the ingress
+      annotations: {}
+      externalDns:
+        # Enable external-dns integration for automatic DNS record creation
+        # This creates an Ingress with external-dns annotations for GCP environments
+        enabled: false
 
 langfuse:
   # Enable this if you want to use langfuse for tracing
