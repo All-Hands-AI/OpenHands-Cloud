@@ -58,7 +58,16 @@ spec:
     keycloak:
       enabled: true
       url: 'http://keycloak'
-      resourcesPreset: small
+      resourcesPreset: none
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+          ephemeral-storage: 50Mi
+        limits:
+          cpu: 750m
+          memory: 2Gi
+          ephemeral-storage: 2Gi
       ingress:
         enabled: true
         ingressClassName: traefik
@@ -250,6 +259,11 @@ spec:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
+        databaseMigrations:
+          createDatabases: true
+        runtime-api:
+          databaseMigrations:
+            createDatabases: true
         postgresql:
           enabled: true
           auth:
@@ -262,6 +276,8 @@ spec:
     - when: '{{repl ConfigOptionEquals "postgres_type" "external_postgres" }}'
       recursiveMerge: true
       values:
+        databaseMigrations:
+          createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
         postgresql:
           enabled: false
         externalDatabase:
@@ -273,6 +289,17 @@ spec:
           # existingSecret: postgres-password
           # existingSecretUserKey: username
           # existingSecretPasswordKey: password
+        keycloak:
+          externalDatabase:
+            database: '{{repl ConfigOption "external_postgres_keycloak_database"}}'
+        litellm-helm:
+          db:
+            database: '{{repl ConfigOption "external_postgres_litellm_database"}}'
+        runtime-api:
+          databaseMigrations:
+            createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
+          env:
+            DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
