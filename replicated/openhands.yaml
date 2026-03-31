@@ -250,6 +250,8 @@ spec:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
+        databaseMigrations:
+          createDatabases: true
         postgresql:
           enabled: true
           auth:
