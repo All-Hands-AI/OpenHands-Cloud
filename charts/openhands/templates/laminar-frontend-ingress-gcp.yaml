@@ -9,6 +9,7 @@ metadata:
   name: laminar-frontend-ingress
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
+    external-dns.alpha.kubernetes.io/hostname: {{ $hostname }}
     {{- with .Values.laminar.frontend.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
