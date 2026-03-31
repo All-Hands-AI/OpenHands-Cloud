@@ -252,6 +252,9 @@ spec:
       values:
         databaseMigrations:
           createDatabases: true
+        runtime-api:
+          databaseMigrations:
+            createDatabases: true
         postgresql:
           enabled: true
           auth:
@@ -284,6 +287,8 @@ spec:
           db:
             database: '{{repl ConfigOption "external_postgres_litellm_database"}}'
         runtime-api:
+          databaseMigrations:
+            createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
           env:
             DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
