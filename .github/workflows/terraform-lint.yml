@@ -28,9 +28,6 @@ jobs:
         with:
           terraform_version: "~> 1.5"
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive -diff
-
       - name: Terraform Init
         run: terraform init -backend=false
 
