@@ -540,7 +540,7 @@ spec:
           when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
         - name: no_proxy
           title: NO_PROXY
-          help_text: Additional hosts to bypass the proxy (comma-separated). Internal services and configured domain hostnames are automatically included.
+          help_text: Additional hosts to bypass the proxy, in comma-delimited format with no leading dot (e.g., example.com,internal.corp). Each entry matches the domain and all its subdomains — login.example.com matches login.example.com and subdomain.login.example.com, but not app.example.com. Internal services and configured domain hostnames are automatically included.
           type: text
           when: 'repl{{ ConfigOptionEquals "proxy_enabled" "1" }}'
         - name: ssl_verify
