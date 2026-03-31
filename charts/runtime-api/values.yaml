@@ -4,7 +4,7 @@ fullnameOverride: ""
 replicaCount: 1
 
 databaseMigrations:
-  createDatabases: true
+  createDatabases: false
   migrate: true
 
 image:

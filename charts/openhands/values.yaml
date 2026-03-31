@@ -28,7 +28,7 @@ debuggingRoutes:
   enabled: false
 
 databaseMigrations:
-  createDatabases: true
+  createDatabases: false
   migrate: true
 
 deployment:
@@ -566,7 +566,7 @@ runtime-api:
           - --user-id
           - "0"
   databaseMigrations:
-    createDatabases: true
+    createDatabases: false
     migrate: true
   postgresql:
     auth:
