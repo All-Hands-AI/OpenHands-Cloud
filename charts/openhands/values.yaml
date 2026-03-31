@@ -314,6 +314,7 @@ keycloak:
     enabled: false
   externalDatabase:
     host: oh-main-postgresql
+    database: bitnami_keycloak
     existingSecret: postgres-password
     existingSecretUserKey: username
     existingSecretPasswordKey: password
@@ -357,6 +358,7 @@ langfuse:
     host: oh-main-postgresql
     auth:
       username: postgres
+      database: postgres_langfuse
       existingSecret: postgres-password
       existingSecretKey: password
   redis:
@@ -461,7 +463,7 @@ postgresql:
     existingSecret: postgres-password
   primary:
     initdb:
-      scriptsConfigMap: oh-psql-scripts-configmap
+      scriptsConfigMap: ""
     persistence:
       enabled: false
     # Add the following if using Karpenter with persistence
