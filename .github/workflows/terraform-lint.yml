@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'terraform/**'
+      - '.github/workflows/terraform-lint.yml'
 
 jobs:
   terraform-lint:
