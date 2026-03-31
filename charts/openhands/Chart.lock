@@ -24,7 +24,10 @@ dependencies:
   repository: oci://charts.shortrib.io/library
   version: 1.9.0
 - name: runtime-api
-  repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.24
-digest: sha256:bca3722cdd4840a4557955ea2b80e38991cc2d0a0211855a791cf98e37410e45
-generated: "2026-03-18T00:28:58.972983917-04:00"
+  repository: file://../runtime-api
+  version: 0.2.5
+- name: automation
+  repository: file://../automation
+  version: 0.1.0
+digest: sha256:756105a362e9c4fa6987c5fc7e7276df8e50518d9a627f9c2800b26b47113886
+generated: "2026-03-31T15:04:41.68948-04:00"
