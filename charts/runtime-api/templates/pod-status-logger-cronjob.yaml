@@ -14,6 +14,9 @@ spec:
     spec:
       activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
+        metadata:
+          labels:
+            {{- include "runtime-api.selectorLabels" . | nindent 12 }}
         spec:
           {{- with .Values.securityContext }}
           securityContext:

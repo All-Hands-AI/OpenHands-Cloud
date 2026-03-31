@@ -4,6 +4,7 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name }}-resend-sync
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "resend-sync") | nindent 4 }}
     app: {{ .Release.Name }}-resend-sync
 spec:
   schedule: {{ .Values.resendSync.schedule | quote }}
@@ -16,6 +17,7 @@ spec:
       template:
         metadata:
           labels:
+            {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "resend-sync") | nindent 12 }}
             app: {{ .Release.Name }}-resend-sync
         spec:
           {{- with .Values.securityContext }}

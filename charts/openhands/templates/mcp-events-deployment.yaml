@@ -3,15 +3,18 @@ kind: Deployment
 metadata:
   name: openhands-mcp
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "mcp") | nindent 4 }}
     app: openhands-mcp
 spec:
   replicas: {{ .Values.mcpEvents.deployment.replicas | default 2 }}
   selector:
     matchLabels:
+      {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "mcp") | nindent 6 }}
       app: openhands-mcp
   template:
     metadata:
       labels:
+        {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "mcp") | nindent 8 }}
         app: openhands-mcp
       annotations:
         {{- if .Values.allowedUsers }}

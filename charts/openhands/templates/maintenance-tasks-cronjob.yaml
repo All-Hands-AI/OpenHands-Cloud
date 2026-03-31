@@ -4,6 +4,7 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name }}-maintenance-tasks
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "maintenance-tasks") | nindent 4 }}
     app: {{ .Release.Name }}-maintenance-tasks
 spec:
   schedule: {{ .Values.maintenanceTasks.schedule | quote }}
@@ -18,6 +19,7 @@ spec:
         metadata:
           name: maintenance-tasks
           labels:
+            {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "maintenance-tasks") | nindent 12 }}
             app: {{ .Release.Name }}-maintenance-tasks
         spec:
           {{- with .Values.securityContext }}

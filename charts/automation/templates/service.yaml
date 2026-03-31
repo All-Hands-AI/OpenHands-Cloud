@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: automation
   labels:
+    {{- include "automation.labels" . | nindent 4 }}
     app: automation
 spec:
   ports:
@@ -11,4 +12,4 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: automation
+    {{- include "automation.selectorLabels" . | nindent 4 }}

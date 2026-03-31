@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: openhands-mcp-service
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "mcp") | nindent 4 }}
     app: openhands-mcp
 spec:
   ports:
@@ -11,5 +12,5 @@ spec:
     protocol: TCP
     targetPort: 3000
   selector:
-    app: openhands-mcp
+    {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "mcp") | nindent 4 }}
   type: ClusterIP

@@ -3,15 +3,18 @@ kind: Deployment
 metadata:
   name: openhands
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "server") | nindent 4 }}
     app: openhands
 spec:
   replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
+      {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "server") | nindent 6 }}
       app: openhands
   template:
     metadata:
       labels:
+        {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "server") | nindent 8 }}
         app: openhands
       annotations:
         checksum/keycloak-config: {{ include (print $.Template.BasePath "/keycloak-config-script.yaml") . | sha256sum }}

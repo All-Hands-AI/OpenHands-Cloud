@@ -4,6 +4,7 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name }}-install-hooks
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "install-hooks") | nindent 4 }}
     app: {{ .Release.Name }}-install-hooks
 spec:
   schedule: {{ .Values.gitlabWebhookInstallation.schedule | quote }}
@@ -16,6 +17,7 @@ spec:
       template:
         metadata:
           labels:
+            {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "install-hooks") | nindent 12 }}
             app: {{ .Release.Name }}-install-hooks
         spec:
           {{- with .Values.securityContext }}

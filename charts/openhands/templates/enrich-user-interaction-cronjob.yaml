@@ -5,6 +5,7 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "enrich-user-interaction") | nindent 4 }}
     app: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
 spec:
   schedule: {{ .Values.enrichUserInteractionData.schedule | quote }}
@@ -17,6 +18,7 @@ spec:
       template:
         metadata:
           labels:
+            {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "enrich-user-interaction") | nindent 12 }}
             app: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
         spec:
           {{- with .Values.securityContext }}

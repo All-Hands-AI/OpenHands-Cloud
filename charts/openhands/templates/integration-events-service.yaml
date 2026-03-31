@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: openhands-integrations-service
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "integrations") | nindent 4 }}
     app: openhands-integrations
 spec:
   ports:
@@ -11,5 +12,5 @@ spec:
     protocol: TCP
     targetPort: 3000
   selector:
-    app: openhands-integrations
+    {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "integrations") | nindent 4 }}
   type: ClusterIP

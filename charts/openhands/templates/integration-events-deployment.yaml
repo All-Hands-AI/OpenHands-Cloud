@@ -3,15 +3,18 @@ kind: Deployment
 metadata:
   name: openhands-integrations
   labels:
+    {{- include "openhands.componentLabels" (dict "context" . "component" "integrations") | nindent 4 }}
     app: openhands-integrations
 spec:
   replicas: {{ .Values.integrationEvents.deployment.replicas | default 2 }}
   selector:
     matchLabels:
+      {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "integrations") | nindent 6 }}
       app: openhands-integrations
   template:
     metadata:
       labels:
+        {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "integrations") | nindent 8 }}
         app: openhands-integrations
       annotations:
         {{- if .Values.allowedUsers }}

@@ -33,7 +33,9 @@ spec:
         name: app/openhands/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app=openhands
+          - app.kubernetes.io/name={{ include "openhands.name" . }}
+          - app.kubernetes.io/instance={{ .Release.Name }}
+          - app.kubernetes.io/component=server
         limits:
           maxAge: 720h
     # OpenHands integrations deployment logs
@@ -41,7 +43,9 @@ spec:
         name: app/openhands-integrations/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app=openhands-integrations
+          - app.kubernetes.io/name={{ include "openhands.name" . }}
+          - app.kubernetes.io/instance={{ .Release.Name }}
+          - app.kubernetes.io/component=integrations
         limits:
           maxAge: 720h
     # OpenHands MCP deployment logs
@@ -49,7 +53,9 @@ spec:
         name: app/openhands-mcp/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app=openhands-mcp
+          - app.kubernetes.io/name={{ include "openhands.name" . }}
+          - app.kubernetes.io/instance={{ .Release.Name }}
+          - app.kubernetes.io/component=mcp
         limits:
           maxAge: 720h
     {{- if .Values.postgresql.enabled }}
