@@ -1,3 +1,9 @@
+{{/*
+  TEMPORARY WORKAROUND: This ingress uses external-dns to create DNS records automatically.
+  This is a temporary solution for testing until a manual DNS A record can be created
+  to map the ingress hostname to a fixed IP for the laminar frontend service.
+  TODO: Remove this template once manual DNS is configured.
+*/}}
 {{- $hostname := .Values.laminar.frontend.ingress.hostname }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
