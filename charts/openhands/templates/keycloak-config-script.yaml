@@ -102,7 +102,7 @@ data:
       # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
       export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
 
-      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_PROVIDER_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
+      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
       keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms\" -H \"Authorization: Bearer $ACCESS_TOKEN\" -H \"Content-Type: application/json\" --data \"@/app/allhands-realm-github-provider.json\""
       echo "Created allhands realm."
     fi

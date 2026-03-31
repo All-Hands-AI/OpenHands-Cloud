@@ -112,11 +112,6 @@
     secretKeyRef:
       name: keycloak-realm
       key: realm-name
-- name: KEYCLOAK_PROVIDER_NAME
-  valueFrom:
-    secretKeyRef:
-      name: keycloak-realm
-      key: provider-name
 - name: KEYCLOAK_CLIENT_ID
   valueFrom:
     secretKeyRef:
