@@ -463,7 +463,7 @@ postgresql:
     existingSecret: postgres-password
   primary:
     initdb:
-      scriptsConfigMap: oh-psql-scripts-configmap
+      scriptsConfigMap: ""
     persistence:
       enabled: false
     # Add the following if using Karpenter with persistence
