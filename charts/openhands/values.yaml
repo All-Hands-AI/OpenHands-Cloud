@@ -332,12 +332,7 @@ keycloak:
 laminar:
   # Enable this if you want to use laminar
   enabled: false
-  global:
-    # Cloud provider: "aws" or "gcp"
-    cloudProvider: "aws"
   frontend:
-    service:
-      port: 80
     ingress:
       # Hostname for the frontend ingress
       # When set with cloudProvider: "gcp", creates a GCP Ingress with external-dns annotation
