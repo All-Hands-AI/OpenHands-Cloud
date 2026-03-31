@@ -335,9 +335,9 @@ laminar:
   frontend:
     ingress:
       # Hostname for the frontend ingress
-      # When set with cloudProvider: "gcp", creates a GCP Ingress with external-dns annotation
+      # When set, creates an Ingress with TLS via cert-manager
       hostname: ""
-      # Ingress class name (defaults to "gce" for GCP)
+      # Ingress class name (defaults to "traefik")
       className: ""
       # Additional annotations for the ingress
       annotations: {}
