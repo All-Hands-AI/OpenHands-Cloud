@@ -58,7 +58,16 @@ spec:
     keycloak:
       enabled: true
       url: 'http://keycloak'
-      resourcesPreset: small
+      resourcesPreset: none
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+          ephemeral-storage: 50Mi
+        limits:
+          cpu: 750m
+          memory: 2Gi
+          ephemeral-storage: 2Gi
       ingress:
         enabled: true
         ingressClassName: traefik
