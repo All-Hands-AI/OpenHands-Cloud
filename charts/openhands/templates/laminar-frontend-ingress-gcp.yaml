@@ -1,4 +1,3 @@
-{{- if and .Values.laminar.enabled (eq (default "aws" .Values.laminar.global.cloudProvider) "gcp") .Values.laminar.frontend.ingress.hostname }}
 {{- $hostname := .Values.laminar.frontend.ingress.hostname }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -22,4 +21,3 @@ spec:
                 name: laminar-frontend-service
                 port:
                   number: {{ .Values.laminar.frontend.service.port | default 80 }}
-{{- end }}
