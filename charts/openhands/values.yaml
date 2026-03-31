@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 image:
   repository: ghcr.io/openhands/enterprise-server
   # sha of openhands with keycloak redirect uri for laminar https://github.com/OpenHands/OpenHands/pull/13666
-  tag: sha-63755ad
+  tag: sha-9756600
 
 ingress:
   enabled: false
