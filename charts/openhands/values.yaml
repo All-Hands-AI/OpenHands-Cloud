@@ -35,8 +35,8 @@ deployment:
   replicas: 1
   resources:
     requests:
-      memory: 3Gi
-      cpu: 1
+      memory: 1200Mi
+      cpu: 100m
     limits:
       memory: 3Gi
 
@@ -143,11 +143,11 @@ ingress:
 
 integrationEvents:
   deployment:
-    replicas: 2
+    replicas: 1
     resources:
       requests:
-        memory: 1.5Gi
-        cpu: 1000m
+        memory: 800Mi
+        cpu: 100m
       limits:
         memory: 1.5Gi
         cpu: 1000m
@@ -167,7 +167,7 @@ litellm:
 
 mcpEvents:
   deployment:
-    replicas: 2
+    replicas: 1
   uvicorn:
     workers: 2
 
@@ -461,7 +461,7 @@ minio:
   rootUser: "root"
   resources:
     requests:
-      memory: 512Mi
+      memory: 100Mi
       cpu: 100m
     limits:
       memory: 512Mi
@@ -503,7 +503,7 @@ redis:
     replicaCount: 0
   resources:
     requests:
-      memory: 512Mi
+      memory: 100Mi
       cpu: 100m
     limits:
       memory: 512Mi
@@ -520,8 +520,8 @@ maintenanceTasks:
   backoffLimit: 3
   resources:
     requests:
-      memory: "512Mi"
-      cpu: "200m"
+      memory: "100Mi"
+      cpu: "100m"
     limits:
       memory: "1Gi"
       cpu: "500m"
@@ -541,8 +541,8 @@ runtime-api:
     runAsNonRoot: true
   resources:
     requests:
-      cpu: 500m
-      memory: 1.5Gi
+      cpu: 100m
+      memory: 100Mi
     limits:
       cpu: null
       memory: 1.5Gi
