@@ -9,7 +9,6 @@ spec:
   replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
-      {{- include "automation.selectorLabels" . | nindent 6 }}
       app: automation
   template:
     metadata:

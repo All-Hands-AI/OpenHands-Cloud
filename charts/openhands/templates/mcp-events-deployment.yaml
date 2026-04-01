@@ -9,7 +9,6 @@ spec:
   replicas: {{ .Values.mcpEvents.deployment.replicas | default 2 }}
   selector:
     matchLabels:
-      {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "mcp") | nindent 6 }}
       app: openhands-mcp
   template:
     metadata:

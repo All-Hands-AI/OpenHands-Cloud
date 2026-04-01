@@ -9,7 +9,6 @@ spec:
   replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
-      {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "server") | nindent 6 }}
       app: openhands
   template:
     metadata:

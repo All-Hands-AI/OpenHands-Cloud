@@ -9,7 +9,6 @@ spec:
   replicas: {{ .Values.integrationEvents.deployment.replicas | default 2 }}
   selector:
     matchLabels:
-      {{- include "openhands.componentSelectorLabels" (dict "context" . "component" "integrations") | nindent 6 }}
       app: openhands-integrations
   template:
     metadata:
