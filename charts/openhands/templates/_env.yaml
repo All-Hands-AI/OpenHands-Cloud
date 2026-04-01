@@ -393,14 +393,14 @@
       name: linear-app
       key: client-secret
 {{- end }}
-{{- if .Values.pluginDirectory.enabled }}
+{{- if (index .Values "plugin-directory").enabled }}
 - name: PLUGIN_DIRECTORY_HOST
-  value: {{ .Values.pluginDirectory.ingress.host | quote }}
+  value: {{ (index .Values "plugin-directory").appUrl | quote }}
 - name: PLUGIN_DIRECTORY_CLIENT_SECRET
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.pluginDirectory.auth.existingSecret }}
-      key: oidc-client-secret
+      name: {{ (index .Values "plugin-directory").auth.existingSecret }}
+      key: {{ (index .Values "plugin-directory").auth.oidcClientSecretKey }}
 {{- else }}
 # Empty values for Keycloak envsubst when plugin-directory is disabled
 - name: PLUGIN_DIRECTORY_HOST

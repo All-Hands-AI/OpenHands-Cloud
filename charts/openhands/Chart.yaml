@@ -48,3 +48,7 @@ dependencies:
     repository: oci://ghcr.io/all-hands-ai/helm-charts
     version: 0.1.0
     condition: automation.enabled
+  - name: plugin-directory
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.0
+    condition: plugin-directory.enabled
