@@ -92,37 +92,8 @@ spec:
       keycloakConfigCli:
         image:
           repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak-config-cli'
-      initContainers:
-        - name: wait-for-db
-          image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
-          command: ['sh', '-c']
-          args:
-            - |
-              echo "Waiting for database \"$KEYCLOAK_DATABASE_NAME\" at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
-              until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" > /dev/null 2>&1; do
-                echo "PostgreSQL is unavailable - sleeping 5s"
-                sleep 5
-              done
-              echo "PostgreSQL is ready, checking database exists..."
-              until PGPASSWORD=$DB_PASS psql -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" -c "SELECT 1" > /dev/null 2>&1; do
-                echo "Database \"$KEYCLOAK_DATABASE_NAME\" not ready - sleeping 5s"
-                sleep 5
-              done
-              echo "Database \"$KEYCLOAK_DATABASE_NAME\" is ready!"
-          envFrom:
-            - configMapRef:
-                name: keycloak-env-vars
-          env:
-            - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-password
-                  key: username
-            - name: DB_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: postgres-password
-                  key: password
+      waitForDb:
+        image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
 
     litellm:
       enabled: true
@@ -421,6 +392,8 @@ spec:
           keycloakConfigCli:
             image:
               repository: '{{repl LocalRegistryNamespace }}/keycloak-config-cli'
+          waitForDb:
+            image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
