@@ -23,6 +23,9 @@ on:
       automation-publishable:
         description: 'Whether automation chart is publishable (no changes or version bumped)'
         value: ${{ jobs.validate-chart-versions.outputs.automation-publishable }}
+      plugin-directory-publishable:
+        description: 'Whether plugin-directory chart is publishable (no changes or version bumped)'
+        value: ${{ jobs.validate-chart-versions.outputs.plugin-directory-publishable }}
       openhands-publishable:
         description: 'Whether openhands chart is publishable (no changes or version bumped)'
         value: ${{ jobs.validate-chart-versions.outputs.openhands-publishable }}
@@ -39,6 +42,7 @@ jobs:
       runtime-api-publishable: ${{ steps.validate.outputs.runtime-api-publishable }}
       image-loader-publishable: ${{ steps.validate.outputs.image-loader-publishable }}
       automation-publishable: ${{ steps.validate.outputs.automation-publishable }}
+      plugin-directory-publishable: ${{ steps.validate.outputs.plugin-directory-publishable }}
       openhands-publishable: ${{ steps.validate.outputs.openhands-publishable }}
       openhands-secrets-publishable: ${{ steps.validate.outputs.openhands-secrets-publishable }}
 
