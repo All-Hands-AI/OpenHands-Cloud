@@ -20,9 +20,15 @@ on:
       image-loader-publishable:
         description: 'Whether image-loader chart is publishable (no changes or version bumped)'
         value: ${{ jobs.validate-chart-versions.outputs.image-loader-publishable }}
+      automation-publishable:
+        description: 'Whether automation chart is publishable (no changes or version bumped)'
+        value: ${{ jobs.validate-chart-versions.outputs.automation-publishable }}
       openhands-publishable:
         description: 'Whether openhands chart is publishable (no changes or version bumped)'
         value: ${{ jobs.validate-chart-versions.outputs.openhands-publishable }}
+      openhands-secrets-publishable:
+        description: 'Whether openhands-secrets chart is publishable (no changes or version bumped)'
+        value: ${{ jobs.validate-chart-versions.outputs.openhands-secrets-publishable }}
 
 jobs:
   validate-chart-versions:
@@ -32,7 +38,9 @@ jobs:
     outputs:
       runtime-api-publishable: ${{ steps.validate.outputs.runtime-api-publishable }}
       image-loader-publishable: ${{ steps.validate.outputs.image-loader-publishable }}
+      automation-publishable: ${{ steps.validate.outputs.automation-publishable }}
       openhands-publishable: ${{ steps.validate.outputs.openhands-publishable }}
+      openhands-secrets-publishable: ${{ steps.validate.outputs.openhands-secrets-publishable }}
 
     steps:
       - name: Checkout

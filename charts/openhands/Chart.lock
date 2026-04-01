@@ -4,13 +4,13 @@ dependencies:
   version: 9.2.5
 - name: keycloak
   repository: oci://registry-1.docker.io/bitnamicharts
-  version: 24.5.2
+  version: 24.7.5
 - name: langfuse
   repository: https://langfuse.github.io/langfuse-k8s
   version: 1.2.13
 - name: litellm-helm
   repository: oci://ghcr.io/berriai
-  version: 0.1.781
+  version: 0.1.831
 - name: minio
   repository: https://charts.min.io/
   version: 5.0.10
@@ -20,8 +20,11 @@ dependencies:
 - name: redis
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 20.3.0
+- name: replicated
+  repository: oci://charts.shortrib.io/library
+  version: 1.9.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.21-alpha.304
-digest: sha256:91de387fcf3da78462ebabb94fb05a5c04733362c9e70c87f3bf56ad583abd1b
-generated: "2026-03-03T15:22:05.190106883-05:00"
+  version: 0.1.24
+digest: sha256:bca3722cdd4840a4557955ea2b80e38991cc2d0a0211855a791cf98e37410e45
+generated: "2026-03-18T00:28:58.972983917-04:00"

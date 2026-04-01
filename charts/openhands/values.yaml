@@ -13,31 +13,10 @@ appConfig:
   OPENHANDS_GITHUB_SERVICE_CLS: "integrations.github.github_service.SaaSGitHubService"
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
   OPENHANDS_BITBUCKET_SERVICE_CLS: "integrations.bitbucket.bitbucket_service.SaaSBitBucketService"
+  OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS: "integrations.bitbucket_data_center.bitbucket_dc_service.SaaSBitbucketDCService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
   OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
-
-commonRoomSync:
-  enabled: false
-  schedule: "0 3 * * *" # Daily at 3 AM
-  concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 3
-  backoffLimit: 3
-  batchSize: "100"
-  maxRetries: "3"
-  initialBackoffSeconds: "1"
-  maxBackoffSeconds: "60"
-  backoffFactor: "2"
-  rateLimit: "2"
-  keycloakBatchSize: "20"
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: 100m
-    limits:
-      memory: 512Mi
-      cpu: 200m
 
 datadog:
   enabled: false
@@ -48,12 +27,16 @@ datadog:
 debuggingRoutes:
   enabled: false
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 deployment:
   replicas: 1
   resources:
     requests:
-      memory: 3Gi
-      cpu: 1
+      memory: 1200Mi
+      cpu: 100m
     limits:
       memory: 3Gi
 
@@ -106,6 +89,13 @@ bitbucket:
   auth:
     existingSecret: bitbucket-app
 
+enterpriseSSO:
+  enabled: false
+
+bitbucketDataCenter:
+  enabled: false
+  host: ""
+
 gitlabWebhookInstallation:
   enabled: false
   schedule: "* * * * *"
@@ -123,7 +113,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-4ea3e4b
+  tag: sha-5f064fa
 
 ingress:
   enabled: false
@@ -153,11 +143,11 @@ ingress:
 
 integrationEvents:
   deployment:
-    replicas: 2
+    replicas: 1
     resources:
       requests:
-        memory: 1.5Gi
-        cpu: 1000m
+        memory: 800Mi
+        cpu: 100m
       limits:
         memory: 1.5Gi
         cpu: 1000m
@@ -177,14 +167,9 @@ litellm:
 
 mcpEvents:
   deployment:
-    replicas: 2
+    replicas: 1
   uvicorn:
     workers: 2
-
-migrationJob:
-  enabled: true
-  initContainer:
-    enabled: true
 
 proactiveConvoClean:
   enabled: false
@@ -226,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: 4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik
+    tag: 3c5023ac021cfc075f2d6b5ff7f345f375bded47-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -291,6 +276,8 @@ clickhouse:
   replicaCount: 1
   keeper:
     enabled: true
+    image:
+      repository: bitnamilegacy/clickhouse-keeper
   auth:
     username: default
     existingSecret: clickhouse-password
@@ -327,18 +314,28 @@ keycloak:
     enabled: false
   externalDatabase:
     host: oh-main-postgresql
+    database: bitnami_keycloak
     existingSecret: postgres-password
     existingSecretUserKey: username
     existingSecretPasswordKey: password
   extraEnvVars:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
+    - name: KC_HTTP_ENABLED
+      value: "true"
+    - name: KC_PROXY_HEADERS
+      value: "xforwarded"
+    - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+      value: "true"
   image:
     repository: bitnamilegacy/keycloak
 
 langfuse:
   # Enable this if you want to use langfuse for tracing
   enabled: false
+  s3:
+    image:
+      repository: bitnamilegacy/minio
   langfuse:
     salt:
       secretKeyRef:
@@ -361,6 +358,7 @@ langfuse:
     host: oh-main-postgresql
     auth:
       username: postgres
+      database: postgres_langfuse
       existingSecret: postgres-password
       existingSecretKey: password
   redis:
@@ -382,6 +380,9 @@ litellm-helm:
   # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
   # envVars:
   #   LANGFUSE_HOST: "http://oh-main-langfuse"
+  # Migrations run automatically when litellm starts. This disables running them separately as a job.
+  migrationJob:
+    enabled: false
   db:
     deployStandalone: false
     useExisting: true
@@ -449,7 +450,7 @@ minio:
   rootUser: "root"
   resources:
     requests:
-      memory: 512Mi
+      memory: 100Mi
       cpu: 100m
     limits:
       memory: 512Mi
@@ -462,7 +463,7 @@ postgresql:
     existingSecret: postgres-password
   primary:
     initdb:
-      scriptsConfigMap: oh-psql-scripts-configmap
+      scriptsConfigMap: ""
     persistence:
       enabled: false
     # Add the following if using Karpenter with persistence
@@ -491,7 +492,7 @@ redis:
     replicaCount: 0
   resources:
     requests:
-      memory: 512Mi
+      memory: 100Mi
       cpu: 100m
     limits:
       memory: 512Mi
@@ -508,8 +509,8 @@ maintenanceTasks:
   backoffLimit: 3
   resources:
     requests:
-      memory: "512Mi"
-      cpu: "200m"
+      memory: "100Mi"
+      cpu: "100m"
     limits:
       memory: "1Gi"
       cpu: "500m"
@@ -519,7 +520,7 @@ runtime-api:
   replicaCount: 1
   runtimeInSameCluster: true
   image:
-    tag: sha-0c907c9
+    tag: sha-20ec8b3
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -529,8 +530,8 @@ runtime-api:
     runAsNonRoot: true
   resources:
     requests:
-      cpu: 500m
-      memory: 1.5Gi
+      cpu: 100m
+      memory: 100Mi
     limits:
       cpu: null
       memory: 1.5Gi
@@ -539,7 +540,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
+        image: "ghcr.io/openhands/runtime:3c5023ac021cfc075f2d6b5ff7f345f375bded47-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -564,8 +565,10 @@ runtime-api:
           - root
           - --user-id
           - "0"
+  databaseMigrations:
+    createDatabases: false
+    migrate: true
   postgresql:
-    postMigrate: true
     auth:
       username: postgres
       existingSecret: postgres-password
@@ -637,8 +640,140 @@ pluginDirectory:
   auth:
     existingSecret: plugin-directory-secrets
 
+automationServiceKey:
+  enabled: false
+  existingSecret: automation-service-key
+  secretKey: automation-service-key
+
+# Automation subchart configuration
+# When enabled, deploys the automation service as a subchart
+# The automation service handles scheduled and event-driven automation execution
+# Routing is handled by parent chart via /api/automation subpath
+automation:
+  enabled: false
+
+  image:
+    repository: ghcr.io/openhands/automation
+    # tag: set via helm args or override
+
+  imagePullSecrets: []
+
+  deployment:
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+  securityContext:
+    runAsUser: 42420
+    runAsGroup: 42420
+    runAsNonRoot: true
+
+  serviceAccount:
+    create: true
+    name: automation-sa
+    annotations: {}
+
+  probes:
+    startup:
+      failureThreshold: 30
+      periodSeconds: 10
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      failureThreshold: 3
+
+  # URL configuration
+  # OpenHands API URL for dispatching sandbox runs (e.g., https://staging.all-hands.dev)
+  openhandsApiUrl: ""
+  # Automation service base URL for completion callbacks (e.g., https://staging.all-hands.dev/api/automation)
+  automationBaseUrl: ""
+
+  # PostgreSQL database configuration
+  database:
+    # Full hostname of the PostgreSQL server
+    # Examples:
+    #   - Cloud SQL: "my-project:us-central1:my-instance"
+    #   - In-cluster: "openhands-main-postgresql"
+    #   - Feature env: "openhands-feature-branch-postgresql"
+    host: ""
+    port: "5432"
+    user: "automation_user"
+    name: "automations"
+    # Secret containing the automation database password
+    secretName: "automation-db-secret"
+    secretKey: "db-password"
+    # Create database and user in an existing PostgreSQL instance
+    # When true, runs an init container to create the database and user
+    # Useful when sharing a PostgreSQL instance with other services
+    createDatabaseUser: false
+    # Secret containing the postgres superuser password (for creating the automation user)
+    # Only used when createDatabaseUser=true
+    superuserSecretName: "postgres-password"
+    superuserSecretKey: "password"
+
+  # GCP Cloud SQL (leave empty for non-GCP)
+  gcp:
+    dbInstance: ""
+    project: ""
+    region: ""
+
+  # File storage configuration (aligned with openhands chart pattern)
+  # Supports multiple backends: gcs, s3, or in-cluster minio for ephemeral environments
+  filestore:
+    # When true, uses S3-compatible storage (minio) for ephemeral/feature environments
+    # When false, uses cloud storage specified by 'type' (for production)
+    ephemeral: false
+    # Bucket name for storing automation data
+    bucket: automation-data
+    # Storage type when ephemeral=false (e.g., gcs, s3)
+    type: gcs
+
+  # Minio configuration for ephemeral storage
+  # When deployed as subchart of openhands, automation uses parent's minio instance
+  minio:
+    # Don't deploy minio as subchart - use parent's minio instance
+    enabled: false
+    # External minio configuration (points to parent chart's minio)
+    external:
+      endpoint: "minio:9000"
+      accessKey: "default"
+      secretKey: "notasecret"
+
+  # Service key from K8s secret
+  serviceKeyFromSecret:
+    name: automation-service-key
+    key: automation-service-key
+
+  # Datadog configuration
+  datadog:
+    env: "dev"
+
+  # Env vars passed directly to the container (overrides defaults)
+  env: {}
+
+  # PostgreSQL subchart - disabled when using parent's PostgreSQL
+  postgresql:
+    enabled: false
+
+replicated:
+  enabled: false
+
 global:
   security:
     # This allows using the bitnamilegacy image repo.
     # See: https://github.com/bitnami/containers/issues/83267
     allowInsecureImages: true
+
+vertexAI:
+  enabled: false
+  project: ""
+  location: ""

@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "runtime-api.labels" . | nindent 4 }}
 spec:
+  {{- if and (not .Values.autoscaling.enabled) .Values.replicaCount }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "runtime-api.selectorLabels" . | nindent 6 }}
@@ -36,6 +38,8 @@ spec:
             name: {{ include "runtime-api.fullname" . }}-ingress-base
         {{- end }}
       {{- end }}
+      initContainers:
+      {{- include "runtime-api.dbInitContainers" . | nindent 6 }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -65,6 +69,18 @@ spec:
                   key: admin-password
             
 
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}

@@ -1,0 +1,62 @@
+# Default values for secrets chart
+# This chart creates all the required secrets for OpenHands
+
+# Configuration values will be passed from the parent chart
+config:
+  # Security secrets
+  admin_password: ""
+  postgres_host: ""
+  postgres_username: "postgres"
+  postgres_database: "openhands"
+  postgres_password: ""
+  redis_password: ""
+  jwt_secret: ""
+  keycloak_admin_password: ""
+  keycloak_client_secret: ""
+  litellm_api_key: ""
+  langfuse_salt: ""
+  langfuse_nextauth_secret: ""
+  clickhouse_password: ""
+  default_api_key: ""
+  sandbox_api_key: ""
+  
+  # Keycloak configuration
+  keycloak_realm_name: "openhands"
+  keycloak_client_id: "openhands"
+  keycloak_smtp_password: ""
+  
+  # LLM provider secrets
+  anthropic_api_key: ""
+  openai_api_key: ""
+  google_gemini_api_key: ""
+  google_vertex_credentials: ""
+  deepseek_api_key: ""
+  mistral_api_key: ""
+  azure_api_key: ""
+  groq_api_key: ""
+  openrouter_api_key: ""
+  custom_api_key: ""
+  
+  # S3 credentials
+  external_s3_access_key: ""
+  external_s3_secret_key: ""
+
+  # Bitbucket credentials
+  bitbucket_data_center_domain: ""
+  bitbucket_data_center_client_id: ""
+  bitbucket_data_center_client_secret: ""
+
+  # GitHub credentials
+  github_oauth_client_id: ""
+  github_oauth_client_secret: ""
+  github_app_id: ""
+  github_app_webhook_secret: ""
+  github_app_private_key: ""
+  
+  # TLS certificates
+  tls_certificate: ""
+  tls_private_key: ""
+  tls_ca_certificate: ""
+  tls_env: ""
+  auth_hostname: ""
+ 

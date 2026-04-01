@@ -1,0 +1,24 @@
+{{- if or .Values.config.github_oauth_client_id .Values.config.github_oauth_client_secret .Values.config.github_app_id .Values.config.github_app_webhook_secret .Values.config.github_app_private_key }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-app
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  {{- if .Values.config.github_app_id }}
+  app-id: {{ .Values.config.github_app_id | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.github_app_webhook_secret }}
+  webhook-secret: {{ .Values.config.github_app_webhook_secret | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.github_oauth_client_id }}
+  client-id: {{ .Values.config.github_oauth_client_id | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.github_oauth_client_secret }}
+  client-secret: {{ .Values.config.github_oauth_client_secret | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.github_app_private_key }}
+  private-key: {{ .Values.config.github_app_private_key | b64enc | quote }}
+  {{- end }}
+{{- end }}

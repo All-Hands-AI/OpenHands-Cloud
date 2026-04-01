@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-admin
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  admin-password: {{ .Values.config.keycloak_admin_password | b64enc | quote }}

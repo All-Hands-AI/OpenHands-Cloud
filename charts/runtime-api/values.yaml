@@ -3,9 +3,13 @@ fullnameOverride: ""
 
 replicaCount: 1
 
+databaseMigrations:
+  createDatabases: false
+  migrate: true
+
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-c5193e4
+  tag: sha-20ec8b3
   pullPolicy: Always
 
 imagePullSecrets:
@@ -41,8 +45,8 @@ resources:
     cpu: 1
     memory: 4Gi
   requests:
-    cpu: 1
-    memory: 4Gi
+    cpu: 100m
+    memory: 100Mi
 
 # Unified job settings for both jobs and cronjobs
 jobSettings:
@@ -52,8 +56,8 @@ jobSettings:
       cpu: 1
       memory: 3Gi
     requests:
-      cpu: 1
-      memory: 3Gi
+      cpu: 100m
+      memory: 100Mi
   # Timeout settings (30 minutes)
   activeDeadlineSeconds: 1800
   # History limits
@@ -71,9 +75,6 @@ affinity: {}
 postgresql:
   enabled: false
   isFeatureDeploy: false
-  # Set to true when deployed as subchart and parent chart owns PostgreSQL
-  # This ensures migrate-db runs as post-install hook (after postgres is ready)
-  postMigrate: false
   primary:
     persistence:
       enabled: false
@@ -162,7 +163,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:c0bb84dfa20b4973effbe938d19ed7342e42d4be-nikolaik"
+      image: "ghcr.io/openhands/runtime:3c5023ac021cfc075f2d6b5ff7f345f375bded47-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:
@@ -211,6 +212,9 @@ monitoring:
 datadog:
   enabled: false
   env: "dev"
+
+replicated:
+  enabled: false
 
 global:
   security:

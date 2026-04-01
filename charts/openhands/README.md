@@ -80,7 +80,6 @@ kubectl create secret generic jwt-secret -n openhands --from-literal=jwt-secret=
 
 kubectl create secret generic keycloak-realm -n openhands \
   --from-literal=realm-name=allhands \
-  --from-literal=provider-name=email \
   --from-literal=server-url=http://keycloak \
   --from-literal=client-id=allhands \
   --from-literal=client-secret=$GLOBAL_SECRET \
@@ -257,6 +256,34 @@ authentication as well.
    ```
 
 When the chart is deployed, a job will run to configure the Keycloak realm with the identity provider credentials you provided.
+
+#### Bitbucket Data Center
+
+Bitbucket Data Center is the self-hosted version of Bitbucket. The setup is different from the cloud version. 
+
+1. Create a Bitbucket Data Center Application Link:
+
+   - Follow the instructions in Bitbucket Data Center to create an [OAuth2 Application Link](https://confluence.atlassian.com/enterprise/link-to-atlassian-products-using-oauth-2-0-1688928427.html)
+   - Grant repository read and write scopes.
+   - Set the application URL to `https://auth.openhands.example.com/realms/openhands/broker/bitbucket_data_center
+   - Note the Client ID and Client Secret provided by Bitbucket Data Center
+
+2. Create a Bitbucket Data Center App secret:
+
+   ```bash
+   kubectl create secret generic bitbucket-data-center-app -n openhands \
+     --from-literal=client-id=<your-client-id> \
+     --from-literal=client-secret=<your-client-secret> \
+   ```
+
+3. Update site-values.yaml file:
+
+   ```yaml
+   bitbucketDataCenter:
+     # Set this to true if you are using Bitbucket Data Center as your identity provider
+     enabled: true
+     host: <your-bitbucket-data-center-host>
+   ```
 
 ### LiteLLM configuration
 
@@ -510,6 +537,44 @@ parameters:
 volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
+### VolumeSnapshotClass Configuration (Optional)
+
+To enable PVC snapshots for cost optimization (snapshotting paused runtime PVCs instead of keeping them active), you need to create a VolumeSnapshotClass. This is optional but recommended for production deployments to reduce storage costs.
+
+```bash
+# For AWS EKS
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: ebs-snapshot-class
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+EOF
+
+# For GKE
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: pd-snapshot-class
+driver: pd.csi.storage.gke.io
+deletionPolicy: Delete
+parameters:
+  storage-locations: us-central1  # Replace with your cluster's region
+EOF
+```
+
+Then configure the runtime-api to use the snapshot class:
+
+```yaml
+runtime-api:
+  env:
+    VOLUME_SNAPSHOT_CLASS: "pd-snapshot-class"  # or "ebs-snapshot-class" for AWS
+```
+
+> **Note:** The VolumeSnapshot CRDs must be installed in your cluster. Most managed Kubernetes services (GKE, EKS) include these by default. If not, see the [Kubernetes VolumeSnapshot documentation](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
 
 ## Upgrading
 

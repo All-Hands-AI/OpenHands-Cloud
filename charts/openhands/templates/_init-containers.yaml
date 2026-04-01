@@ -1,0 +1,48 @@
+{{- define "openhands.dbInitContainers" }}
+- name: wait-for-db
+  image: "bitnamilegacy/postgresql:latest"
+  command: ['sh', '-c']
+  args:
+    - |
+      echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
+      # pg_isready succeeds even if the database doesn't exist yet;
+      # we pass credentials and database to avoid failed auth log entries.
+      until PGPASSWORD=$DB_PASS pg_isready -h $DB_HOST -p 5432 -U $DB_USER -d $DB_NAME > /dev/null 2>&1; do
+        echo "PostgreSQL is unavailable - sleeping for 2 seconds"
+        sleep 2
+      done
+      echo "PostgreSQL is up and running!"
+  env:
+    {{- include "openhands.env" . | nindent 4 }}
+{{- if .Values.databaseMigrations.createDatabases }}
+- name: create-db
+  image: "bitnamilegacy/postgresql:latest"
+  command: ['sh', '-c']
+  args:
+    - |
+      export PGPASSWORD=$DB_PASS
+      PSQL="psql -h $DB_HOST -p 5432 -U $DB_USER"
+
+      for db in $DB_NAME $DATABASES; do
+        echo "Ensuring database \"$db\" exists..."
+        $PSQL -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 || \
+        $PSQL -d postgres -c "CREATE DATABASE $db;"
+      done
+  env:
+    - name: DATABASES
+      value: "{{ .Values.keycloak.externalDatabase.database }}{{- if (index .Values "litellm-helm").enabled }} {{ (index .Values "litellm-helm").db.database }}{{- end }}{{- if .Values.langfuse.enabled }} {{ .Values.langfuse.postgresql.auth.database }}{{- end }}"
+    {{- include "openhands.env" . | nindent 4 }}
+{{- end }}
+{{- if .Values.databaseMigrations.migrate }}
+- name: migrate-db
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+  command: ["/bin/sh", "-c"]
+  workingDir: /app
+  args:
+    - |
+      echo "Running migrations..."
+      alembic upgrade head
+  env:
+    {{- include "openhands.env" . | nindent 4 }}
+{{- end }}
+{{- end }}
