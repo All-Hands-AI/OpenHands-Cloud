@@ -333,7 +333,10 @@ keycloak:
     image: "bitnamilegacy/postgresql:latest"
   initContainers:
     - name: wait-for-db
-      # Resolved via tpl by the Bitnami subchart; override waitForDb.image for Replicated.
+      # The Bitnami Keycloak subchart renders initContainers through common.tplvalues.render,
+      # so this template expression is evaluated at deploy time rather than being treated as
+      # a literal string. This lets us override just the image (e.g. for Replicated proxy)
+      # without duplicating the entire init container.
       image: '{{ .Values.waitForDb.image }}'
       command: ['sh', '-c']
       args:
