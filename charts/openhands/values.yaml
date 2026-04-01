@@ -113,7 +113,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-5f064fa
+  tag: cloud-1.19.0
 
 ingress:
   enabled: false
@@ -211,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: 3c5023ac021cfc075f2d6b5ff7f345f375bded47-nikolaik
+    tag: cloud-1.19.0-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -556,8 +556,6 @@ runtime-api:
   enabled: true
   replicaCount: 1
   runtimeInSameCluster: true
-  image:
-    tag: sha-20ec8b3
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -577,7 +575,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:3c5023ac021cfc075f2d6b5ff7f345f375bded47-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
