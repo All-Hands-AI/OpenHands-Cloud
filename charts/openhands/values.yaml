@@ -113,7 +113,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-5f064fa
+  tag: cloud-1.19.0
 
 ingress:
   enabled: false
@@ -337,8 +337,8 @@ keycloak:
       # so this template expression is evaluated at deploy time rather than being treated as
       # a literal string. This lets us override just the image (e.g. for Replicated proxy)
       # without duplicating the entire init container.
-      image: '{{ .Values.waitForDb.image }}'
-      command: ['sh', '-c']
+      image: "{{ .Values.waitForDb.image }}"
+      command: ["sh", "-c"]
       args:
         - |
           echo "Waiting for database \"$KEYCLOAK_DATABASE_NAME\" at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
@@ -556,8 +556,6 @@ runtime-api:
   enabled: true
   replicaCount: 1
   runtimeInSameCluster: true
-  image:
-    tag: sha-20ec8b3
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -654,13 +652,13 @@ automationServiceKey:
 # Routing is handled by parent chart via /api/automation subpath
 automation:
   enabled: false
-  
+
   image:
     repository: ghcr.io/openhands/automation
     # tag: set via helm args or override
-  
+
   imagePullSecrets: []
-  
+
   deployment:
     replicas: 1
     resources:
@@ -670,17 +668,17 @@ automation:
       limits:
         memory: 512Mi
         cpu: 500m
-  
+
   securityContext:
     runAsUser: 42420
     runAsGroup: 42420
     runAsNonRoot: true
-  
+
   serviceAccount:
     create: true
     name: automation-sa
     annotations: {}
-  
+
   probes:
     startup:
       failureThreshold: 30
@@ -693,13 +691,13 @@ automation:
       initialDelaySeconds: 5
       periodSeconds: 10
       failureThreshold: 3
-  
+
   # URL configuration
   # OpenHands API URL for dispatching sandbox runs (e.g., https://staging.all-hands.dev)
   openhandsApiUrl: ""
   # Automation service base URL for completion callbacks (e.g., https://staging.all-hands.dev/api/automation)
   automationBaseUrl: ""
-  
+
   # PostgreSQL database configuration
   database:
     # Full hostname of the PostgreSQL server
@@ -722,13 +720,13 @@ automation:
     # Only used when createDatabaseUser=true
     superuserSecretName: "postgres-password"
     superuserSecretKey: "password"
-  
+
   # GCP Cloud SQL (leave empty for non-GCP)
   gcp:
     dbInstance: ""
     project: ""
     region: ""
-  
+
   # File storage configuration (aligned with openhands chart pattern)
   # Supports multiple backends: gcs, s3, or in-cluster minio for ephemeral environments
   filestore:
@@ -739,7 +737,7 @@ automation:
     bucket: automation-data
     # Storage type when ephemeral=false (e.g., gcs, s3)
     type: gcs
-  
+
   # Minio configuration for ephemeral storage
   # When deployed as subchart of openhands, automation uses parent's minio instance
   minio:
@@ -750,19 +748,19 @@ automation:
       endpoint: "minio:9000"
       accessKey: "default"
       secretKey: "notasecret"
-  
+
   # Service key from K8s secret
   serviceKeyFromSecret:
     name: automation-service-key
     key: automation-service-key
-  
+
   # Datadog configuration
   datadog:
     env: "dev"
-  
+
   # Env vars passed directly to the container (overrides defaults)
   env: {}
-  
+
   # PostgreSQL subchart - disabled when using parent's PostgreSQL
   postgresql:
     enabled: false
