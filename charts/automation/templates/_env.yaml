@@ -1,4 +1,7 @@
 {{- define "automation.env.defaults" }}
+# Root path for Swagger UI / OpenAPI spec (when mounted behind a proxy)
+- name: AUTOMATION_ROOT_PATH
+  value: "/api/automation"
 # OpenHands API base URL (for dispatching sandbox runs)
 {{- if .Values.openhandsApiUrl }}
 - name: AUTOMATION_OPENHANDS_API_BASE_URL
