@@ -243,6 +243,45 @@ name: openhands
         assert result is None
 
 
+class TestGetCurrentAppVersion:
+    """Tests for get_current_app_version function."""
+
+    @pytest.fixture
+    def sample_chart_yaml(self):
+        """Create a sample Chart.yaml content."""
+        return """\
+apiVersion: v2
+appVersion: cloud-1.19.0
+version: 0.3.11
+name: openhands
+"""
+
+    @pytest.fixture
+    def temp_chart_file(self, sample_chart_yaml):
+        """Create a temporary Chart.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_chart_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_returns_app_version(self, temp_chart_file):
+        """Test that function returns the appVersion from chart."""
+        from update_openhands_charts import get_current_app_version
+
+        result = get_current_app_version(temp_chart_file)
+        assert result == "cloud-1.19.0"
+
+    def test_returns_none_for_missing_file(self):
+        """Test that function returns None for missing file."""
+        from update_openhands_charts import get_current_app_version
+
+        result = get_current_app_version(Path("/nonexistent/Chart.yaml"))
+        assert result is None
+
+
 class TestBumpPatchVersion:
     """Tests for bump_patch_version function.
 

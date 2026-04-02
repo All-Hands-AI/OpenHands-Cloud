@@ -45,6 +45,18 @@ def extract_version_from_cloud_tag(cloud_tag: str) -> str | None:
     return None
 
 
+def get_current_app_version(chart_path: Path) -> str | None:
+    """Get the current appVersion from a Chart.yaml file."""
+    if not chart_path.exists():
+        return None
+    try:
+        yaml = YAML()
+        chart_data = yaml.load(chart_path)
+        return chart_data.get("appVersion")
+    except Exception:
+        return None
+
+
 def format_sha_tag(sha: str) -> str:
     """Format a SHA hash into a sha-SHORT_SHA tag format."""
     return f"sha-{get_short_sha(sha)}"
@@ -566,6 +578,17 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     else:
         print("No cloud version tag found in OpenHands releases")
         return
+
+    # Check if openhands chart is already at the latest version
+    current_app_version = get_current_app_version(CHART_PATH)
+    if current_app_version:
+        print(f"Current openhands chart appVersion: {current_app_version}")
+        if current_app_version == openhands_version:
+            print()
+            print("=" * 60)
+            print("Charts are already up to date - no changes needed")
+            print("=" * 60)
+            return
 
     # Extract version number to use as deploy tag (e.g., 1.19.0)
     version_number = extract_version_from_cloud_tag(openhands_version)
