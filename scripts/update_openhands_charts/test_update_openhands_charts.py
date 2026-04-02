@@ -75,6 +75,27 @@ class TestCloudSemverPattern:
         assert not CLOUD_SEMVER_PATTERN.match("")
 
 
+class TestExtractVersionFromCloudTag:
+    """Tests for extract_version_from_cloud_tag function."""
+
+    def test_extracts_version_from_cloud_tag(self):
+        """Test that version is extracted from cloud-X.Y.Z format."""
+        from update_openhands_charts import extract_version_from_cloud_tag
+
+        assert extract_version_from_cloud_tag("cloud-1.19.0") == "1.19.0"
+        assert extract_version_from_cloud_tag("cloud-2.0.0") == "2.0.0"
+        assert extract_version_from_cloud_tag("cloud-10.20.30") == "10.20.30"
+
+    def test_returns_none_for_invalid_format(self):
+        """Test that None is returned for invalid formats."""
+        from update_openhands_charts import extract_version_from_cloud_tag
+
+        assert extract_version_from_cloud_tag("1.19.0") is None
+        assert extract_version_from_cloud_tag("v1.19.0") is None
+        assert extract_version_from_cloud_tag("cloud-1.19") is None
+        assert extract_version_from_cloud_tag("") is None
+
+
 class TestGetShortSha:
     """Tests for get_short_sha function."""
 

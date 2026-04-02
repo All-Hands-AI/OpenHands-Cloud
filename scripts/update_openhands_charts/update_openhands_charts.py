@@ -33,6 +33,14 @@ def get_short_sha(sha: str) -> str:
     return sha[:SHORT_SHA_LENGTH]
 
 
+def extract_version_from_cloud_tag(cloud_tag: str) -> str | None:
+    """Extract version number from cloud-X.Y.Z format."""
+    match = CLOUD_SEMVER_PATTERN.match(cloud_tag)
+    if match:
+        return match.group(1)
+    return None
+
+
 def format_sha_tag(sha: str) -> str:
     """Format a SHA hash into a sha-SHORT_SHA tag format."""
     return f"sha-{get_short_sha(sha)}"
@@ -300,32 +308,35 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Fetching latest versions...")
     print("=" * 60)
 
-    if deploy_tag:
-        print(f"Using specified deploy tag: {deploy_tag}")
-    else:
-        deploy_tag = get_latest_semver_tag(token, "OpenHands/deploy")
-        if deploy_tag:
-            print(f"Latest deploy tag: {deploy_tag}")
-        else:
-            print("No deploy semantic version tag found")
-            return
-
-    # Fetch deploy config from the tagged version
-    deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
-    if not deploy_config:
-        print("Could not fetch deploy config")
-        return
-
-    print(f"Deploy config (from {deploy_tag}):")
-    print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
-
-    # Get the latest cloud tag from OpenHands releases
+    # Get the latest cloud tag from OpenHands releases (e.g., cloud-1.19.0)
     openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
     if openhands_version:
         print(f"Latest OpenHands cloud version: {openhands_version}")
     else:
         print("No cloud version tag found in OpenHands releases")
         return
+
+    # Extract version number to use as deploy tag (e.g., 1.19.0)
+    version_number = extract_version_from_cloud_tag(openhands_version)
+    if not version_number:
+        print(f"Could not extract version from cloud tag: {openhands_version}")
+        return
+
+    # Use provided deploy_tag or derive from cloud version
+    if deploy_tag:
+        print(f"Using specified deploy tag: {deploy_tag}")
+    else:
+        deploy_tag = version_number
+        print(f"Using deploy tag from cloud version: {deploy_tag}")
+
+    # Fetch deploy config from the corresponding deploy repo tag
+    deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
+    if not deploy_config:
+        print(f"Could not fetch deploy config from tag {deploy_tag}")
+        return
+
+    print(f"Deploy config (from {deploy_tag}):")
+    print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
 
     # Update runtime-api chart first to get the new version
     print()
