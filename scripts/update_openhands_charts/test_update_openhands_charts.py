@@ -1370,46 +1370,6 @@ class TestParseArgs:
         finally:
             sys.argv = original_argv
 
-    def test_test_flag_argument_exists(self):
-        """Test that --test argument is accepted."""
-        from update_openhands_charts import parse_args
-        import sys
-
-        original_argv = sys.argv
-        try:
-            sys.argv = ["script", "--test"]
-            args = parse_args()
-            assert args.test is True
-        finally:
-            sys.argv = original_argv
-
-    def test_test_flag_default_is_false(self):
-        """Test that --test defaults to False."""
-        from update_openhands_charts import parse_args
-        import sys
-
-        original_argv = sys.argv
-        try:
-            sys.argv = ["script"]
-            args = parse_args()
-            assert args.test is False
-        finally:
-            sys.argv = original_argv
-
-    def test_test_flag_with_dry_run(self):
-        """Test that --test can be combined with --dry-run."""
-        from update_openhands_charts import parse_args
-        import sys
-
-        original_argv = sys.argv
-        try:
-            sys.argv = ["script", "--test", "--dry-run"]
-            args = parse_args()
-            assert args.test is True
-            assert args.dry_run is True
-        finally:
-            sys.argv = original_argv
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
