@@ -408,243 +408,16 @@ class TestDeployConfig:
 class TestUpdateResultHelpers:
     """Tests for UpdateResult helper methods.
 
-    These helpers provide a cleaner API for checking if specific keys
-    were changed or unchanged, reducing coupling to internal data structures.
-    """
-
-    @pytest.mark.parametrize("key,expected", [
-        # Happy path: first key in list should be found
-        ("appVersion", True),
-        # Happy path: key with special chars (hyphen, space) should be found
-        ("runtime-api version", True),
-        # Boundary: key not in list returns False (not None or error)
-        ("nonexistent-key", False),
-    ])
-    def test_is_unchanged_finds_keys_in_unchanged_list(self, key, expected):
-        """Verify is_unchanged correctly identifies presence/absence of keys."""
-        result = update_openhands_charts.UpdateResult(
-            unchanged=[("appVersion", "1.0.0"), ("runtime-api version", "0.2.6")]
-        )
-        assert result.is_unchanged(key) is expected
-
-    @pytest.mark.parametrize("key,expected", [
-        # Happy path: first key in changes list should be found
-        ("appVersion", True),
-        # Happy path: additional keys in list should also be found
-        ("version", True),
-        # Boundary: key not in list returns False (not None or error)
-        ("nonexistent-key", False),
-    ])
-    def test_has_change_for_finds_keys_in_changes_list(self, key, expected):
-        """Verify has_change_for correctly identifies presence/absence of keys."""
-        result = update_openhands_charts.UpdateResult(
-            has_changes=True,
-            changes=[("appVersion", "1.0.0", "2.0.0"), ("version", "0.1.0", "0.1.1")]
-        )
-        assert result.has_change_for(key) is expected
-
-    @pytest.mark.parametrize("substring,expected", [
-        # Happy path: exact substring match
-        ("enterprise-server", True),
-        # Happy path: partial match within longer message
-        ("image tag", True),
-        # Boundary: substring not in any error returns False
-        ("nonexistent-error", False),
-    ])
-    def test_has_error_containing_finds_substrings_in_errors(self, substring, expected):
-        """Verify has_error_containing correctly identifies substrings in error messages."""
-        result = update_openhands_charts.UpdateResult(
-            errors=[
-                "Could not find enterprise-server image tag",
-                "Could not find runtime image tag",
-            ]
-        )
-        assert result.has_error_containing(substring) is expected
-
-    @pytest.mark.parametrize("method_name,query", [
-        # Edge case: empty UpdateResult returns False for all lookup methods
-        pytest.param("is_unchanged", "any-key", id="is_unchanged on empty"),
-        pytest.param("has_change_for", "any-key", id="has_change_for on empty"),
-        pytest.param("has_error_containing", "any-error", id="has_error_containing on empty"),
-    ])
-    def test_lookup_methods_return_false_for_empty_result(self, method_name, query):
-        """Verify all lookup methods return False when their list is empty.
-
-        Consolidates edge case tests for is_unchanged, has_change_for, and
-        has_error_containing to verify consistent behavior on empty UpdateResult.
-        """
-        result = update_openhands_charts.UpdateResult()
-        method = getattr(result, method_name)
-        assert method(query) is False
-
-    @pytest.mark.parametrize("field,data,expected_count", [
-        # error_count: multiple, single, empty
-        pytest.param("errors", ["error1", "error2", "error3"], 3, id="error_count: multiple"),
-        pytest.param("errors", ["only one error"], 1, id="error_count: single"),
-        pytest.param("errors", [], 0, id="error_count: empty"),
-        # change_count: multiple, single, empty
-        pytest.param("changes", [("k1", "old1", "new1"), ("k2", "old2", "new2")], 2, id="change_count: multiple"),
-        pytest.param("changes", [("key", "old", "new")], 1, id="change_count: single"),
-        pytest.param("changes", [], 0, id="change_count: empty"),
-        # unchanged_count: multiple, single, empty
-        pytest.param("unchanged", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")], 3, id="unchanged_count: multiple"),
-        pytest.param("unchanged", [("key", "value")], 1, id="unchanged_count: single"),
-        pytest.param("unchanged", [], 0, id="unchanged_count: empty"),
-    ])
-    def test_count_properties_return_correct_counts(self, field, data, expected_count):
-        """Verify count properties (error_count, change_count, unchanged_count) return correct values.
-
-        Consolidates count property tests into a single parameterized test that
-        covers all three properties with their boundary conditions (multiple,
-        single, empty).
-        """
-        result = update_openhands_charts.UpdateResult(**{field: data})
-        # Property name follows pattern: field_name -> field_count (errors -> error_count)
-        count_property = field.rstrip("s") + "_count"  # errors->error_count, changes->change_count
-        assert getattr(result, count_property) == expected_count
-
-
-class TestAssertVersionBumped:
-    """Tests for assert_version_bumped helper function.
-
-    This helper verifies that a chart's version was correctly bumped,
-    encapsulating the common pattern of bump_patch_version + get_chart_value.
-    """
-
-    def test_passes_when_version_correctly_bumped(self, make_temp_yaml_file):
-        """Test helper passes when version is incremented by one patch."""
-        # Boundary: exact +1 increment is the only valid bump
-        chart_content = """\
-apiVersion: v2
-name: test-chart
-version: 1.2.4
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-
-        # Should not raise - version 1.2.4 is exactly one patch bump from 1.2.3
-        assert_version_bumped(temp_file, original_version="1.2.3")
-
-    def test_fails_when_version_not_bumped(self, make_temp_yaml_file):
-        """Test helper raises AssertionError when version unchanged."""
-        # Edge case: version unchanged (forgot to bump) should be caught
-        chart_content = """\
-apiVersion: v2
-name: test-chart
-version: 1.2.3
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-
-        with pytest.raises(AssertionError, match="Expected version 1.2.4"):
-            assert_version_bumped(temp_file, original_version="1.2.3")
-
-    def test_fails_when_version_bumped_incorrectly(self, make_temp_yaml_file):
-        """Test helper raises AssertionError when version bumped by wrong amount."""
-        # Edge case: over-bumping (e.g., +2 instead of +1) should be caught
-        # This prevents accidental double-bumps or manual version edits
-        chart_content = """\
-apiVersion: v2
-name: test-chart
-version: 1.2.5
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-
-        with pytest.raises(AssertionError, match="Expected version 1.2.4, got 1.2.5"):
-            assert_version_bumped(temp_file, original_version="1.2.3")
-
-
-class TestGetDependencyVersion:
-    """Tests for get_dependency_version helper function.
-
-    This helper extracts dependency versions from Chart.yaml files,
-    reducing coupling to internal YAML data structures in tests.
-    """
-
-    @pytest.mark.parametrize("dep_name,expected_version", [
-        # Existing dependencies return their version
-        ("runtime-api", OPENHANDS_CHART_RUNTIME_API_VERSION),
-        ("other-dep", OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION),
-        # Non-existent dependency returns None
-        ("nonexistent-dep", None),
-    ])
-    def test_dependency_version_lookup_by_name(self, make_temp_yaml_file, sample_openhands_chart_with_deps, dep_name, expected_version):
-        """Verify dependency versions are correctly extracted by name, or None if not found."""
-        temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, dep_name) == expected_version
-
-    def test_returns_none_when_chart_has_no_dependencies(self, make_temp_yaml_file):
-        """Verify None is returned when chart has no dependencies section."""
-        chart_content = """\
-apiVersion: v2
-name: test-chart
-version: 1.0.0
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_dependency_version(temp_file, "any-dep") is None
-
-
-class TestGetChartValue:
-    """Tests for get_chart_value helper function.
-
-    This helper extracts top-level values from Chart.yaml files,
-    reducing coupling to internal YAML data structures in tests.
-    """
-
-    def test_returns_value_when_key_exists(self, make_temp_yaml_file):
-        """Test that value is returned when key exists."""
-        chart_content = """\
-apiVersion: v2
-appVersion: cloud-1.0.0
-version: 0.3.11
-name: openhands
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "appVersion") == "cloud-1.0.0"
-
-    def test_returns_value_for_any_top_level_key(self, make_temp_yaml_file):
-        """Test that value is returned for any top-level key."""
-        chart_content = """\
-apiVersion: v2
-appVersion: cloud-2.0.0
-version: 0.1.0
-name: test-chart
-description: A test chart
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "name") == "test-chart"
-        assert get_chart_value(temp_file, "version") == "0.1.0"
-        assert get_chart_value(temp_file, "description") == "A test chart"
-
-    def test_returns_none_when_key_not_found(self, make_temp_yaml_file):
-        """Test that None is returned when key doesn't exist."""
-        chart_content = """\
-apiVersion: v2
-name: test-chart
-version: 1.0.0
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "nonexistent-key") is None
-
-
-# =============================================================================
-# GITHUB API INTEGRATION TESTS
-# Tests for functions that interact with GitHub API (mocked).
-# These verify correct API usage, error handling, and response parsing.
-# =============================================================================
-
-
-class TestGetDeployConfig:
-    """Tests for get_deploy_config function.
-
-    Uses parameterized tests for comprehensive error path coverage.
-    All error scenarios should return None and print an error message.
-    """
-
-    # Valid workflow YAML for success case tests
-    VALID_WORKFLOW_YAML = """\
-env:
-  RUNTIME_API_SHA: abc123def456
-  OPENHANDS_RUNTIME_IMAGE_TAG: "cloud-1.21.0-nikolaik"
-  OTHER_VAR: value
+runtime-api:
+  enabled: true
+  replicaCount: 1
+  warmRuntimes:
+    enabled: true
+    count: 1
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/runtime:oldsha1234567890-nikolaik"
+        working_dir: "/openhands/code/"
 """
 
     @pytest.fixture
@@ -656,88 +429,33 @@ env:
         mock_response.json.return_value = {"content": encoded_content}
         return mock_response
 
-    def test_returns_deploy_config_on_success(self, monkeypatch, mock_successful_response):
-        """Test that valid response returns DeployConfig with correct values."""
-        monkeypatch.setattr(
-            "update_openhands_charts.requests.get",
-            Mock(return_value=mock_successful_response)
+    def test_update_enterprise_server_tag(self, temp_values_file):
+        """Test that enterprise-server image tag is updated correctly."""
+        update_openhands_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
         )
 
         result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
 
-        assert result is not None
-        assert isinstance(result, DeployConfig)
-        assert result.runtime_api_sha == "abc123def456"
-        assert result.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
-
-    def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
-        """Test that URL is constructed correctly without ref parameter."""
-        mock_get = Mock(return_value=mock_successful_response)
-        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
-
-        get_deploy_config("fake-token", "owner/repo")
-
-        called_url = mock_get.call_args[0][0]
-        assert called_url == "https://api.github.com/repos/owner/repo/contents/.github/workflows/deploy.yaml"
-        assert "?ref=" not in called_url
-
-    def test_constructs_correct_url_with_ref(self, monkeypatch, mock_successful_response):
-        """Test that URL includes ref parameter when provided."""
-        mock_get = Mock(return_value=mock_successful_response)
-        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
-
-        get_deploy_config("fake-token", "owner/repo", ref="v1.2.3")
-
-        called_url = mock_get.call_args[0][0]
-        assert "?ref=v1.2.3" in called_url
-
-    def test_includes_authorization_header(self, monkeypatch, mock_successful_response):
-        """Test that Authorization header is included with token."""
-        mock_get = Mock(return_value=mock_successful_response)
-        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
-
-        get_deploy_config("my-secret-token", "owner/repo")
-
-        called_headers = mock_get.call_args[1]["headers"]
-        assert called_headers["Authorization"] == "Bearer my-secret-token"
-
-    def test_returns_empty_string_when_env_key_missing(self, monkeypatch, make_workflow_response):
-        """Test that missing env keys return empty string (not None).
-
-        Edge case: Workflow has env section but lacks expected keys.
-        This tests graceful handling via dict.get() default behavior.
-        """
-        # Workflow without expected keys - simulates incomplete workflow config
-        response = make_workflow_response("env:\n  OTHER_VAR: value\n")
-        monkeypatch.setattr(
-            "update_openhands_charts.requests.get",
-            Mock(return_value=response)
+    def test_update_runtime_tag(self, temp_values_file):
+        """Test that runtime image tag is updated correctly."""
+        update_openhands_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
         )
 
         result = get_deploy_config("token", "owner/repo")
 
-        assert result is not None
-        assert result.runtime_api_sha == ""
-        assert result.openhands_runtime_image_tag == ""
-
-    def test_returns_empty_string_when_env_section_missing(self, monkeypatch, make_workflow_response):
-        """Test that missing env section returns empty string.
-
-        Edge case: Valid workflow YAML but no env section at all.
-        This tests defensive handling when expected structure is absent.
-        """
-        # Workflow without env section - simulates minimal workflow file
-        response = make_workflow_response("name: deploy\njobs: {}\n")
-        monkeypatch.setattr(
-            "update_openhands_charts.requests.get",
-            Mock(return_value=response)
+    def test_update_warm_runtimes_tag(self, temp_values_file):
+        """Test that warmRuntimes image tag is updated correctly."""
+        update_openhands_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
         )
-
-        result = get_deploy_config("token", "owner/repo")
-
-        assert result is not None
-        assert result.runtime_api_sha == ""
-        assert result.openhands_runtime_image_tag == ""
 
     # =========================================================================
     # Parameterized error path tests
@@ -748,102 +466,21 @@ env:
     # The printed error message enables operators to diagnose issues from logs.
     # =========================================================================
 
-    @pytest.mark.parametrize("error_name,setup_mock", [
-        # =====================================================================
-        # Network-level errors (transient, typically retryable)
-        # Recovery: Caller should retry with exponential backoff or skip update
-        # =====================================================================
-        (
-            "connection_timeout",
-            lambda Mock, _: Mock(side_effect=Exception("Connection timed out")),
-        ),
-        (
-            "connection_refused",
-            lambda Mock, _: Mock(side_effect=Exception("Connection refused")),
-        ),
-        (
-            "dns_resolution_failed",
-            lambda Mock, _: Mock(side_effect=Exception("Name resolution failed")),
-        ),
-        # =====================================================================
-        # HTTP error responses (4xx client errors vs 5xx server errors)
-        # Recovery: 4xx errors indicate config issues (check token/repo path);
-        #           5xx errors are transient (retry or wait for GitHub recovery)
-        # =====================================================================
-        (
-            "http_401_unauthorized",
-            lambda Mock, _: _make_http_error_response(Mock, 401, "Unauthorized"),
-        ),
-        (
-            "http_403_forbidden",
-            lambda Mock, _: _make_http_error_response(Mock, 403, "Forbidden"),
-        ),
-        (
-            "http_404_not_found",
-            lambda Mock, _: _make_http_error_response(Mock, 404, "Not Found"),
-        ),
-        (
-            "http_500_server_error",
-            lambda Mock, _: _make_http_error_response(Mock, 500, "Internal Server Error"),
-        ),
-        (
-            "http_502_bad_gateway",
-            lambda Mock, _: _make_http_error_response(Mock, 502, "Bad Gateway"),
-        ),
-        (
-            "http_503_unavailable",
-            lambda Mock, _: _make_http_error_response(Mock, 503, "Service Unavailable"),
-        ),
-        # =====================================================================
-        # Response parsing errors (data corruption or API contract violations)
-        # Recovery: These indicate unexpected API behavior; check GitHub status
-        #           or report bug if persistent. Update should be skipped.
-        # =====================================================================
-        (
-            "invalid_json_response",
-            lambda Mock, _: _make_json_error_response(Mock),
-        ),
-        (
-            "missing_content_key",
-            lambda Mock, _: _make_missing_key_response(Mock, {}),
-        ),
-        (
-            "null_content_value",
-            lambda Mock, _: _make_missing_key_response(Mock, {"content": None}),
-        ),
-        # =====================================================================
-        # Base64 decoding errors (corrupted file content in repository)
-        # Recovery: Check the workflow file in the repository for corruption;
-        #           these errors indicate the file content itself is invalid.
-        # =====================================================================
-        (
-            "invalid_base64_content",
-            lambda Mock, _: _make_invalid_base64_response(Mock, "not-valid-base64!!!"),
-        ),
-        (
-            "corrupted_base64_content",
-            lambda Mock, _: _make_invalid_base64_response(Mock, "YWJj==="),  # Invalid padding
-        ),
-        # =====================================================================
-        # YAML parsing errors (malformed workflow file syntax)
-        # Recovery: Fix the workflow YAML syntax in the source repository.
-        #           These errors indicate the deploy workflow file is invalid.
-        # =====================================================================
-        (
-            "invalid_yaml_syntax",
-            lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "{{invalid: yaml: ::"),
-        ),
-        (
-            "yaml_with_tabs",
-            lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "env:\n\t\tinvalid_indent: true"),
-        ),
-    ])
-    def test_returns_none_and_prints_error(self, error_name, setup_mock, monkeypatch, capsys):
-        """Test that error scenarios return None and print an error message.
+    def test_unchanged_when_same_values(self, temp_values_file, capsys):
+        """Test messages when values are already up to date."""
+        # First update to set the values
+        update_openhands_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
+        )
 
-        All error paths in get_deploy_config should:
-        1. Return None (not raise an exception) - enables graceful degradation
-        2. Print an error message containing "Error fetching deploy config" - enables debugging
+        # Second update with same values
+        update_openhands_values(
+            temp_values_file,
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
+        )
 
         This fail-safe design ensures CI/CD pipelines can continue even when
         deploy config is temporarily unavailable, while providing clear diagnostic
@@ -856,143 +493,28 @@ env:
 
         assert result is None, f"Expected None for {error_name}, got {result}"
         captured = capsys.readouterr()
-        assert "Error fetching deploy config" in captured.out, (
-            f"Expected error message for {error_name}, got: {captured.out}"
-        )
+        assert "enterprise-server image tag unchanged" in captured.out
+        assert "runtime image tag unchanged" in captured.out
+        assert "warmRuntimes image tag unchanged" in captured.out
 
-
-# Helper functions for parameterized test setup
-def _make_http_error_response(Mock, status_code, message):
-    """Create a mock that raises HTTPError on raise_for_status()."""
-    mock_response = Mock()
-    mock_response.status_code = status_code
-    mock_response.raise_for_status.side_effect = Exception(f"HTTP {status_code}: {message}")
-    return Mock(return_value=mock_response)
-
-
-def _make_json_error_response(Mock):
-    """Create a mock that raises error on .json() call."""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.side_effect = Exception("Invalid JSON")
-    return Mock(return_value=mock_response)
-
-
-def _make_missing_key_response(Mock, json_data):
-    """Create a mock with JSON response missing required keys."""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.return_value = json_data
-    return Mock(return_value=mock_response)
-
-
-def _make_invalid_base64_response(Mock, invalid_content):
-    """Create a mock with invalid base64 content."""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.return_value = {"content": invalid_content}
-    return Mock(return_value=mock_response)
-
-
-def _make_invalid_yaml_response(Mock, base64_module, invalid_yaml):
-    """Create a mock with valid base64 but invalid YAML content."""
-    encoded = base64_module.b64encode(invalid_yaml.encode()).decode()
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.return_value = {"content": encoded}
-    return Mock(return_value=mock_response)
-
-
-class TestUpdateValues:
-    """Tests for update_openhands_values function.
-
-    Test Structure:
-    - test_update_*_tag: Image tag update behavior for each component
-    - test_unchanged_when_same_values: Idempotency verification
-    - test_preserves_other_content: Non-destructive update check
-    - test_returns_*: Return value behavior
-    - test_reports_error_*: Error handling for missing patterns
-
-    TDD Rationale: Tests drive regex-based image tag replacement that must
-    handle three distinct tag locations (enterprise-server, runtime, warmRuntimes).
-    Error tests ensure graceful handling when expected patterns are missing,
-    preventing silent failures in CI/CD pipelines.
-    """
-
-    @pytest.fixture
-    def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_full):
-        """Create a temporary values.yaml file using shared fixtures."""
-        return make_temp_yaml_file(sample_openhands_values_full)
-
-    def test_update_enterprise_server_tag_uses_cloud_version(self, temp_values_file):
-        """Test that enterprise-server image tag uses cloud version format."""
+    def test_short_sha_format(self, temp_values_file):
+        """Test that SHA is correctly shortened to 7 characters."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            openhands_sha="abcdefghijklmnop",  # 16 chars
+            runtime_image_tag="full-tag-unchanged",
         )
 
-        assert_file_contains(temp_values_file, "tag: cloud-1.1.0")
-
-    def test_update_runtime_tag_uses_runtime_image_tag(self, temp_values_file):
-        """Test that runtime image tag uses value from deploy config."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert_file_contains(temp_values_file, "tag: cloud-1.1.0-nikolaik")
-
-    def test_update_warm_runtimes_tag_uses_runtime_image_tag(self, temp_values_file):
-        """Test that warmRuntimes image tag uses value from deploy config."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert_file_contains(temp_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
-
-    def test_idempotent_when_reapplying_same_values(self, temp_values_file):
-        """Test that reapplying identical values is idempotent.
-
-        Idempotency pattern: The two-step (apply → reapply) structure verifies
-        that calling the function with identical values:
-        1. Does not mark the result as having changes (has_changes=False)
-        2. Reports specific keys as unchanged via is_unchanged()
-
-        This ensures update functions are deterministic and don't cause spurious
-        version bumps when no actual changes occur.
-        """
-        # Step 1: Apply initial values (establishes baseline state)
-        update_openhands_values(
-            temp_values_file,
-            openhands_version="cloud-1.0.0",
-            runtime_image_tag="cloud-1.0.0-nikolaik",
-        )
-
-        # Step 2: Reapply same values (tests idempotency)
-        result = update_openhands_values(
-            temp_values_file,
-            openhands_version="cloud-1.0.0",
-            runtime_image_tag="cloud-1.0.0-nikolaik",
-        )
-
-        # Verify: Boolean flag correctly indicates no changes
-        assert result.has_changes is False
-
-        # Verify: Specific keys reported as unchanged
-        assert result.is_unchanged("enterprise-server image tag")
-        assert result.is_unchanged("runtime image tag")
-        assert result.is_unchanged("warmRuntimes image tag")
+        content = temp_values_file.read_text()
+        # enterprise-server should have sha-abcdefg (7 chars)
+        assert "tag: sha-abcdefg" in content
 
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
         )
 
         assert_file_contains_all(temp_values_file, [
@@ -1032,6 +554,7 @@ runtime:
     tag: cloud-1.0.0-nikolaik
 
 runtime-api:
+  enabled: true
   warmRuntimes:
     configs:
       - name: default
@@ -1265,8 +788,8 @@ class TestDryRun:
         # Act: run update with dry_run=True
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
             dry_run=True,
         )
 
@@ -1278,15 +801,15 @@ class TestDryRun:
         # Act
         result = update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
             dry_run=True,
         )
 
-        # Assert: changes are tracked even though file wasn't modified
-        assert result.has_change_for("enterprise-server image tag")
-        assert result.has_change_for("runtime image tag")
-        assert result.has_change_for("warmRuntimes image tag")
+        captured = capsys.readouterr()
+        assert "Updated enterprise-server image tag:" in captured.out
+        assert "Updated runtime image tag:" in captured.out
+        assert "Updated warmRuntimes image tag:" in captured.out
 
     def test_update_chart_without_dry_run_modifies_file(self, temp_chart_file):
         """Test that without dry-run, Chart.yaml is modified."""
@@ -1307,8 +830,8 @@ class TestDryRun:
         # Act: run update with dry_run=False (default behavior)
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            openhands_sha="newsha1234567890",
+            runtime_image_tag="newruntime123-nikolaik",
             dry_run=False,
         )
 

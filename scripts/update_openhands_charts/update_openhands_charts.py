@@ -376,7 +376,7 @@ def update_openhands_chart(
 
 def update_openhands_values(
     values_path: Path,
-    openhands_version: str,
+    openhands_sha: str,
     runtime_image_tag: str,
     dry_run: bool = False,
 ) -> UpdateResult:
@@ -416,7 +416,48 @@ def update_openhands_values(
         replacement_suffix='"',
     )
 
-    if not dry_run and result.has_changes:
+    enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
+    enterprise_match = re.search(enterprise_pattern, content)
+
+    if enterprise_match:
+        old_tag = enterprise_match.group(2)
+        if old_tag == enterprise_new_tag:
+            print(f"enterprise-server image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(enterprise_pattern, rf"\g<1>{enterprise_new_tag}", content)
+            print(f"Updated enterprise-server image tag: {old_tag} -> {enterprise_new_tag}")
+    else:
+        print("Could not find enterprise-server image tag in values.yaml")
+
+    # Update runtime image tag (under runtime.image.tag)
+    runtime_pattern = r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
+    runtime_match = re.search(runtime_pattern, content)
+
+    if runtime_match:
+        old_tag = runtime_match.group(2)
+        if old_tag == runtime_image_tag:
+            print(f"runtime image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(runtime_pattern, rf"\g<1>{runtime_image_tag}", content)
+            print(f"Updated runtime image tag: {old_tag} -> {runtime_image_tag}")
+    else:
+        print("Could not find runtime image tag in values.yaml")
+
+    # Update warmRuntimes image (contains full image path with tag)
+    warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
+    warm_runtime_match = re.search(warm_runtime_pattern, content)
+
+    if warm_runtime_match:
+        old_tag = warm_runtime_match.group(2)
+        if old_tag == runtime_image_tag:
+            print(f"warmRuntimes image tag unchanged: {old_tag} (already latest)")
+        else:
+            content = re.sub(warm_runtime_pattern, rf'\g<1>{runtime_image_tag}"', content)
+            print(f"Updated warmRuntimes image tag: {old_tag} -> {runtime_image_tag}")
+    else:
+        print("Could not find warmRuntimes image tag in values.yaml")
+
+    if not dry_run:
         values_path.write_text(content)
 
     return result
@@ -644,7 +685,76 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
         print("Environment variable GITHUB_TOKEN is required. Try getting with: gh auth status --show-token")
         return
 
-    process_updates(token, dry_run=dry_run, cloud_tag=cloud_tag)
+    print("=" * 60)
+    print("Fetching latest versions...")
+    print("=" * 60)
+
+    if deploy_tag:
+        print(f"Using specified deploy tag: {deploy_tag}")
+    else:
+        deploy_tag = get_latest_semver_tag(token, "OpenHands/deploy")
+        if deploy_tag:
+            print(f"Latest deploy tag: {deploy_tag}")
+        else:
+            print("No deploy semantic version tag found")
+            return
+
+    # Fetch deploy config from the tagged version
+    deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
+    if not deploy_config:
+        print("Could not fetch deploy config")
+        return
+
+    print(f"Deploy config (from {deploy_tag}):")
+    print(f"  OPENHANDS_SHA: {deploy_config.openhands_sha}")
+    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
+    print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
+
+    # Get the semver tag containing the OPENHANDS_SHA from local OpenHands repo
+    openhands_version = get_semver_tag_containing_commit(
+        OPENHANDS_REPO_PATH, deploy_config.openhands_sha
+    )
+    if openhands_version:
+        print(f"OpenHands version (latest tag containing OPENHANDS_SHA): {openhands_version}")
+    else:
+        print(f"No semantic version tag found containing commit {deploy_config.openhands_sha[:7]}")
+        return
+
+    # Update runtime-api chart first to get the new version
+    print()
+    print("=" * 60)
+    print("Updating runtime-api chart...")
+    print("=" * 60)
+
+    print("Updating runtime-api Chart.yaml...")
+    runtime_api_version = update_runtime_api_chart(RUNTIME_API_CHART_PATH, dry_run=dry_run)
+
+    print()
+    print("Updating runtime-api values.yaml...")
+    update_runtime_api_values(
+        RUNTIME_API_VALUES_PATH,
+        deploy_config.runtime_api_sha,
+        deploy_config.openhands_runtime_image_tag,
+        dry_run=dry_run,
+    )
+
+    # Update openhands chart using the bumped runtime-api version
+    print()
+    print("=" * 60)
+    print("Updating openhands chart...")
+    print("=" * 60)
+
+    print("Updating openhands Chart.yaml...")
+    update_openhands_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
+
+    print()
+    print("Updating openhands values.yaml...")
+    update_openhands_values(
+        VALUES_PATH,
+        deploy_config.openhands_sha,
+        deploy_config.openhands_runtime_image_tag,
+        dry_run=dry_run,
+    )
 
 
 if __name__ == "__main__":
