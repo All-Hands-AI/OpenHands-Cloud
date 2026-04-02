@@ -444,122 +444,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_openhands_version(token: str, cloud_tag: str | None) -> str | None:
-    """Resolve the OpenHands cloud version to use for updates.
-
-    Returns the cloud tag (e.g., 'cloud-1.19.0') or None if resolution fails.
-    """
-    if cloud_tag:
-        print(f"Using specified cloud tag: {cloud_tag}")
-        if not cloud_tag_exists(token, OPENHANDS_REPO, cloud_tag):
-            print(f"Error: Cloud tag '{cloud_tag}' does not exist in {OPENHANDS_REPO}")
-            return None
-        return cloud_tag
-
-    openhands_version = get_latest_cloud_tag(token, OPENHANDS_REPO)
-    if openhands_version:
-        print(f"OpenHands cloud tag: {openhands_version}")
-    else:
-        print("No cloud tag found in OpenHands releases")
-    return openhands_version
-
-
-def update_runtime_api_workflow(
-    deploy_config: DeployConfig,
-    dry_run: bool,
-) -> str:
-    """Update runtime-api chart and values. Returns the new chart version."""
-    print_section_header("Updating runtime-api chart...")
-
-    print("Updating runtime-api values.yaml...")
-    values_result = update_runtime_api_values(
-        RUNTIME_API_VALUES_PATH,
-        deploy_config.runtime_api_sha,
-        deploy_config.openhands_runtime_image_tag,
-        dry_run=dry_run,
-    )
-    values_result.print_summary()
-
-    print()
-    print("Updating runtime-api Chart.yaml...")
-    chart_version, chart_result = update_runtime_api_chart(
-        RUNTIME_API_CHART_PATH,
-        has_changes=values_result.has_changes,
-        dry_run=dry_run,
-    )
-    chart_result.print_summary()
-
-    return chart_version
-
-
-def update_openhands_workflow(
-    deploy_config: DeployConfig,
-    openhands_version: str,
-    runtime_api_version: str,
-    dry_run: bool,
-) -> None:
-    """Update openhands chart and values."""
-    print_section_header("Updating openhands chart...")
-
-    print("Updating openhands values.yaml...")
-    values_result = update_openhands_values(
-        VALUES_PATH,
-        openhands_version,
-        deploy_config.openhands_runtime_image_tag,
-        dry_run=dry_run,
-    )
-    values_result.print_summary()
-
-    print()
-    print("Updating openhands Chart.yaml...")
-    chart_result = update_openhands_chart(
-        CHART_PATH,
-        openhands_version,
-        runtime_api_version,
-        has_changes=values_result.has_changes,
-        dry_run=dry_run,
-    )
-    chart_result.print_summary()
-
-
-def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = None) -> None:
-    print_section_header("Fetching latest versions...")
-
-    openhands_version = resolve_openhands_version(token, cloud_tag)
-    if not openhands_version:
-        return
-
-    current_app_version = get_current_app_version(CHART_PATH)
-    if current_app_version:
-        print(f"OpenHands-Cloud openhands chart appVersion: {current_app_version}")
-        if current_app_version == openhands_version:
-            print()
-            print_section_header("Charts are already up to date - no changes needed")
-            return
-
-    version_number = extract_version_from_cloud_tag(openhands_version)
-    if not version_number:
-        print(f"Could not extract version from cloud tag: {openhands_version}")
-        return
-
-    print(f"Using deploy tag: {version_number}")
-
-    deploy_config = get_deploy_config(token, DEPLOY_REPO, ref=version_number)
-    if not deploy_config:
-        print(f"Could not fetch deploy config from tag {version_number}")
-        return
-
-    print(f"Deploy config (from {version_number}):")
-    print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
-    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
-
-    print()
-    runtime_api_version = update_runtime_api_workflow(deploy_config, dry_run)
-
-    print()
-    update_openhands_workflow(deploy_config, openhands_version, runtime_api_version, dry_run)
-
-
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     if dry_run:
         print_section_header("DRY RUN MODE - No changes will be made")
@@ -574,15 +458,19 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     print("Fetching latest versions...")
     print("=" * 60)
 
-    # Get the latest cloud tag from OpenHands releases (e.g., cloud-1.19.0)
-    openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
-    if openhands_version:
-        print(f"Latest OpenHands cloud version: {openhands_version}")
+    # Use provided cloud tag or fetch the latest from OpenHands releases
+    if cloud_tag:
+        openhands_version = cloud_tag
+        print(f"Using specified cloud tag: {openhands_version}")
     else:
-        print("No cloud version tag found in OpenHands releases")
-        return
+        openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
+        if openhands_version:
+            print(f"Latest OpenHands cloud version: {openhands_version}")
+        else:
+            print("No cloud version tag found in OpenHands releases")
+            return
 
-    # Check if openhands chart is already at the latest version
+    # Check if openhands chart is already at the target version
     current_app_version = get_current_app_version(CHART_PATH)
     if current_app_version:
         print(f"Current openhands chart appVersion: {current_app_version}")
@@ -599,12 +487,8 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
         print(f"Could not extract version from cloud tag: {openhands_version}")
         return
 
-    # Use provided deploy_tag or derive from cloud version
-    if deploy_tag:
-        print(f"Using specified deploy tag: {deploy_tag}")
-    else:
-        deploy_tag = version_number
-        print(f"Using deploy tag from cloud version: {deploy_tag}")
+    deploy_tag = version_number
+    print(f"Using deploy tag: {deploy_tag}")
 
     # Fetch deploy config from the corresponding deploy repo tag
     deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
