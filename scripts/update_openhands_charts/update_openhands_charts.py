@@ -19,6 +19,7 @@ from github import Auth, Github
 from ruamel.yaml import YAML
 
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -64,13 +65,13 @@ def get_latest_semver_tag(token: str, repo_name: str) -> str | None:
 
 
 def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | None:
-    """Get the latest semantic version tag containing a specific commit from a local git repo.
+    """Get the latest cloud version tag containing a specific commit from a local git repo.
 
     This function:
     1. Checks out main branch
     2. Runs git pull to fetch the latest updates
     3. Runs git tag --contains <commit_sha> to get all tags containing the commit
-    4. Filters for semantic version tags and returns the latest one
+    4. Filters for cloud-X.Y.Z tags and returns the latest one
     """
     if not repo_path.exists():
         print(f"Repository not found at {repo_path}")
@@ -103,13 +104,16 @@ def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | 
         )
 
         tags = result.stdout.strip().split("\n")
-        # Filter for semantic version tags
-        semver_tags = [t for t in tags if t and SEMVER_PATTERN.match(t)]
+        # Filter for cloud-X.Y.Z tags
+        cloud_tags = [t for t in tags if t and CLOUD_SEMVER_PATTERN.match(t)]
 
-        if semver_tags:
+        if cloud_tags:
             # Sort by version number (descending) and return the latest
-            semver_tags.sort(key=lambda v: list(map(int, v.split("."))), reverse=True)
-            return semver_tags[0]
+            cloud_tags.sort(
+                key=lambda v: list(map(int, CLOUD_SEMVER_PATTERN.match(v).group(1).split("."))),
+                reverse=True,
+            )
+            return cloud_tags[0]
 
         return None
     except subprocess.CalledProcessError as e:
