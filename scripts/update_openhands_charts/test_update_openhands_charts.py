@@ -1129,6 +1129,47 @@ class TestGetLatestCloudTag:
         assert "following" not in captured.out.lower()
 
 
+class TestCloudTagExists:
+    """Tests for cloud_tag_exists function."""
+
+    def test_returns_true_for_existing_tag(self):
+        """Test that function returns True for an existing cloud tag."""
+        import os
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            pytest.skip("GITHUB_TOKEN not set")
+
+        from update_openhands_charts import cloud_tag_exists
+
+        # cloud-1.19.0 is a known existing tag
+        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", "cloud-1.19.0")
+        assert result is True
+
+    def test_returns_false_for_nonexistent_tag(self):
+        """Test that function returns False for a non-existent tag."""
+        import os
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            pytest.skip("GITHUB_TOKEN not set")
+
+        from update_openhands_charts import cloud_tag_exists
+
+        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", "cloud-99.99.99")
+        assert result is False
+
+    def test_returns_false_for_invalid_repo(self):
+        """Test that function returns False for an invalid repository."""
+        import os
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            pytest.skip("GITHUB_TOKEN not set")
+
+        from update_openhands_charts import cloud_tag_exists
+
+        result = cloud_tag_exists(token, "nonexistent/repo", "cloud-1.0.0")
+        assert result is False
+
+
 class TestParseArgs:
     """Tests for parse_args function."""
 

@@ -101,6 +101,17 @@ def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
     return None
 
 
+def cloud_tag_exists(token: str, repo_name: str, tag_name: str) -> bool:
+    """Check if a specific cloud tag exists in a GitHub repository."""
+    gh = Github(auth=Auth.Token(token))
+    try:
+        repo = gh.get_repo(repo_name)
+        repo.get_git_ref(f"tags/{tag_name}")
+        return True
+    except Exception:
+        return False
+
+
 def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> DeployConfig | None:
     """Fetch deployment config values from deploy.yaml workflow."""
     headers = {"Authorization": f"Bearer {token}"}
@@ -462,6 +473,10 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     if cloud_tag:
         openhands_version = cloud_tag
         print(f"Using specified cloud tag: {openhands_version}")
+        # Validate that the specified cloud tag exists
+        if not cloud_tag_exists(token, "All-Hands-AI/OpenHands", cloud_tag):
+            print(f"Error: Cloud tag '{cloud_tag}' does not exist in All-Hands-AI/OpenHands")
+            return
     else:
         openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
         if openhands_version:
