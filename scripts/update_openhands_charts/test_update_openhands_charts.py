@@ -273,8 +273,6 @@ runtime:
 runtime-api:
   enabled: true
   replicaCount: 1
-  image:
-    tag: sha-oldsha2
   warmRuntimes:
     enabled: true
     count: 1
@@ -300,31 +298,17 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
         content = temp_values_file.read_text()
         assert "tag: sha-newsha1" in content
 
-    def test_update_runtime_api_tag(self, temp_values_file):
-        """Test that runtime-api image tag is updated correctly."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
-        )
-
-        content = temp_values_file.read_text()
-        assert "tag: sha-newapi1" in content
-
     def test_update_runtime_tag(self, temp_values_file):
         """Test that runtime image tag is updated correctly."""
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
@@ -336,7 +320,6 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
@@ -349,7 +332,6 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
@@ -357,13 +339,11 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
         captured = capsys.readouterr()
         assert "enterprise-server image tag unchanged" in captured.out
-        assert "runtime-api image tag unchanged" in captured.out
         assert "runtime image tag unchanged" in captured.out
         assert "warmRuntimes image tag unchanged" in captured.out
 
@@ -372,22 +352,18 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="abcdefghijklmnop",  # 16 chars
-            runtime_api_sha="1234567890abcdef",  # 16 chars
             runtime_image_tag="full-tag-unchanged",
         )
 
         content = temp_values_file.read_text()
         # enterprise-server should have sha-abcdefg (7 chars)
         assert "tag: sha-abcdefg" in content
-        # runtime-api should have sha-1234567 (7 chars)
-        assert "tag: sha-1234567" in content
 
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
         )
 
@@ -430,8 +406,6 @@ runtime:
 
 runtime-api:
   enabled: true
-  image:
-    tag: sha-oldsha2
   warmRuntimes:
     configs:
       - name: default
@@ -484,7 +458,6 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
             dry_run=True,
         )
@@ -496,14 +469,12 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
             dry_run=True,
         )
 
         captured = capsys.readouterr()
         assert "Updated enterprise-server image tag:" in captured.out
-        assert "Updated runtime-api image tag:" in captured.out
         assert "Updated runtime image tag:" in captured.out
         assert "Updated warmRuntimes image tag:" in captured.out
 
@@ -522,7 +493,6 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_api_sha="newapi1234567890",
             runtime_image_tag="newruntime123-nikolaik",
             dry_run=False,
         )

@@ -200,7 +200,6 @@ def update_openhands_chart(
 def update_openhands_values(
     values_path: Path,
     openhands_sha: str,
-    runtime_api_sha: str,
     runtime_image_tag: str,
     dry_run: bool = False,
 ) -> None:
@@ -222,22 +221,6 @@ def update_openhands_values(
             print(f"Updated enterprise-server image tag: {old_tag} -> {enterprise_new_tag}")
     else:
         print("Could not find enterprise-server image tag in values.yaml")
-
-    # Update runtime-api image tag
-    runtime_api_new_tag = format_sha_tag(runtime_api_sha)
-
-    runtime_api_pattern = r"(runtime-api:\s*\n(?:.*\n)*?\s*image:\s*\n\s*tag:\s*)(\S+)"
-    runtime_api_match = re.search(runtime_api_pattern, content)
-
-    if runtime_api_match:
-        old_tag = runtime_api_match.group(2)
-        if old_tag == runtime_api_new_tag:
-            print(f"runtime-api image tag unchanged: {old_tag} (already latest)")
-        else:
-            content = re.sub(runtime_api_pattern, rf"\g<1>{runtime_api_new_tag}", content)
-            print(f"Updated runtime-api image tag: {old_tag} -> {runtime_api_new_tag}")
-    else:
-        print("Could not find runtime-api image tag in values.yaml")
 
     # Update runtime image tag (under runtime.image.tag)
     runtime_pattern = r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
@@ -433,7 +416,6 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     update_openhands_values(
         VALUES_PATH,
         deploy_config.openhands_sha,
-        deploy_config.runtime_api_sha,
         deploy_config.openhands_runtime_image_tag,
         dry_run=dry_run,
     )
