@@ -51,6 +51,22 @@ from update_openhands_charts import (
     update_runtime_api_chart,
     update_runtime_api_values,
 )
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+bump_patch_version = module.bump_patch_version
+update_openhands_chart = module.update_openhands_chart
+update_openhands_values = module.update_openhands_values
+update_runtime_api_chart = module.update_runtime_api_chart
+update_runtime_api_values = module.update_runtime_api_values
+get_short_sha = module.get_short_sha
+format_sha_tag = module.format_sha_tag
+get_semver_tag_containing_commit = module.get_semver_tag_containing_commit
+DeployConfig = module.DeployConfig
+SEMVER_PATTERN = module.SEMVER_PATTERN
+CLOUD_SEMVER_PATTERN = module.CLOUD_SEMVER_PATTERN
+SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
+OPENHANDS_REPO_PATH = module.OPENHANDS_REPO_PATH
 
 
 # =============================================================================
@@ -113,6 +129,29 @@ class TestExtractVersionFromCloudTag:
         safely filter cloud tags from mixed tag lists without try/except blocks.
         """
         assert extract_version_from_cloud_tag(invalid_tag) is None
+
+
+class TestCloudSemverPattern:
+    """Tests for CLOUD_SEMVER_PATTERN regex."""
+
+    def test_valid_cloud_semver(self):
+        assert CLOUD_SEMVER_PATTERN.match("cloud-1.2.3")
+        assert CLOUD_SEMVER_PATTERN.match("cloud-0.0.0")
+        assert CLOUD_SEMVER_PATTERN.match("cloud-10.20.30")
+        assert CLOUD_SEMVER_PATTERN.match("cloud-1.19.0")
+
+    def test_extracts_version_group(self):
+        match = CLOUD_SEMVER_PATTERN.match("cloud-1.19.0")
+        assert match.group(1) == "1.19.0"
+
+    def test_invalid_cloud_semver(self):
+        assert not CLOUD_SEMVER_PATTERN.match("1.2.3")
+        assert not CLOUD_SEMVER_PATTERN.match("v1.2.3")
+        assert not CLOUD_SEMVER_PATTERN.match("cloud-1.2")
+        assert not CLOUD_SEMVER_PATTERN.match("cloud-1.2.3.4")
+        assert not CLOUD_SEMVER_PATTERN.match("Cloud-1.2.3")
+        assert not CLOUD_SEMVER_PATTERN.match("cloud1.2.3")
+        assert not CLOUD_SEMVER_PATTERN.match("")
 
 
 class TestGetShortSha:

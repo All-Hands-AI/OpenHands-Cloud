@@ -18,9 +18,7 @@ import requests
 from github import Auth, Github
 from ruamel.yaml import YAML
 
-# Suppress PyGithub's redirect messages
-logging.getLogger("github").setLevel(logging.WARNING)
-
+SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
@@ -151,15 +149,64 @@ def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
     return None
 
 
-def cloud_tag_exists(token: str, repo_name: str, tag_name: str) -> bool:
-    """Check if a specific cloud tag exists in a GitHub repository."""
-    gh = Github(auth=Auth.Token(token))
+def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | None:
+    """Get the latest cloud version tag containing a specific commit from a local git repo.
+
+    This function:
+    1. Checks out main branch
+    2. Runs git pull to fetch the latest updates
+    3. Runs git tag --contains <commit_sha> to get all tags containing the commit
+    4. Filters for cloud-X.Y.Z tags and returns the latest one
+    """
+    if not repo_path.exists():
+        print(f"Repository not found at {repo_path}")
+        return None
+
     try:
-        repo = gh.get_repo(repo_name)
-        repo.get_git_ref(f"tags/{tag_name}")
-        return True
-    except Exception:
-        return False
+        # Checkout main branch
+        subprocess.run(
+            ["git", "checkout", "main"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Pull latest updates
+        subprocess.run(
+            ["git", "pull"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+        )
+
+        # Get tags containing the commit
+        result = subprocess.run(
+            ["git", "tag", "--contains", commit_sha],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        tags = result.stdout.strip().split("\n")
+        # Filter for cloud-X.Y.Z tags
+        cloud_tags = [t for t in tags if t and CLOUD_SEMVER_PATTERN.match(t)]
+
+        if cloud_tags:
+            # Sort by version number (descending) and return the latest
+            cloud_tags.sort(
+                key=lambda v: list(map(int, CLOUD_SEMVER_PATTERN.match(v).group(1).split("."))),
+                reverse=True,
+            )
+            return cloud_tags[0]
+
+        return None
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed: {e}")
+        return None
+    except Exception as e:
+        print(f"Error getting tags containing commit: {e}")
+        return None
 
 
 def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> DeployConfig | None:
