@@ -711,6 +711,79 @@ warmRuntimes:
 
         assert temp_runtime_api_values_file.read_text() == original_content
 
+    def test_returns_true_when_changes_made(self, temp_runtime_api_values_file):
+        """Test that function returns True when changes are made."""
+        result = update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
+            openhands_version="cloud-1.1.0",
+        )
+
+        assert result is True
+
+    def test_returns_false_when_no_changes(self, temp_runtime_api_values_file):
+        """Test that function returns False when no changes are needed."""
+        # First update
+        update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
+            openhands_version="cloud-1.1.0",
+        )
+
+        # Second update with same values
+        result = update_runtime_api_values(
+            temp_runtime_api_values_file,
+            runtime_api_sha="abc1234567890def",
+            openhands_version="cloud-1.1.0",
+        )
+
+        assert result is False
+
+
+class TestUpdateRuntimeApiChartConditional:
+    """Tests for conditional runtime-api chart version update."""
+
+    @pytest.fixture
+    def sample_runtime_api_chart_yaml(self):
+        """Create a sample runtime-api Chart.yaml content."""
+        return """\
+apiVersion: v2
+appVersion: 0.1.0
+version: 0.2.6
+name: runtime-api
+"""
+
+    @pytest.fixture
+    def temp_runtime_api_chart_file(self, sample_runtime_api_chart_yaml):
+        """Create a temporary runtime-api Chart.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_runtime_api_chart_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file, capsys):
+        """Test that chart version is not bumped when has_changes is False."""
+        from update_openhands_charts import update_runtime_api_chart
+
+        result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
+
+        assert result == "0.2.6"  # Version unchanged
+        captured = capsys.readouterr()
+        assert "runtime-api chart version unchanged" in captured.out
+
+    def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file, capsys):
+        """Test that chart version is bumped when has_changes is True."""
+        from update_openhands_charts import update_runtime_api_chart
+
+        result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
+
+        assert result == "0.2.7"  # Version bumped
+        captured = capsys.readouterr()
+        assert "Updated runtime-api chart version: 0.2.6 -> 0.2.7" in captured.out
+
 
 class TestGetLatestCloudTag:
     """Tests for get_latest_cloud_tag function."""

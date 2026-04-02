@@ -240,16 +240,24 @@ def update_openhands_values(
 
 def update_runtime_api_chart(
     chart_path: Path,
+    has_changes: bool = True,
     dry_run: bool = False,
 ) -> str:
-    """Bump the patch version of the runtime-api chart and return the new version."""
+    """Bump the patch version of the runtime-api chart and return the new/current version.
+
+    Only bumps the version if has_changes is True.
+    """
     yaml = YAML()
     yaml.preserve_quotes = True
     yaml.indent(mapping=2, sequence=4, offset=2)
 
     chart_data = yaml.load(chart_path)
-
     old_version = chart_data.get("version")
+
+    if not has_changes:
+        print(f"runtime-api chart version unchanged: {old_version} (no value changes)")
+        return old_version
+
     new_version = bump_patch_version(old_version)
     chart_data["version"] = new_version
     print(f"Updated runtime-api chart version: {old_version} -> {new_version}")
@@ -265,9 +273,13 @@ def update_runtime_api_values(
     runtime_api_sha: str,
     openhands_version: str,
     dry_run: bool = False,
-) -> None:
-    """Update image tag and warmRuntimes default config image in runtime-api values.yaml."""
+) -> bool:
+    """Update image tag and warmRuntimes default config image in runtime-api values.yaml.
+
+    Returns True if any changes were made, False otherwise.
+    """
     content = values_path.read_text()
+    has_changes = False
 
     # Update image.tag with sha-SHORT_SHA format
     new_image_tag = format_sha_tag(runtime_api_sha)
@@ -281,6 +293,7 @@ def update_runtime_api_values(
         else:
             content = re.sub(image_tag_pattern, rf'\g<1>{new_image_tag}', content)
             print(f"Updated runtime-api image tag: {old_tag} -> {new_image_tag}")
+            has_changes = True
     else:
         print("Could not find runtime-api image tag in values.yaml")
 
@@ -296,11 +309,14 @@ def update_runtime_api_values(
         else:
             content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
             print(f"Updated runtime-api warmRuntimes image tag: {old_tag} -> {warm_runtime_new_tag}")
+            has_changes = True
     else:
         print("Could not find warmRuntimes image tag in runtime-api values.yaml")
 
     if not dry_run:
         values_path.write_text(content)
+
+    return has_changes
 
 
 def parse_args() -> argparse.Namespace:
@@ -394,21 +410,25 @@ def main(dry_run: bool = False, cloud_tag: str | None = None, test: bool = False
     print(f"Deploy config (from {deploy_tag}):")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
 
-    # Update runtime-api chart first to get the new version
+    # Update runtime-api values first to check if there are changes
     print()
     print("=" * 60)
     print("Updating runtime-api chart...")
     print("=" * 60)
 
-    print("Updating runtime-api Chart.yaml...")
-    runtime_api_version = update_runtime_api_chart(RUNTIME_API_CHART_PATH, dry_run=dry_run)
-
-    print()
     print("Updating runtime-api values.yaml...")
-    update_runtime_api_values(
+    runtime_api_has_changes = update_runtime_api_values(
         RUNTIME_API_VALUES_PATH,
         deploy_config.runtime_api_sha,
         openhands_version,
+        dry_run=dry_run,
+    )
+
+    print()
+    print("Updating runtime-api Chart.yaml...")
+    runtime_api_version = update_runtime_api_chart(
+        RUNTIME_API_CHART_PATH,
+        has_changes=runtime_api_has_changes,
         dry_run=dry_run,
     )
 
