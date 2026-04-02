@@ -262,7 +262,7 @@ allowedUsers: null
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-oldsha1
+  tag: cloud-1.18.0
 
 runtime:
   image:
@@ -293,22 +293,20 @@ runtime-api:
             yield Path(f.name)
         Path(f.name).unlink(missing_ok=True)
 
-    def test_update_enterprise_server_tag(self, temp_values_file):
-        """Test that enterprise-server image tag is updated correctly."""
+    def test_update_enterprise_server_tag_uses_cloud_version(self, temp_values_file):
+        """Test that enterprise-server image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
         content = temp_values_file.read_text()
-        assert "tag: sha-newsha1" in content
+        assert "tag: cloud-1.20.0" in content
 
     def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
         """Test that runtime image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
@@ -319,7 +317,6 @@ runtime-api:
         """Test that warmRuntimes image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
@@ -331,14 +328,12 @@ runtime-api:
         # First update to set the values
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.18.0",
         )
 
         # Second update with same values
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.18.0",
         )
 
@@ -347,23 +342,10 @@ runtime-api:
         assert "runtime image tag unchanged" in captured.out
         assert "warmRuntimes image tag unchanged" in captured.out
 
-    def test_short_sha_format(self, temp_values_file):
-        """Test that SHA is correctly shortened to 7 characters."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_sha="abcdefghijklmnop",  # 16 chars
-            openhands_version="cloud-1.20.0",
-        )
-
-        content = temp_values_file.read_text()
-        # enterprise-server should have sha-abcdefg (7 chars)
-        assert "tag: sha-abcdefg" in content
-
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
@@ -397,7 +379,7 @@ dependencies:
         return """\
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-oldsha1
+  tag: cloud-1.18.0
 
 runtime:
   image:
@@ -457,7 +439,6 @@ runtime-api:
 
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
             dry_run=True,
         )
@@ -468,7 +449,6 @@ runtime-api:
         """Test that dry-run still prints what would be changed."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
             dry_run=True,
         )
@@ -492,7 +472,6 @@ runtime-api:
 
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
             dry_run=False,
         )

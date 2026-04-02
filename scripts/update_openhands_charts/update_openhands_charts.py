@@ -199,26 +199,23 @@ def update_openhands_chart(
 
 def update_openhands_values(
     values_path: Path,
-    openhands_sha: str,
     openhands_version: str,
     dry_run: bool = False,
 ) -> None:
-    """Update image tags in values.yaml."""
+    """Update image tags in values.yaml using cloud version format."""
     content = values_path.read_text()
 
-    # Update enterprise-server image tag
-    enterprise_new_tag = format_sha_tag(openhands_sha)
-
+    # Update enterprise-server image tag using cloud version format (e.g., cloud-1.19.0)
     enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
     enterprise_match = re.search(enterprise_pattern, content)
 
     if enterprise_match:
         old_tag = enterprise_match.group(2)
-        if old_tag == enterprise_new_tag:
+        if old_tag == openhands_version:
             print(f"enterprise-server image tag unchanged: {old_tag} (already latest)")
         else:
-            content = re.sub(enterprise_pattern, rf"\g<1>{enterprise_new_tag}", content)
-            print(f"Updated enterprise-server image tag: {old_tag} -> {enterprise_new_tag}")
+            content = re.sub(enterprise_pattern, rf"\g<1>{openhands_version}", content)
+            print(f"Updated enterprise-server image tag: {old_tag} -> {openhands_version}")
     else:
         print("Could not find enterprise-server image tag in values.yaml")
 
@@ -418,7 +415,6 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Updating openhands values.yaml...")
     update_openhands_values(
         VALUES_PATH,
-        deploy_config.openhands_sha,
         openhands_version,
         dry_run=dry_run,
     )
