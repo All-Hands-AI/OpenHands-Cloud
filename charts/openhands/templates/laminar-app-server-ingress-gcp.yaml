@@ -1,4 +1,5 @@
 {{/*
+  For exposing the Laminar app server API externally on GCP. For AWS configuration, see https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#https-with-acm-certificate.
   Ingress for laminar app-server API with TLS support via cert-manager.
   Used for trace ingestion from external services (e.g., runtime pods in other clusters).
 */}}

@@ -1,4 +1,5 @@
 {{/*
+  For exposing the Laminar frontend externally on GCP. For AWS configuration, see https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#https-with-acm-certificate.
   Ingress for laminar frontend service with TLS support via cert-manager.
 */}}
 {{- if and .Values.laminar.enabled (and (eq .Values.laminar.global.cloudProvider "gcp") .Values.laminar.frontend.ingress.hostname) }}
