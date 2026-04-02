@@ -372,24 +372,13 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="A cloud tag from OpenHands (e.g., cloud-1.19.0) to use instead of fetching the latest.",
     )
-    parser.add_argument(
-        "--test",
-        action="store_true",
-        help="Skip the 'already up to date' check and show what updates would be made.",
-    )
     return parser.parse_args()
 
 
-def main(dry_run: bool = False, cloud_tag: str | None = None, test: bool = False) -> None:
+def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     if dry_run:
         print("=" * 60)
         print("DRY RUN MODE - No changes will be made")
-        print("=" * 60)
-        print()
-
-    if test:
-        print("=" * 60)
-        print("TEST MODE - Skipping 'already up to date' check")
         print("=" * 60)
         print()
 
@@ -418,11 +407,11 @@ def main(dry_run: bool = False, cloud_tag: str | None = None, test: bool = False
             print("No cloud version tag found in OpenHands releases")
             return
 
-    # Check if openhands chart is already at the target version (unless --test is set)
+    # Check if openhands chart is already at the target version
     current_app_version = get_current_app_version(CHART_PATH)
     if current_app_version:
         print(f"Current openhands chart appVersion: {current_app_version}")
-        if current_app_version == openhands_version and not test:
+        if current_app_version == openhands_version:
             print()
             print("=" * 60)
             print("Charts are already up to date - no changes needed")
@@ -495,4 +484,4 @@ def main(dry_run: bool = False, cloud_tag: str | None = None, test: bool = False
 
 if __name__ == "__main__":
     args = parse_args()
-    main(dry_run=args.dry_run, cloud_tag=args.cloud_tag, test=args.test)
+    main(dry_run=args.dry_run, cloud_tag=args.cloud_tag)
