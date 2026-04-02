@@ -200,7 +200,7 @@ def update_openhands_chart(
 def update_openhands_values(
     values_path: Path,
     openhands_sha: str,
-    runtime_image_tag: str,
+    openhands_version: str,
     dry_run: bool = False,
 ) -> None:
     """Update image tags in values.yaml."""
@@ -222,31 +222,33 @@ def update_openhands_values(
     else:
         print("Could not find enterprise-server image tag in values.yaml")
 
-    # Update runtime image tag (under runtime.image.tag)
+    # Update runtime image tag using cloud version format (e.g., cloud-1.19.0-nikolaik)
+    runtime_new_tag = f"{openhands_version}-nikolaik"
     runtime_pattern = r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
     runtime_match = re.search(runtime_pattern, content)
 
     if runtime_match:
         old_tag = runtime_match.group(2)
-        if old_tag == runtime_image_tag:
+        if old_tag == runtime_new_tag:
             print(f"runtime image tag unchanged: {old_tag} (already latest)")
         else:
-            content = re.sub(runtime_pattern, rf"\g<1>{runtime_image_tag}", content)
-            print(f"Updated runtime image tag: {old_tag} -> {runtime_image_tag}")
+            content = re.sub(runtime_pattern, rf"\g<1>{runtime_new_tag}", content)
+            print(f"Updated runtime image tag: {old_tag} -> {runtime_new_tag}")
     else:
         print("Could not find runtime image tag in values.yaml")
 
-    # Update warmRuntimes image (contains full image path with tag)
+    # Update warmRuntimes image using cloud version format (e.g., cloud-1.19.0-nikolaik)
+    warm_runtime_new_tag = f"{openhands_version}-nikolaik"
     warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
     warm_runtime_match = re.search(warm_runtime_pattern, content)
 
     if warm_runtime_match:
         old_tag = warm_runtime_match.group(2)
-        if old_tag == runtime_image_tag:
+        if old_tag == warm_runtime_new_tag:
             print(f"warmRuntimes image tag unchanged: {old_tag} (already latest)")
         else:
-            content = re.sub(warm_runtime_pattern, rf'\g<1>{runtime_image_tag}"', content)
-            print(f"Updated warmRuntimes image tag: {old_tag} -> {runtime_image_tag}")
+            content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
+            print(f"Updated warmRuntimes image tag: {old_tag} -> {warm_runtime_new_tag}")
     else:
         print("Could not find warmRuntimes image tag in values.yaml")
 
@@ -279,7 +281,7 @@ def update_runtime_api_chart(
 def update_runtime_api_values(
     values_path: Path,
     runtime_api_sha: str,
-    runtime_image_tag: str,
+    openhands_version: str,
     dry_run: bool = False,
 ) -> None:
     """Update image tag and warmRuntimes default config image in runtime-api values.yaml."""
@@ -300,17 +302,18 @@ def update_runtime_api_values(
     else:
         print("Could not find runtime-api image tag in values.yaml")
 
-    # Update warmRuntimes image (contains full image path with tag)
+    # Update warmRuntimes image using cloud version format (e.g., cloud-1.19.0-nikolaik)
+    warm_runtime_new_tag = f"{openhands_version}-nikolaik"
     warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
     warm_runtime_match = re.search(warm_runtime_pattern, content)
 
     if warm_runtime_match:
         old_tag = warm_runtime_match.group(2)
-        if old_tag == runtime_image_tag:
+        if old_tag == warm_runtime_new_tag:
             print(f"runtime-api warmRuntimes image tag unchanged: {old_tag} (already latest)")
         else:
-            content = re.sub(warm_runtime_pattern, rf'\g<1>{runtime_image_tag}"', content)
-            print(f"Updated runtime-api warmRuntimes image tag: {old_tag} -> {runtime_image_tag}")
+            content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
+            print(f"Updated runtime-api warmRuntimes image tag: {old_tag} -> {warm_runtime_new_tag}")
     else:
         print("Could not find warmRuntimes image tag in runtime-api values.yaml")
 
@@ -398,7 +401,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     update_runtime_api_values(
         RUNTIME_API_VALUES_PATH,
         deploy_config.runtime_api_sha,
-        deploy_config.openhands_runtime_image_tag,
+        openhands_version,
         dry_run=dry_run,
     )
 
@@ -416,7 +419,7 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     update_openhands_values(
         VALUES_PATH,
         deploy_config.openhands_sha,
-        deploy_config.openhands_runtime_image_tag,
+        openhands_version,
         dry_run=dry_run,
     )
 

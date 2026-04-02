@@ -267,7 +267,7 @@ image:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: oldsha1234567890-nikolaik
+    tag: cloud-1.18.0-nikolaik
   runAsRoot: true
 
 runtime-api:
@@ -278,7 +278,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:oldsha1234567890-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.18.0-nikolaik"
         working_dir: "/openhands/code/"
 """
 
@@ -298,33 +298,33 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_values_file.read_text()
         assert "tag: sha-newsha1" in content
 
-    def test_update_runtime_tag(self, temp_values_file):
-        """Test that runtime image tag is updated correctly."""
+    def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
+        """Test that runtime image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_values_file.read_text()
-        assert "tag: newruntime123-nikolaik" in content
+        assert "tag: cloud-1.20.0-nikolaik" in content
 
-    def test_update_warm_runtimes_tag(self, temp_values_file):
-        """Test that warmRuntimes image tag is updated correctly."""
+    def test_update_warm_runtimes_tag_uses_cloud_version(self, temp_values_file):
+        """Test that warmRuntimes image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_values_file.read_text()
-        assert 'image: "ghcr.io/openhands/runtime:newruntime123-nikolaik"' in content
+        assert 'image: "ghcr.io/openhands/runtime:cloud-1.20.0-nikolaik"' in content
 
     def test_unchanged_when_same_values(self, temp_values_file, capsys):
         """Test messages when values are already up to date."""
@@ -332,14 +332,14 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.18.0",
         )
 
         # Second update with same values
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.18.0",
         )
 
         captured = capsys.readouterr()
@@ -352,7 +352,7 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="abcdefghijklmnop",  # 16 chars
-            runtime_image_tag="full-tag-unchanged",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_values_file.read_text()
@@ -364,7 +364,7 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_values_file.read_text()
@@ -402,14 +402,14 @@ image:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: oldsha1234567890-nikolaik
+    tag: cloud-1.18.0-nikolaik
 
 runtime-api:
   enabled: true
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:oldsha1234567890-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.18.0-nikolaik"
 """
 
     @pytest.fixture
@@ -458,7 +458,7 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
             dry_run=True,
         )
 
@@ -469,7 +469,7 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
             dry_run=True,
         )
 
@@ -493,7 +493,7 @@ runtime-api:
         update_openhands_values(
             temp_values_file,
             openhands_sha="newsha1234567890",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
             dry_run=False,
         )
 
@@ -587,7 +587,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
+      image: "ghcr.io/openhands/runtime:cloud-1.18.0-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
 """
@@ -608,22 +608,23 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
         assert "tag: sha-abc1234" in content
 
-    def test_update_warm_runtimes_image(self, temp_runtime_api_values_file):
-        """Test that warmRuntimes image tag is updated correctly."""
+    def test_update_warm_runtimes_image_uses_cloud_version(self, temp_runtime_api_values_file):
+        """Test that warmRuntimes image tag uses cloud version format, not full SHA."""
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
-        assert 'image: "ghcr.io/openhands/runtime:9d0a19cf8f9b45af4d42eb0534cfb9fab18342f2-nikolaik"' in content
+        # Should use cloud version format for warmRuntimes
+        assert 'image: "ghcr.io/openhands/runtime:cloud-1.20.0-nikolaik"' in content
 
     def test_unchanged_when_same_value(self, temp_runtime_api_values_file, capsys):
         """Test message when value is already up to date."""
@@ -631,14 +632,14 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.19.0",
         )
 
         # Second update with same value
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.19.0",
         )
 
         captured = capsys.readouterr()
@@ -650,7 +651,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
@@ -664,7 +665,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="newruntime123-nikolaik",
+            openhands_version="cloud-1.20.0",
             dry_run=True,
         )
 
