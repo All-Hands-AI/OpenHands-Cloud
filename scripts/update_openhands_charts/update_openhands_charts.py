@@ -236,8 +236,14 @@ def update_openhands_chart(
     new_runtime_api_version: str | None,
     has_changes: bool = True,
     dry_run: bool = False,
-) -> UpdateResult:
+) -> None:
     """Update appVersion, bump patch version, and update runtime-api dependency.
+
+    Only updates appVersion and bumps version if has_changes is True.
+    """
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.indent(mapping=2, sequence=4, offset=2)
 
     Only updates appVersion and bumps version if has_changes is True.
     """
@@ -254,6 +260,30 @@ def update_openhands_chart(
         if not dry_run and result.has_changes:
             yaml.dump(chart_data, chart_path)
         return result
+
+    if not has_changes:
+        old_version = chart_data.get("version")
+        old_app_version = chart_data.get("appVersion")
+        print(f"openhands chart version unchanged: {old_version} (no value changes)")
+        print(f"appVersion unchanged: {old_app_version} (no value changes)")
+        # Still update runtime-api dependency if needed
+        if new_runtime_api_version:
+            for dep in chart_data.get("dependencies", []):
+                if dep.get("name") == "runtime-api":
+                    old_runtime_version = dep.get("version")
+                    if old_runtime_version == new_runtime_api_version:
+                        print(
+                            f"runtime-api version unchanged: {old_runtime_version} (already latest)"
+                        )
+                    else:
+                        dep["version"] = new_runtime_api_version
+                        print(
+                            f"Updated runtime-api version: {old_runtime_version} -> {new_runtime_api_version}"
+                        )
+                    break
+        if not dry_run:
+            yaml.dump(chart_data, chart_path)
+        return
 
     old_app_version = chart_data.get("appVersion")
     if old_app_version == new_app_version:
@@ -280,9 +310,13 @@ def update_openhands_values(
     values_path: Path,
     openhands_version: str,
     dry_run: bool = False,
-) -> None:
-    """Update image tags in values.yaml using cloud version format."""
+) -> bool:
+    """Update image tags in values.yaml using cloud version format.
+
+    Returns True if any changes were made, False otherwise.
+    """
     content = values_path.read_text()
+    has_changes = False
 
     # Update enterprise-server image tag using cloud version format (e.g., cloud-1.19.0)
     enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
@@ -295,6 +329,7 @@ def update_openhands_values(
         else:
             content = re.sub(enterprise_pattern, rf"\g<1>{openhands_version}", content)
             print(f"Updated enterprise-server image tag: {old_tag} -> {openhands_version}")
+            has_changes = True
     else:
         print("Could not find enterprise-server image tag in values.yaml")
 
@@ -310,6 +345,7 @@ def update_openhands_values(
         else:
             content = re.sub(runtime_pattern, rf"\g<1>{runtime_new_tag}", content)
             print(f"Updated runtime image tag: {old_tag} -> {runtime_new_tag}")
+            has_changes = True
     else:
         print("Could not find runtime image tag in values.yaml")
 
@@ -325,13 +361,14 @@ def update_openhands_values(
         else:
             content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
             print(f"Updated warmRuntimes image tag: {old_tag} -> {warm_runtime_new_tag}")
+            has_changes = True
     else:
         print("Could not find warmRuntimes image tag in values.yaml")
 
     if not dry_run:
         values_path.write_text(content)
 
-    return result
+    return has_changes
 
 
 def update_runtime_api_chart(
@@ -552,20 +589,26 @@ def main(dry_run: bool = False, cloud_tag: str | None = None, test: bool = False
         dry_run=dry_run,
     )
 
-    # Update openhands chart using the bumped runtime-api version
+    # Update openhands values first to check if there are changes
     print()
     print("=" * 60)
     print("Updating openhands chart...")
     print("=" * 60)
 
-    print("Updating openhands Chart.yaml...")
-    update_openhands_chart(CHART_PATH, openhands_version, runtime_api_version, dry_run=dry_run)
-
-    print()
     print("Updating openhands values.yaml...")
-    update_openhands_values(
+    openhands_has_changes = update_openhands_values(
         VALUES_PATH,
         openhands_version,
+        dry_run=dry_run,
+    )
+
+    print()
+    print("Updating openhands Chart.yaml...")
+    update_openhands_chart(
+        CHART_PATH,
+        openhands_version,
+        runtime_api_version,
+        has_changes=openhands_has_changes,
         dry_run=dry_run,
     )
 

@@ -625,8 +625,93 @@ runtime-api:
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
+
+        assert result is True
+
+    def test_returns_false_when_no_changes(self, temp_values_file):
+        """Test that function returns False when no changes are needed."""
+        # First update
+        update_openhands_values(
+            temp_values_file,
+            openhands_version="cloud-1.1.0",
+        )
+
+        # Second update with same values
+        result = update_openhands_values(
+            temp_values_file,
+            openhands_version="cloud-1.1.0",
+        )
+
+        assert result is False
+
+
+class TestUpdateOpenhandsChartConditional:
+    """Tests for conditional openhands chart version update."""
+
+    @pytest.fixture
+    def sample_chart_yaml(self):
+        """Create a sample openhands Chart.yaml content."""
+        return """\
+apiVersion: v2
+appVersion: cloud-1.0.0
+version: 0.3.11
+name: openhands
+dependencies:
+  - name: runtime-api
+    version: 0.2.6
+"""
+
+    @pytest.fixture
+    def temp_chart_file(self, sample_chart_yaml):
+        """Create a temporary openhands Chart.yaml file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            f.write(sample_chart_yaml)
+            f.flush()
+            yield Path(f.name)
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_no_version_bump_when_no_changes(self, temp_chart_file, capsys):
+        """Test that chart version is not bumped when has_changes is False."""
+        from update_openhands_charts import update_openhands_chart
+
+        update_openhands_chart(
+            temp_chart_file,
+            new_app_version="cloud-1.0.0",
+            new_runtime_api_version="0.2.6",
+            has_changes=False,
+        )
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        assert chart_data["version"] == "0.3.11"  # Unchanged
+        assert chart_data["appVersion"] == "cloud-1.0.0"  # Unchanged
+
+        captured = capsys.readouterr()
+        assert "openhands chart version unchanged" in captured.out
+
+    def test_version_bump_when_has_changes(self, temp_chart_file, capsys):
+        """Test that chart version is bumped when has_changes is True."""
+        from update_openhands_charts import update_openhands_chart
+
+        update_openhands_chart(
+            temp_chart_file,
+            new_app_version="cloud-1.1.0",
+            new_runtime_api_version="0.2.7",
+            has_changes=True,
+        )
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        assert chart_data["version"] == "0.3.12"  # Bumped
+        assert chart_data["appVersion"] == "cloud-1.1.0"  # Updated
+
+        captured = capsys.readouterr()
+        assert "Updated appVersion: cloud-1.0.0 -> cloud-1.1.0" in captured.out
+        assert "Updated version: 0.3.11 -> 0.3.12" in captured.out
+
 
         assert result.has_changes is True
 
