@@ -1269,7 +1269,7 @@ class TestMainOutputMessages:
         main(dry_run=True)
 
         captured = capsys.readouterr()
-        assert "Latest openhands cloud tag: cloud-1.20.0" in captured.out
+        assert "OpenHands cloud tag: cloud-1.20.0" in captured.out
 
 
 class TestGetLatestCloudTag:
