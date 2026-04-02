@@ -877,6 +877,35 @@ name: runtime-api
         assert "Updated runtime-api chart version: 0.2.6 -> 0.2.7" in captured.out
 
 
+class TestMainOutputMessages:
+    """Tests for main() output message formatting."""
+
+    def test_latest_cloud_tag_message_format(self, capsys, monkeypatch):
+        """Test that the latest cloud tag message uses correct format."""
+        from update_openhands_charts import main
+
+        # Mock get_latest_cloud_tag to return a known value
+        monkeypatch.setattr(
+            "update_openhands_charts.get_latest_cloud_tag",
+            lambda token, repo: "cloud-1.20.0"
+        )
+        # Mock cloud_tag_exists
+        monkeypatch.setattr(
+            "update_openhands_charts.cloud_tag_exists",
+            lambda token, repo, tag: True
+        )
+        # Mock get_current_app_version to return matching version (early exit)
+        monkeypatch.setattr(
+            "update_openhands_charts.get_current_app_version",
+            lambda path: "cloud-1.20.0"
+        )
+
+        main(dry_run=True)
+
+        captured = capsys.readouterr()
+        assert "Latest openhands cloud tag: cloud-1.20.0" in captured.out
+
+
 class TestGetLatestCloudTag:
     """Tests for get_latest_cloud_tag function."""
 
