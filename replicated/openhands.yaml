@@ -65,7 +65,7 @@ spec:
           memory: 512Mi
           ephemeral-storage: 50Mi
         limits:
-          cpu: 750m
+          cpu: "2"
           memory: 2Gi
           ephemeral-storage: 2Gi
       ingress:
@@ -92,6 +92,8 @@ spec:
       keycloakConfigCli:
         image:
           repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak-config-cli'
+      waitForDb:
+        image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
 
     litellm:
       enabled: true
@@ -390,6 +392,8 @@ spec:
           keycloakConfigCli:
             image:
               repository: '{{repl LocalRegistryNamespace }}/keycloak-config-cli'
+          waitForDb:
+            image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
