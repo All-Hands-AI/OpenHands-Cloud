@@ -10,7 +10,6 @@ import base64
 import io
 import os
 import re
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,7 +26,6 @@ CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
 RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
-OPENHANDS_REPO_PATH = REPO_ROOT.parent / "OpenHands"
 
 
 def get_short_sha(sha: str) -> str:
@@ -44,14 +42,11 @@ def format_sha_tag(sha: str) -> str:
 class DeployConfig:
     """Configuration values from the deploy workflow."""
 
-    openhands_sha: str
-    openhands_runtime_image_tag: str
     runtime_api_sha: str
 
 
 def get_latest_semver_tag(token: str, repo_name: str) -> str | None:
     """Fetch the latest semantic version tag (x.y.z) from a GitHub repository."""
-    # TODO: use github package or use api but not both in the script
     gh = Github(auth=Auth.Token(token))
     try:
         repo = gh.get_repo(repo_name)
@@ -64,64 +59,18 @@ def get_latest_semver_tag(token: str, repo_name: str) -> str | None:
     return None
 
 
-def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | None:
-    """Get the latest cloud version tag containing a specific commit from a local git repo.
-
-    This function:
-    1. Checks out main branch
-    2. Runs git pull to fetch the latest updates
-    3. Runs git tag --contains <commit_sha> to get all tags containing the commit
-    4. Filters for cloud-X.Y.Z tags and returns the latest one
-    """
-    if not repo_path.exists():
-        print(f"Repository not found at {repo_path}")
-        return None
-
+def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
+    """Fetch the latest cloud-X.Y.Z tag from a GitHub repository."""
+    gh = Github(auth=Auth.Token(token))
     try:
-        # Checkout main branch
-        subprocess.run(
-            ["git", "checkout", "main"],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-        )
-
-        # Pull latest updates
-        subprocess.run(
-            ["git", "pull"],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-        )
-
-        # Get tags containing the commit
-        result = subprocess.run(
-            ["git", "tag", "--contains", commit_sha],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        tags = result.stdout.strip().split("\n")
-        # Filter for cloud-X.Y.Z tags
-        cloud_tags = [t for t in tags if t and CLOUD_SEMVER_PATTERN.match(t)]
-
-        if cloud_tags:
-            # Sort by version number (descending) and return the latest
-            cloud_tags.sort(
-                key=lambda v: list(map(int, CLOUD_SEMVER_PATTERN.match(v).group(1).split("."))),
-                reverse=True,
-            )
-            return cloud_tags[0]
-
-        return None
-    except subprocess.CalledProcessError as e:
-        print(f"Git command failed: {e}")
-        return None
+        repo = gh.get_repo(repo_name)
+        tags = repo.get_tags()
+        for tag in tags:
+            if CLOUD_SEMVER_PATTERN.match(tag.name):
+                return tag.name
     except Exception as e:
-        print(f"Error getting tags containing commit: {e}")
-        return None
+        print(f"Error fetching tags from {repo_name}: {e}")
+    return None
 
 
 def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> DeployConfig | None:
@@ -141,8 +90,6 @@ def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> Dep
 
         env = workflow.get("env", {})
         return DeployConfig(
-            openhands_sha=env.get("OPENHANDS_SHA", ""),
-            openhands_runtime_image_tag=env.get("OPENHANDS_RUNTIME_IMAGE_TAG", ""),
             runtime_api_sha=env.get("RUNTIME_API_SHA", ""),
         )
     except Exception as e:
@@ -370,18 +317,14 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
         return
 
     print(f"Deploy config (from {deploy_tag}):")
-    print(f"  OPENHANDS_SHA: {deploy_config.openhands_sha}")
-    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
 
-    # Get the semver tag containing the OPENHANDS_SHA from local OpenHands repo
-    openhands_version = get_semver_tag_containing_commit(
-        OPENHANDS_REPO_PATH, deploy_config.openhands_sha
-    )
+    # Get the latest cloud tag from OpenHands releases
+    openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
     if openhands_version:
-        print(f"OpenHands version (latest tag containing OPENHANDS_SHA): {openhands_version}")
+        print(f"Latest OpenHands cloud version: {openhands_version}")
     else:
-        print(f"No semantic version tag found containing commit {deploy_config.openhands_sha[:7]}")
+        print("No cloud version tag found in OpenHands releases")
         return
 
     # Update runtime-api chart first to get the new version
