@@ -402,7 +402,7 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     else:
         openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
         if openhands_version:
-            print(f"Latest openhands cloud tag: {openhands_version}")
+            print(f"OpenHands cloud tag: {openhands_version}")
         else:
             print("No cloud tag found in OpenHands releases")
             return

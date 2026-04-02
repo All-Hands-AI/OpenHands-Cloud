@@ -903,7 +903,7 @@ class TestMainOutputMessages:
         main(dry_run=True)
 
         captured = capsys.readouterr()
-        assert "Latest openhands cloud tag: cloud-1.20.0" in captured.out
+        assert "OpenHands cloud tag: cloud-1.20.0" in captured.out
 
     def test_current_app_version_message_format(self, capsys, monkeypatch):
         """Test that the current appVersion message uses correct format."""
