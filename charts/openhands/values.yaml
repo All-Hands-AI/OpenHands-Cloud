@@ -113,7 +113,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.19.0
+  tag: sha-1bbf699
 
 ingress:
   enabled: false
@@ -366,6 +366,29 @@ keycloak:
             secretKeyRef:
               name: postgres-password
               key: password
+
+laminar:
+  # Enable this if you want to use laminar
+  enabled: false
+  frontend:
+    ingress:
+      # Hostname for the frontend ingress
+      # When set, creates an Ingress with TLS via cert-manager
+      hostname: ""
+      # Ingress class name (defaults to "traefik")
+      className: ""
+      # Additional annotations for the ingress
+      annotations: {}
+  appServer:
+    ingress:
+      # Hostname for the app-server API ingress
+      # When set, creates an Ingress with TLS via cert-manager
+      # Used for trace ingestion from external services (e.g., runtime pods)
+      hostname: ""
+      # Ingress class name (defaults to "traefik")
+      className: ""
+      # Additional annotations for the ingress
+      annotations: {}
 
 langfuse:
   # Enable this if you want to use langfuse for tracing

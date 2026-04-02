@@ -2,7 +2,7 @@ apiVersion: v2
 description: OpenHands is an AI-driven autonomous software engineer
 name: openhands
 appVersion: cloud-1.19.0
-version: 0.3.11
+version: 0.3.12
 maintainers:
   - name: rbren
   - name: xingyao
@@ -16,6 +16,10 @@ dependencies:
     version: 24.7.5
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: keycloak.enabled
+  - name: laminar
+    repository: https://lmnr-ai.github.io/lmnr-helm
+    version: 0.1.7
+    condition: laminar.enabled
   - name: langfuse
     repository: https://langfuse.github.io/langfuse-k8s
     version: 1.2.13
