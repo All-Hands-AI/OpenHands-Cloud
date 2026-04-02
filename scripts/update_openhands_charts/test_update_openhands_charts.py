@@ -756,5 +756,48 @@ class TestGetLatestCloudTag:
         assert "following" not in captured.out.lower()
 
 
+class TestParseArgs:
+    """Tests for parse_args function."""
+
+    def test_cloud_tag_argument_exists(self):
+        """Test that --cloud-tag argument is accepted."""
+        from update_openhands_charts import parse_args
+        import sys
+
+        original_argv = sys.argv
+        try:
+            sys.argv = ["script", "--cloud-tag", "cloud-1.2.0"]
+            args = parse_args()
+            assert args.cloud_tag == "cloud-1.2.0"
+        finally:
+            sys.argv = original_argv
+
+    def test_cloud_tag_default_is_none(self):
+        """Test that --cloud-tag defaults to None."""
+        from update_openhands_charts import parse_args
+        import sys
+
+        original_argv = sys.argv
+        try:
+            sys.argv = ["script"]
+            args = parse_args()
+            assert args.cloud_tag is None
+        finally:
+            sys.argv = original_argv
+
+    def test_dry_run_argument(self):
+        """Test that --dry-run argument works."""
+        from update_openhands_charts import parse_args
+        import sys
+
+        original_argv = sys.argv
+        try:
+            sys.argv = ["script", "--dry-run"]
+            args = parse_args()
+            assert args.dry_run is True
+        finally:
+            sys.argv = original_argv
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

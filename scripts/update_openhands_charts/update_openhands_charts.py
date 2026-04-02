@@ -303,15 +303,15 @@ def parse_args() -> argparse.Namespace:
         help="Show what would be updated without making changes.",
     )
     parser.add_argument(
-        "--deploy-tag",
+        "--cloud-tag",
         type=str,
         default=None,
-        help="A tag of deploy repo to use instead of fetching the latest semantic version.",
+        help="A cloud tag from OpenHands (e.g., cloud-1.19.0) to use instead of fetching the latest.",
     )
     return parser.parse_args()
 
 
-def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
+def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     if dry_run:
         print("=" * 60)
         print("DRY RUN MODE - No changes will be made")
@@ -327,15 +327,19 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
     print("Fetching latest versions...")
     print("=" * 60)
 
-    # Get the latest cloud tag from OpenHands releases (e.g., cloud-1.19.0)
-    openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
-    if openhands_version:
-        print(f"Latest OpenHands cloud version: {openhands_version}")
+    # Use provided cloud tag or fetch the latest from OpenHands releases
+    if cloud_tag:
+        openhands_version = cloud_tag
+        print(f"Using specified cloud tag: {openhands_version}")
     else:
-        print("No cloud version tag found in OpenHands releases")
-        return
+        openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
+        if openhands_version:
+            print(f"Latest OpenHands cloud version: {openhands_version}")
+        else:
+            print("No cloud version tag found in OpenHands releases")
+            return
 
-    # Check if openhands chart is already at the latest version
+    # Check if openhands chart is already at the target version
     current_app_version = get_current_app_version(CHART_PATH)
     if current_app_version:
         print(f"Current openhands chart appVersion: {current_app_version}")
@@ -352,12 +356,8 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
         print(f"Could not extract version from cloud tag: {openhands_version}")
         return
 
-    # Use provided deploy_tag or derive from cloud version
-    if deploy_tag:
-        print(f"Using specified deploy tag: {deploy_tag}")
-    else:
-        deploy_tag = version_number
-        print(f"Using deploy tag from cloud version: {deploy_tag}")
+    deploy_tag = version_number
+    print(f"Using deploy tag: {deploy_tag}")
 
     # Fetch deploy config from the corresponding deploy repo tag
     deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
@@ -406,4 +406,4 @@ def main(dry_run: bool = False, deploy_tag: str | None = None) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    main(dry_run=args.dry_run, deploy_tag=args.deploy_tag)
+    main(dry_run=args.dry_run, cloud_tag=args.cloud_tag)
