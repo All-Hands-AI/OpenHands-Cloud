@@ -402,7 +402,7 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     else:
         openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
         if openhands_version:
-            print(f"OpenHands cloud tag: {openhands_version}")
+            print(f"Latest openhands cloud tag: {openhands_version}")
         else:
             print("No cloud tag found in OpenHands releases")
             return
@@ -410,7 +410,7 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     # Check if openhands chart is already at the target version
     current_app_version = get_current_app_version(CHART_PATH)
     if current_app_version:
-        print(f"Current openhands chart appVersion: {current_app_version}")
+        print(f"OpenHands-Cloud openhands chart appVersion: {current_app_version}")
         if current_app_version == openhands_version:
             print()
             print("=" * 60)
