@@ -136,11 +136,11 @@ class TestCloudSemverPattern:
         assert CLOUD_SEMVER_PATTERN.match("cloud-1.2.3")
         assert CLOUD_SEMVER_PATTERN.match("cloud-0.0.0")
         assert CLOUD_SEMVER_PATTERN.match("cloud-10.20.30")
-        assert CLOUD_SEMVER_PATTERN.match("cloud-1.19.0")
+        assert CLOUD_SEMVER_PATTERN.match("cloud-1.1.0")
 
     def test_extracts_version_group(self):
-        match = CLOUD_SEMVER_PATTERN.match("cloud-1.19.0")
-        assert match.group(1) == "1.19.0"
+        match = CLOUD_SEMVER_PATTERN.match("cloud-1.1.0")
+        assert match.group(1) == "1.1.0"
 
     def test_invalid_cloud_semver(self):
         assert not CLOUD_SEMVER_PATTERN.match("1.2.3")
@@ -159,7 +159,7 @@ class TestExtractVersionFromCloudTag:
         """Test that version is extracted from cloud-X.Y.Z format."""
         from update_openhands_charts import extract_version_from_cloud_tag
 
-        assert extract_version_from_cloud_tag("cloud-1.19.0") == "1.19.0"
+        assert extract_version_from_cloud_tag("cloud-1.1.0") == "1.1.0"
         assert extract_version_from_cloud_tag("cloud-2.0.0") == "2.0.0"
         assert extract_version_from_cloud_tag("cloud-10.20.30") == "10.20.30"
 
@@ -167,9 +167,9 @@ class TestExtractVersionFromCloudTag:
         """Test that None is returned for invalid formats."""
         from update_openhands_charts import extract_version_from_cloud_tag
 
-        assert extract_version_from_cloud_tag("1.19.0") is None
-        assert extract_version_from_cloud_tag("v1.19.0") is None
-        assert extract_version_from_cloud_tag("cloud-1.19") is None
+        assert extract_version_from_cloud_tag("1.1.0") is None
+        assert extract_version_from_cloud_tag("v1.1.0") is None
+        assert extract_version_from_cloud_tag("cloud-1.1") is None
         assert extract_version_from_cloud_tag("") is None
 
 
@@ -251,7 +251,7 @@ class TestGetCurrentAppVersion:
         """Create a sample Chart.yaml content."""
         return """\
 apiVersion: v2
-appVersion: cloud-1.19.0
+appVersion: cloud-1.1.0
 version: 0.3.11
 name: openhands
 """
@@ -272,7 +272,7 @@ name: openhands
         from update_openhands_charts import get_current_app_version
 
         result = get_current_app_version(temp_chart_file)
-        assert result == "cloud-1.19.0"
+        assert result == "cloud-1.1.0"
 
     def test_returns_none_for_missing_file(self):
         """Test that function returns None for missing file."""
@@ -518,12 +518,12 @@ class TestDeployConfig:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.18.0
+  tag: cloud-1.0.0
 
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: cloud-1.18.0-nikolaik
+    tag: cloud-1.0.0-nikolaik
   runAsRoot: true
 
 runtime-api:
@@ -534,7 +534,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.18.0-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
         working_dir: "/openhands/code/"
 """
 
@@ -551,44 +551,44 @@ runtime-api:
         """Test that enterprise-server image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         content = temp_values_file.read_text()
-        assert "tag: cloud-1.19.0" in content
+        assert "tag: cloud-1.1.0" in content
 
     def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
         """Test that runtime image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         content = temp_values_file.read_text()
-        assert "tag: cloud-1.19.0-nikolaik" in content
+        assert "tag: cloud-1.1.0-nikolaik" in content
 
     def test_update_warm_runtimes_tag_uses_cloud_version(self, temp_values_file):
         """Test that warmRuntimes image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         content = temp_values_file.read_text()
-        assert 'image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"' in content
+        assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
 
     def test_unchanged_when_same_values(self, temp_values_file, capsys):
         """Test messages when values are already up to date."""
         # First update to set the values
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.18.0",
+            openhands_version="cloud-1.0.0",
         )
 
         # Second update with same values
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.18.0",
+            openhands_version="cloud-1.0.0",
         )
 
         This fail-safe design ensures CI/CD pipelines can continue even when
@@ -610,7 +610,7 @@ runtime-api:
         """Test that other content in values.yaml is preserved."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         assert_file_contains_all(temp_values_file, [
@@ -642,19 +642,19 @@ runtime-api:
         values_content = """\
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.18.0
+  tag: cloud-1.0.0
 
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: cloud-1.18.0-nikolaik
+    tag: cloud-1.0.0-nikolaik
 
 runtime-api:
   enabled: true
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.18.0-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
 """
         temp_file = make_temp_yaml_file(values_content)
 
@@ -884,7 +884,7 @@ class TestDryRun:
         # Act: run update with dry_run=True
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
             dry_run=True,
         )
 
@@ -896,7 +896,7 @@ class TestDryRun:
         # Act
         result = update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
             dry_run=True,
         )
 
@@ -924,7 +924,7 @@ class TestDryRun:
         # Act: run update with dry_run=False (default behavior)
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
             dry_run=False,
         )
 
@@ -993,7 +993,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.18.0-nikolaik"
+      image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
 """
@@ -1014,7 +1014,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         assert_file_contains(temp_runtime_api_values_file, "tag: sha-abc1234")
@@ -1024,12 +1024,12 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
         # Should use cloud version format for warmRuntimes
-        assert 'image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"' in content
+        assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
 
     def test_idempotent_when_reapplying_same_values(self, temp_runtime_api_values_file):
         """Test that reapplying identical values is idempotent.
@@ -1041,14 +1041,14 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         # Step 2: Reapply same values
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         # Verify: Boolean flag correctly indicates no changes
@@ -1063,7 +1063,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
         )
 
         assert_file_contains_all(temp_runtime_api_values_file, [
@@ -1078,7 +1078,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.19.0",
+            openhands_version="cloud-1.1.0",
             dry_run=True,
         )
 
