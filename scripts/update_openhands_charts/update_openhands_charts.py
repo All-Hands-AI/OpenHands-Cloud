@@ -376,56 +376,23 @@ def update_openhands_chart(
 
 def update_openhands_values(
     values_path: Path,
-    openhands_sha: str,
     openhands_version: str,
     dry_run: bool = False,
-) -> UpdateResult:
-    """Update image tags in values.yaml using cloud version format.
-
-    Args:
-        values_path: Path to the values.yaml file
-        openhands_version: The cloud version tag (e.g., 'cloud-1.21.0')
-        runtime_image_tag: The runtime image tag from deploy config (e.g., 'cloud-1.21.0-nikolaik')
-        dry_run: If True, don't write changes to file
-
-    Returns UpdateResult containing changes made.
-    """
+) -> None:
+    """Update image tags in values.yaml using cloud version format."""
     content = values_path.read_text()
-    result = UpdateResult()
 
-    content = update_tag_in_content(
-        content,
-        ENTERPRISE_SERVER_TAG_PATTERN,
-        openhands_version,
-        "enterprise-server image tag",
-        result,
-    )
-    content = update_tag_in_content(
-        content,
-        RUNTIME_TAG_PATTERN,
-        runtime_image_tag,
-        "runtime image tag",
-        result,
-    )
-    content = update_tag_in_content(
-        content,
-        WARM_RUNTIMES_TAG_PATTERN,
-        runtime_image_tag,
-        "warmRuntimes image tag",
-        result,
-        replacement_suffix='"',
-    )
-
+    # Update enterprise-server image tag using cloud version format (e.g., cloud-1.19.0)
     enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
     enterprise_match = re.search(enterprise_pattern, content)
 
     if enterprise_match:
         old_tag = enterprise_match.group(2)
-        if old_tag == enterprise_new_tag:
+        if old_tag == openhands_version:
             print(f"enterprise-server image tag unchanged: {old_tag} (already latest)")
         else:
-            content = re.sub(enterprise_pattern, rf"\g<1>{enterprise_new_tag}", content)
-            print(f"Updated enterprise-server image tag: {old_tag} -> {enterprise_new_tag}")
+            content = re.sub(enterprise_pattern, rf"\g<1>{openhands_version}", content)
+            print(f"Updated enterprise-server image tag: {old_tag} -> {openhands_version}")
     else:
         print("Could not find enterprise-server image tag in values.yaml")
 
@@ -778,7 +745,6 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     print("Updating openhands values.yaml...")
     update_openhands_values(
         VALUES_PATH,
-        deploy_config.openhands_sha,
         openhands_version,
         dry_run=dry_run,
     )

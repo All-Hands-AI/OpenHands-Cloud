@@ -404,6 +404,9 @@ class TestDeployConfig:
 # These verify the test infrastructure itself works correctly.
 # =============================================================================
 
+image:
+  repository: ghcr.io/openhands/enterprise-server
+  tag: cloud-1.18.0
 
 runtime:
   image:
@@ -432,21 +435,20 @@ runtime-api:
         mock_response.json.return_value = {"content": encoded_content}
         return mock_response
 
-    def test_update_enterprise_server_tag(self, temp_values_file):
-        """Test that enterprise-server image tag is updated correctly."""
+    def test_update_enterprise_server_tag_uses_cloud_version(self, temp_values_file):
+        """Test that enterprise-server image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
-        result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
+        content = temp_values_file.read_text()
+        assert "tag: cloud-1.20.0" in content
 
     def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
         """Test that runtime image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
@@ -457,7 +459,6 @@ runtime-api:
         """Test that warmRuntimes image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
@@ -469,14 +470,12 @@ runtime-api:
         # First update to set the values
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.18.0",
         )
 
         # Second update with same values
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.18.0",
         )
 
@@ -495,23 +494,10 @@ runtime-api:
         assert "runtime image tag unchanged" in captured.out
         assert "warmRuntimes image tag unchanged" in captured.out
 
-    def test_short_sha_format(self, temp_values_file):
-        """Test that SHA is correctly shortened to 7 characters."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_sha="abcdefghijklmnop",  # 16 chars
-            openhands_version="cloud-1.20.0",
-        )
-
-        content = temp_values_file.read_text()
-        # enterprise-server should have sha-abcdefg (7 chars)
-        assert "tag: sha-abcdefg" in content
-
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
         )
 
@@ -543,8 +529,8 @@ runtime-api:
         # YAML without enterprise-server image section - simulates misconfigured values.yaml
         values_content = """\
 image:
-  repository: ghcr.io/other/image
-  tag: v1.0.0
+  repository: ghcr.io/openhands/enterprise-server
+  tag: cloud-1.18.0
 
 runtime:
   image:
@@ -786,7 +772,6 @@ class TestDryRun:
         # Act: run update with dry_run=True
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
             dry_run=True,
         )
@@ -799,7 +784,6 @@ class TestDryRun:
         # Act
         result = update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
             dry_run=True,
         )
@@ -828,7 +812,6 @@ class TestDryRun:
         # Act: run update with dry_run=False (default behavior)
         update_openhands_values(
             temp_values_file,
-            openhands_sha="newsha1234567890",
             openhands_version="cloud-1.20.0",
             dry_run=False,
         )
