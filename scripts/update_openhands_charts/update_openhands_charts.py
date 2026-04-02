@@ -8,6 +8,7 @@
 import argparse
 import base64
 import io
+import logging
 import os
 import re
 from dataclasses import dataclass
@@ -16,6 +17,9 @@ from pathlib import Path
 import requests
 from github import Auth, Github
 from ruamel.yaml import YAML
+
+# Suppress PyGithub's redirect messages
+logging.getLogger("github").setLevel(logging.WARNING)
 
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")

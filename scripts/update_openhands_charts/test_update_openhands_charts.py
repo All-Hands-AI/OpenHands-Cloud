@@ -741,6 +741,20 @@ class TestGetLatestCloudTag:
 
         assert result is None
 
+    def test_no_redirect_message_in_output(self, capsys):
+        """Test that PyGithub redirect messages are suppressed."""
+        import os
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            pytest.skip("GITHUB_TOKEN not set")
+
+        from update_openhands_charts import get_latest_cloud_tag
+        get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
+
+        captured = capsys.readouterr()
+        assert "redirect" not in captured.out.lower()
+        assert "following" not in captured.out.lower()
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
