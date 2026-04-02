@@ -358,31 +358,31 @@ runtime-api:
         """Test that enterprise-server image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_values_file.read_text()
-        assert "tag: cloud-1.20.0" in content
+        assert "tag: cloud-1.19.0" in content
 
     def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
         """Test that runtime image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_values_file.read_text()
-        assert "tag: cloud-1.20.0-nikolaik" in content
+        assert "tag: cloud-1.19.0-nikolaik" in content
 
     def test_update_warm_runtimes_tag_uses_cloud_version(self, temp_values_file):
         """Test that warmRuntimes image tag uses cloud version format."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_values_file.read_text()
-        assert 'image: "ghcr.io/openhands/runtime:cloud-1.20.0-nikolaik"' in content
+        assert 'image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"' in content
 
     def test_unchanged_when_same_values(self, temp_values_file, capsys):
         """Test messages when values are already up to date."""
@@ -407,7 +407,7 @@ runtime-api:
         """Test that other content in values.yaml is preserved."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_values_file.read_text()
@@ -500,7 +500,7 @@ runtime-api:
 
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
             dry_run=True,
         )
 
@@ -510,7 +510,7 @@ runtime-api:
         """Test that dry-run still prints what would be changed."""
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
             dry_run=True,
         )
 
@@ -533,7 +533,7 @@ runtime-api:
 
         update_openhands_values(
             temp_values_file,
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
             dry_run=False,
         )
 
@@ -648,7 +648,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
@@ -659,12 +659,12 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
         # Should use cloud version format for warmRuntimes
-        assert 'image: "ghcr.io/openhands/runtime:cloud-1.20.0-nikolaik"' in content
+        assert 'image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"' in content
 
     def test_unchanged_when_same_value(self, temp_runtime_api_values_file, capsys):
         """Test message when value is already up to date."""
@@ -691,7 +691,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
         )
 
         content = temp_runtime_api_values_file.read_text()
@@ -705,7 +705,7 @@ warmRuntimes:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.20.0",
+            openhands_version="cloud-1.19.0",
             dry_run=True,
         )
 
