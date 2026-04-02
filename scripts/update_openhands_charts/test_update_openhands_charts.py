@@ -229,6 +229,13 @@ dependencies:
         captured = capsys.readouterr()
         assert "runtime-api version unchanged" in captured.out
 
+    def test_app_version_unchanged_when_same_version(self, temp_chart_file, capsys):
+        """Test that appVersion shows unchanged when same."""
+        update_openhands_chart(temp_chart_file, "1.0.0", "0.2.0")
+
+        captured = capsys.readouterr()
+        assert "appVersion unchanged: 1.0.0" in captured.out
+
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
         update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")

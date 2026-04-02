@@ -125,8 +125,11 @@ def update_openhands_chart(
     chart_data = yaml.load(chart_path)
 
     old_app_version = chart_data.get("appVersion")
-    chart_data["appVersion"] = new_app_version
-    print(f"Updated appVersion: {old_app_version} -> {new_app_version}")
+    if old_app_version == new_app_version:
+        print(f"appVersion unchanged: {old_app_version} (already latest)")
+    else:
+        chart_data["appVersion"] = new_app_version
+        print(f"Updated appVersion: {old_app_version} -> {new_app_version}")
 
     old_version = chart_data.get("version")
     new_version = bump_patch_version(old_version)
