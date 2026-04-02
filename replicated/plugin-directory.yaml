@@ -1,0 +1,13 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: plugin-directory
+spec:
+  chart:
+    name: plugin-directory
+  releaseName: plugin-directory
+  # Excluded by default - plugin-directory is not yet enabled for enterprise deployments
+  # To enable, this would need corresponding config.yaml entries and values template
+  exclude: true
+  weight: 25
+  forceConflicts: true

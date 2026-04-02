@@ -1,0 +1,10 @@
+{{- if and .Values.ingress.enabled (index .Values "plugin-directory").enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-plugins-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - /api/plugins
+{{- end }}
