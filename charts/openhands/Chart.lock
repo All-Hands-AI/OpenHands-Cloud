@@ -14,9 +14,9 @@ dependencies:
 - name: minio
   repository: https://charts.min.io/
   version: 5.0.10
-- name: postgresql
-  repository: https://charts.bitnami.com/bitnami
-  version: 15.5.38
+- name: cloudnative-pg
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.28.0
 - name: redis
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 20.3.0
@@ -25,6 +25,9 @@ dependencies:
   version: 1.9.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.24
-digest: sha256:bca3722cdd4840a4557955ea2b80e38991cc2d0a0211855a791cf98e37410e45
-generated: "2026-03-18T00:28:58.972983917-04:00"
+  version: 0.2.6
+- name: automation
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  version: 0.1.0
+digest: sha256:eb9f963e8be64415399224e17e745b7acc0f58f45eafda5777242fc4a711e5fe
+generated: "2026-04-02T13:30:28.147943-04:00"

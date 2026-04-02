@@ -14,24 +14,23 @@ spec:
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 720h
-    {{- if .Values.postgresql.enabled }}
-    # PostgreSQL logs (Bitnami chart)
+    {{- if .Values.cnpg.enabled }}
+    # PostgreSQL logs (CloudNativePG)
     - logs:
-        name: app/{{ .Release.Name }}-postgresql/logs
+        name: app/oh-main-postgresql/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app.kubernetes.io/name=postgresql
-          - app.kubernetes.io/instance={{ .Release.Name }}
+          - cnpg.io/cluster=oh-main-postgresql
         limits:
           maxAge: 168h
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://postgres:@{{ include "runtime-api.postgresql.host" . }}:5432/{{ .Values.postgresql.auth.database | default "runtime_api" }}?sslmode=disable
+        uri: postgresql://postgres:@oh-main-postgresql-rw:5432/{{ .Values.postgresql.auth.database | default "runtime_api_db" }}?sslmode=disable
         tls:
           disabled: true
         password:
-          secretName: {{ .Release.Name }}-postgresql
-          secretKey: postgres-password
+          secretName: postgres-password
+          secretKey: password
     {{- end }}
   analyzers: {{- include "runtime.troubleshoot.analyzers.shared" .  | nindent 4 }}
     - deploymentStatus:
@@ -44,17 +43,7 @@ spec:
           - pass:
               when: ">= 1"
               message: "Runtime API deployment is ready"
-    {{- if .Values.postgresql.enabled }}
-    - statefulsetStatus:
-        name: {{ .Release.Name }}-postgresql
-        namespace: {{ .Release.Namespace }}
-        outcomes:
-          - fail:
-              when: "< 1"
-              message: "Runtime API PostgreSQL statefulset is not ready"
-          - pass:
-              when: ">= 1"
-              message: "Runtime API PostgreSQL statefulset is ready"
+    {{- if .Values.cnpg.enabled }}
     - postgresql:
         checkName: "Runtime API PostgreSQL Database Health"
         collectorName: postgresql

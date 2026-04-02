@@ -1,4 +1,4 @@
-{{- if and .Values.dbCleanup.enabled (or .Values.postgresql.enabled .Values.database.secretName) }}
+{{- if and .Values.dbCleanup.enabled (or .Values.cnpg.enabled .Values.database.secretName) }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

@@ -16,7 +16,7 @@ spec:
       {{- end }}
       containers:
       - name: create-user
-        image: postgres:14
+        image: postgres:16
         env:
         - name: PGPASSWORD
           valueFrom:

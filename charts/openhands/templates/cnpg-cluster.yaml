@@ -1,0 +1,26 @@
+{{- if .Values.cnpg.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: oh-main-postgresql
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: {{ .Values.cnpg.instances | default 1 }}
+  {{- if .Values.cnpg.imageName }}
+  imageName: {{ .Values.cnpg.imageName | quote }}
+  {{- end }}
+  enableSuperuserAccess: true
+  superuserSecret:
+    name: postgres-password
+  bootstrap:
+    initdb:
+      database: {{ .Values.cnpg.database | default "openhands" }}
+      owner: postgres
+      secret:
+        name: postgres-password
+  storage:
+    size: {{ .Values.cnpg.storage.size | default "8Gi" }}
+    {{- if .Values.cnpg.storage.storageClass }}
+    storageClass: {{ .Values.cnpg.storage.storageClass | quote }}
+    {{- end }}
+{{- end }}

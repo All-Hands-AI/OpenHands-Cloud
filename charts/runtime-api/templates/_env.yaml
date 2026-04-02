@@ -36,9 +36,9 @@
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"resource": "GET /health", "sample_rate": 0.0}, {"resource": "GET /internal/metrics", "sample_rate": 0.0}]'
 {{- end }}
-{{- if .Values.postgresql.enabled }}
+{{- if .Values.cnpg.enabled }}
 - name: DB_HOST
-  value: "{{ .Release.Name }}-postgresql"
+  value: "oh-main-postgresql-rw"
 - name: DB_USER
   value: "{{ .Values.postgresql.auth.username }}"
 - name: DB_NAME

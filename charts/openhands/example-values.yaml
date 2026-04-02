@@ -39,7 +39,7 @@ keycloak:
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
     # cert-manager.io/cluster-issuer: letsencrypt
 
-postgresql:
+cnpg:
   enabled: true
 
 litellm:

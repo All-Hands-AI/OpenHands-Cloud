@@ -73,21 +73,10 @@ tolerations: []
 affinity: {}
 
 postgresql:
-  enabled: false
-  isFeatureDeploy: false
-  primary:
-    persistence:
-      enabled: false
   auth:
     username: postgres
-    password: "" # This should be set externally for security reasons
     existingSecret: postgres-password
     database: runtime_api_db
-  service:
-    ports:
-      postgresql: 5432
-  image:
-    repository: bitnamilegacy/postgresql
 
 externalDatabase:
   enabled: false
@@ -216,8 +205,3 @@ datadog:
 replicated:
   enabled: false
 
-global:
-  security:
-    # This allows using the bitnamilegacy image repo.
-    # See: https://github.com/bitnami/containers/issues/83267
-    allowInsecureImages: true

@@ -1,6 +1,6 @@
 {{- define "runtime-api.dbInitContainers" }}
 - name: wait-for-db
-  image: "bitnamilegacy/postgresql:latest"
+  image: "postgres:16"
   command: ['sh', '-c']
   args:
     - |
@@ -16,7 +16,7 @@
     {{- include "runtime-api.env" . | nindent 4 }}
 {{- if .Values.databaseMigrations.createDatabases }}
 - name: create-db
-  image: "bitnamilegacy/postgresql:latest"
+  image: "postgres:16"
   command: ['sh', '-c']
   args:
     - |

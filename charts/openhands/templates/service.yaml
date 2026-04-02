@@ -30,25 +30,6 @@ spec:
     app.kubernetes.io/name: runtime-api
     app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-{{- if .Values.postgresql.enabled }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: oh-main-postgresql
-spec:
-  type: ClusterIP
-  sessionAffinity: None
-  ports:
-    - name: tcp-postgresql
-      port: 5432
-      targetPort: tcp-postgresql
-      nodePort: null
-  selector:
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/name: postgresql
-    app.kubernetes.io/component: primary
-{{- end }}
 {{- if and .Values.redis.enabled .Values.langfuse.enabled }}
 ---
 apiVersion: v1

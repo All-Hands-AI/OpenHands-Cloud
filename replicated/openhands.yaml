@@ -83,7 +83,7 @@ spec:
             certificate: |
               {{repl ConfigOptionData "tls_certificate" | nindent 14}}
       externalDatabase:
-        host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql-rw{{repl end}}'
         existingSecret: postgres-password
         existingSecretUserKey: username
         existingSecretPasswordKey: password
@@ -93,7 +93,7 @@ spec:
         image:
           repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak-config-cli'
       waitForDb:
-        image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
+        image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/library/postgres:16'
 
     litellm:
       enabled: true
@@ -102,8 +102,7 @@ spec:
     litellm-helm:
       enabled: true
       db:
-        # TODO: should the fallback be openhands-postgresql here?
-        endpoint: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        endpoint: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql-rw{{repl end}}'
         secret:
           name: postgres-password
           usernameKey: username
@@ -165,7 +164,7 @@ spec:
         idle_seconds: repl{{ ConfigOption "sandbox_idle_seconds" }}
         dead_seconds: repl{{ ConfigOption "sandbox_dead_seconds" }}
       env:
-        DB_HOST: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        DB_HOST: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql-rw{{repl end}}'
         DB_USER: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_username"}}{{repl else}}postgres{{repl end}}'
         DB_NAME: "runtime_api_db"
         RUNTIME_BASE_URL: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
@@ -219,7 +218,7 @@ spec:
             kubernetes.io/ingress.class: traefik
     sandbox:
       apiHostname: 'http://openhands-runtime-api:5000'
-    postgresql:
+    cnpg:
       enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
     redis:
       enabled: true
@@ -266,21 +265,15 @@ spec:
         runtime-api:
           databaseMigrations:
             createDatabases: true
-        postgresql:
+        cnpg:
           enabled: true
-          auth:
-            username: '{{repl ConfigOption "postgres_username"}}'
-            password: '{{repl ConfigOption "postgres_password" | Base64Encode }}'
-            postgresPassword: '{{repl ConfigOption "postgres_password" | Base64Encode }}'
-            database: '{{repl ConfigOption "postgres_database"}}'
-          persistence:
-            enabled: true
+          database: '{{repl ConfigOption "postgres_database"}}'
     - when: '{{repl ConfigOptionEquals "postgres_type" "external_postgres" }}'
       recursiveMerge: true
       values:
         databaseMigrations:
           createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
-        postgresql:
+        cnpg:
           enabled: false
         externalDatabase:
           host: '{{repl ConfigOption "external_postgres_host"}}'
@@ -314,16 +307,6 @@ spec:
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
 
-    - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
-      recursiveMerge: true
-      values:
-        postgresql:
-          image:
-            repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
-        keycloak:
-          postgresql:
-            image:
-              repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
     - when: '{{repl ConfigOptionEquals "langfuse_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -393,10 +376,9 @@ spec:
             image:
               repository: '{{repl LocalRegistryNamespace }}/keycloak-config-cli'
           waitForDb:
-            image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
-        postgresql:
-          image:
-            repository: '{{repl LocalRegistryNamespace }}/postgresql'
+            image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgres:16'
+        cnpg:
+          imageName: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgres:16'
         redis:
           image:
             repository: '{{repl LocalRegistryNamespace }}/redis'
@@ -528,7 +510,7 @@ spec:
       enabled: true
     minio:
       enabled: true
-    postgresql:
+    cloudnative-pg:
       enabled: true
     redis:
       enabled: true
