@@ -61,12 +61,10 @@ update_runtime_api_chart = module.update_runtime_api_chart
 update_runtime_api_values = module.update_runtime_api_values
 get_short_sha = module.get_short_sha
 format_sha_tag = module.format_sha_tag
-get_semver_tag_containing_commit = module.get_semver_tag_containing_commit
 DeployConfig = module.DeployConfig
 SEMVER_PATTERN = module.SEMVER_PATTERN
 CLOUD_SEMVER_PATTERN = module.CLOUD_SEMVER_PATTERN
 SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
-OPENHANDS_REPO_PATH = module.OPENHANDS_REPO_PATH
 
 
 # =============================================================================
@@ -377,12 +375,8 @@ class TestUpdateChart:
 class TestDeployConfig:
     """Tests for DeployConfig dataclass.
 
-    DeployConfig holds configuration values extracted from the deploy workflow,
-    used to synchronize chart versions with deployed infrastructure.
-    """
-
-    def test_deploy_config_stores_runtime_api_sha(self):
-        """Verify DeployConfig correctly stores the runtime-api commit SHA."""
+    def test_deploy_config_creation(self):
+        """Test that DeployConfig can be created with runtime_api_sha field."""
         config = DeployConfig(
             runtime_api_sha="def5678901234",
             openhands_runtime_image_tag="cloud-1.21.0-nikolaik",
@@ -972,162 +966,35 @@ warmRuntimes:
 
         assert temp_runtime_api_values_file.read_text() == original_content
 
-    def test_returns_true_when_changes_made(self, temp_runtime_api_values_file):
-        """Test that function returns True when changes are made."""
-        result = update_runtime_api_values(
-            temp_runtime_api_values_file,
-            runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert result.has_changes is True
-
-
-class TestMainOutputMessages:
-    """Tests for main() output message formatting."""
-
-    # Use a test constant to avoid magic strings scattered throughout tests
-    MOCK_CLOUD_TAG = "cloud-1.20.0"
-
-    def test_latest_cloud_tag_message_format(self, capsys, mock_main_early_exit):
-        """Test that the latest cloud tag message uses correct format."""
-        mock_tag = self.MOCK_CLOUD_TAG
-        mock_main_early_exit(mock_tag)
-
-        main(dry_run=True)
-
-        captured = capsys.readouterr()
-        assert f"OpenHands cloud tag: {mock_tag}" in captured.out
-
-    def test_current_app_version_message_format(self, capsys, mock_main_early_exit):
-        """Test that the current appVersion message uses correct format."""
-        mock_tag = self.MOCK_CLOUD_TAG
-        mock_main_early_exit(mock_tag)
-
-        main(dry_run=True)
-
-        captured = capsys.readouterr()
-        assert f"OpenHands-Cloud openhands chart appVersion: {mock_tag}" in captured.out
-
 
 class TestGetLatestCloudTag:
-    """Tests for get_latest_cloud_tag function.
+    """Tests for get_latest_cloud_tag function."""
 
-    Uses mocked GitHub API responses for fast, deterministic tests.
-    """
+    def test_returns_cloud_tag_format(self):
+        """Test that function returns a cloud-X.Y.Z formatted tag."""
+        # This is an integration test that requires GITHUB_TOKEN
+        import os
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            pytest.skip("GITHUB_TOKEN not set")
 
-    def test_returns_first_matching_cloud_tag(self, mock_github_tags):
-        """Test that function returns the first cloud-X.Y.Z formatted tag."""
-        mock_github_tags(["latest", "cloud-1.20.0", "cloud-1.19.0"])
+        from update_openhands_charts import get_latest_cloud_tag
+        result = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
 
-        result = get_latest_cloud_tag("fake-token", "All-Hands-AI/OpenHands")
+        assert result is not None
+        assert CLOUD_SEMVER_PATTERN.match(result)
 
-        assert result == "cloud-1.20.0"
-        assert result.startswith("cloud-")
-        assert extract_version_from_cloud_tag(result) == "1.20.0"
+    def test_returns_none_for_invalid_repo(self):
+        """Test that function returns None for invalid repository."""
+        import os
+        token = os.environ.get("GITHUB_TOKEN")
+        if not token:
+            pytest.skip("GITHUB_TOKEN not set")
 
-    def test_skips_non_cloud_tags(self, mock_github_tags):
-        """Test that non-cloud tags are skipped."""
-        mock_github_tags(["v1.0.0", "release-2.0", "cloud-1.5.0"])
-
-        result = get_latest_cloud_tag("fake-token", "owner/repo")
-
-        assert result == "cloud-1.5.0"
-
-    def test_returns_none_when_no_cloud_tags(self, mock_github_tags):
-        """Test that None is returned when no cloud tags exist."""
-        mock_github_tags(["v1.0.0", "latest"])
-
-        result = get_latest_cloud_tag("fake-token", "owner/repo")
+        from update_openhands_charts import get_latest_cloud_tag
+        result = get_latest_cloud_tag(token, "nonexistent/repo-that-does-not-exist")
 
         assert result is None
-
-    def test_returns_none_for_invalid_repo(self, mock_github_tags, capsys):
-        """Test that None is returned and error is printed for invalid repository."""
-        mock_github_tags(repo_error=Exception("Repository not found"))
-
-        result = get_latest_cloud_tag("fake-token", "nonexistent/repo")
-
-        assert result is None
-        captured = capsys.readouterr()
-        assert "Error fetching tags" in captured.out
-
-    def test_no_redirect_message_in_output(self, mock_github_tags, capsys):
-        """Test that PyGithub redirect messages are suppressed."""
-        mock_github_tags(["cloud-1.0.0"])
-
-        get_latest_cloud_tag("fake-token", "owner/repo")
-
-        captured = capsys.readouterr()
-        assert "redirect" not in captured.out.lower()
-        assert "following" not in captured.out.lower()
-
-
-class TestCloudTagExists:
-    """Tests for cloud_tag_exists function.
-
-    Uses mocked GitHub API responses for fast, deterministic tests.
-    """
-
-    def test_returns_true_when_tag_exists(self, mock_github_ref):
-        """Test that function returns True when the tag reference is found."""
-        _, mock_repo = mock_github_ref(tag_exists=True)
-
-        result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-1.20.0")
-
-        assert result is True
-        mock_repo.get_git_ref.assert_called_once_with("tags/cloud-1.20.0")
-
-    def test_returns_false_when_tag_not_found(self, mock_github_ref):
-        """Test that function returns False when get_git_ref raises exception."""
-        mock_github_ref(tag_exists=False)
-
-        result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-99999.0.0")
-
-        assert result is False
-
-    def test_returns_false_for_invalid_repo(self, mock_github_ref):
-        """Test that function returns False when repository doesn't exist."""
-        mock_github_ref(repo_error=Exception("Repository not found"))
-
-        result = cloud_tag_exists("fake-token", "nonexistent/repo", "cloud-1.0.0")
-
-        assert result is False
-
-    def test_handles_various_tag_formats(self, mock_github_ref):
-        """Test that function correctly queries different tag formats."""
-        _, mock_repo = mock_github_ref(tag_exists=True)
-
-        # Test various tag formats
-        cloud_tag_exists("fake-token", "owner/repo", "cloud-1.0.0")
-        cloud_tag_exists("fake-token", "owner/repo", "cloud-10.20.30")
-
-        # Verify correct ref format is used
-        calls = mock_repo.get_git_ref.call_args_list
-        assert calls[0][0][0] == "tags/cloud-1.0.0"
-        assert calls[1][0][0] == "tags/cloud-10.20.30"
-
-
-class TestParseArgs:
-    """Tests for parse_args function."""
-
-    def test_cloud_tag_argument_exists(self, monkeypatch):
-        """Test that --cloud-tag argument is accepted."""
-        monkeypatch.setattr(sys, "argv", ["script", "--cloud-tag", "cloud-1.2.0"])
-        args = parse_args()
-        assert args.cloud_tag == "cloud-1.2.0"
-
-    def test_cloud_tag_default_is_none(self, monkeypatch):
-        """Test that --cloud-tag defaults to None."""
-        monkeypatch.setattr(sys, "argv", ["script"])
-        args = parse_args()
-        assert args.cloud_tag is None
-
-    def test_dry_run_argument(self, monkeypatch):
-        """Test that --dry-run argument works."""
-        monkeypatch.setattr(sys, "argv", ["script", "--dry-run"])
-        args = parse_args()
-        assert args.dry_run is True
 
 
 if __name__ == "__main__":

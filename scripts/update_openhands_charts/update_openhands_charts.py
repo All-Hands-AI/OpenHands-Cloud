@@ -31,71 +31,6 @@ VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
 RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
 
-# Regex patterns for values.yaml image tag updates
-ENTERPRISE_SERVER_TAG_PATTERN = (
-    r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
-)
-RUNTIME_TAG_PATTERN = (
-    r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
-)
-WARM_RUNTIMES_TAG_PATTERN = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
-RUNTIME_API_TAG_PATTERN = (
-    r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
-)
-
-
-@dataclass
-class UpdateResult:
-    """Stores the outcome of a file update operation."""
-    has_changes: bool = False
-    changes: list[tuple[str, str, str]] = None  # [(key, old, new)]
-    unchanged: list[tuple[str, str]] = None     # [(key, val)]
-    errors: list[str] = None                    # [error_message]
-
-    def __post_init__(self):
-        if self.changes is None:
-            self.changes = []
-        if self.unchanged is None:
-            self.unchanged = []
-        if self.errors is None:
-            self.errors = []
-
-    def is_unchanged(self, key: str) -> bool:
-        """Check if a key exists in the unchanged list."""
-        return any(k == key for k, _ in self.unchanged)
-
-    def has_change_for(self, key: str) -> bool:
-        """Check if a key exists in the changes list."""
-        return any(k == key for k, _, _ in self.changes)
-
-    def has_error_containing(self, substring: str) -> bool:
-        """Check if any error message contains the given substring."""
-        return any(substring in err for err in self.errors)
-
-    @property
-    def error_count(self) -> int:
-        """Return the number of errors recorded."""
-        return len(self.errors)
-
-    @property
-    def change_count(self) -> int:
-        """Return the number of changes recorded."""
-        return len(self.changes)
-
-    @property
-    def unchanged_count(self) -> int:
-        """Return the number of unchanged items recorded."""
-        return len(self.unchanged)
-
-    def print_summary(self) -> None:
-        """Prints the outcome of the update."""
-        for key, old, new in self.changes:
-            print(f"Updated {key}: {old} -> {new}")
-        for key, val in self.unchanged:
-            print(f"{key} unchanged: {val} (already latest)")
-        for err in self.errors:
-            print(f"Error: {err}")
-
 
 def get_short_sha(sha: str) -> str:
     """Return the first 7 characters of a SHA hash."""
@@ -135,8 +70,8 @@ class DeployConfig:
     openhands_runtime_image_tag: str
 
 
-def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
-    """Fetch the latest cloud-X.Y.Z tag from a GitHub repository."""
+def get_latest_semver_tag(token: str, repo_name: str) -> str | None:
+    """Fetch the latest semantic version tag (x.y.z) from a GitHub repository."""
     gh = Github(auth=Auth.Token(token))
     try:
         repo = gh.get_repo(repo_name)
@@ -149,64 +84,18 @@ def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
     return None
 
 
-def get_semver_tag_containing_commit(repo_path: Path, commit_sha: str) -> str | None:
-    """Get the latest cloud version tag containing a specific commit from a local git repo.
-
-    This function:
-    1. Checks out main branch
-    2. Runs git pull to fetch the latest updates
-    3. Runs git tag --contains <commit_sha> to get all tags containing the commit
-    4. Filters for cloud-X.Y.Z tags and returns the latest one
-    """
-    if not repo_path.exists():
-        print(f"Repository not found at {repo_path}")
-        return None
-
+def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
+    """Fetch the latest cloud-X.Y.Z tag from a GitHub repository."""
+    gh = Github(auth=Auth.Token(token))
     try:
-        # Checkout main branch
-        subprocess.run(
-            ["git", "checkout", "main"],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-        )
-
-        # Pull latest updates
-        subprocess.run(
-            ["git", "pull"],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-        )
-
-        # Get tags containing the commit
-        result = subprocess.run(
-            ["git", "tag", "--contains", commit_sha],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        tags = result.stdout.strip().split("\n")
-        # Filter for cloud-X.Y.Z tags
-        cloud_tags = [t for t in tags if t and CLOUD_SEMVER_PATTERN.match(t)]
-
-        if cloud_tags:
-            # Sort by version number (descending) and return the latest
-            cloud_tags.sort(
-                key=lambda v: list(map(int, CLOUD_SEMVER_PATTERN.match(v).group(1).split("."))),
-                reverse=True,
-            )
-            return cloud_tags[0]
-
-        return None
-    except subprocess.CalledProcessError as e:
-        print(f"Git command failed: {e}")
-        return None
+        repo = gh.get_repo(repo_name)
+        tags = repo.get_tags()
+        for tag in tags:
+            if CLOUD_SEMVER_PATTERN.match(tag.name):
+                return tag.name
     except Exception as e:
-        print(f"Error getting tags containing commit: {e}")
-        return None
+        print(f"Error fetching tags from {repo_name}: {e}")
+    return None
 
 
 def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> DeployConfig | None:
@@ -700,18 +589,14 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
         return
 
     print(f"Deploy config (from {deploy_tag}):")
-    print(f"  OPENHANDS_SHA: {deploy_config.openhands_sha}")
-    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
 
-    # Get the semver tag containing the OPENHANDS_SHA from local OpenHands repo
-    openhands_version = get_semver_tag_containing_commit(
-        OPENHANDS_REPO_PATH, deploy_config.openhands_sha
-    )
+    # Get the latest cloud tag from OpenHands releases
+    openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
     if openhands_version:
-        print(f"OpenHands version (latest tag containing OPENHANDS_SHA): {openhands_version}")
+        print(f"Latest OpenHands cloud version: {openhands_version}")
     else:
-        print(f"No semantic version tag found containing commit {deploy_config.openhands_sha[:7]}")
+        print("No cloud version tag found in OpenHands releases")
         return
 
     # Update runtime-api chart first to get the new version
