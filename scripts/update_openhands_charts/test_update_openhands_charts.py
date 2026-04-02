@@ -381,9 +381,67 @@ class TestUpdateChart:
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
-    def test_yaml_structure_and_metadata_preserved_after_update(self, temp_chart_file):
-        """Verify YAML structure, metadata, and non-version fields are preserved."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        assert chart_data["appVersion"] == "2.0.0"
+
+    def test_bump_chart_version(self, temp_chart_file):
+        """Test that version is bumped correctly."""
+        update_openhands_chart(temp_chart_file, "2.0.0", None)
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        assert chart_data["version"] == "0.1.1"
+
+    def test_update_runtime_api_version(self, temp_chart_file):
+        """Test that runtime-api dependency version is updated."""
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        runtime_api_dep = next(
+            d for d in chart_data["dependencies"] if d["name"] == "runtime-api"
+        )
+        assert runtime_api_dep["version"] == "0.2.0"
+
+    def test_runtime_api_unchanged_when_same_version(self, temp_chart_file, capsys):
+        """Test that runtime-api is not updated when version is the same."""
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.1.10")
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        runtime_api_dep = next(
+            d for d in chart_data["dependencies"] if d["name"] == "runtime-api"
+        )
+        assert runtime_api_dep["version"] == "0.1.10"
+
+        captured = capsys.readouterr()
+        assert "runtime-api version unchanged" in captured.out
+
+    def test_app_version_unchanged_when_same_version(self, temp_chart_file, capsys):
+        """Test that appVersion shows unchanged when same."""
+        update_openhands_chart(temp_chart_file, "1.0.0", "0.2.0")
+
+        captured = capsys.readouterr()
+        assert "appVersion unchanged: 1.0.0" in captured.out
+
+    def test_other_dependencies_unchanged(self, temp_chart_file):
+        """Test that other dependencies are not affected."""
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
+        other_dep = next(
+            d for d in chart_data["dependencies"] if d["name"] == "other-dep"
+        )
+        assert other_dep["version"] == "1.0.0"
+
+    def test_preserves_yaml_structure(self, temp_chart_file):
+        """Test that YAML structure is preserved."""
+        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
+
+        yaml = YAML()
+        chart_data = yaml.load(temp_chart_file)
 
         # Verify structure is preserved
         assert get_chart_value(temp_chart_file, "apiVersion") == "v2"

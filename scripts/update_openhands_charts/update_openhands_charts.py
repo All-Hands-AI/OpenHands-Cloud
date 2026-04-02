@@ -231,11 +231,10 @@ def update_openhands_chart(
 
     old_app_version = chart_data.get("appVersion")
     if old_app_version == new_app_version:
-        result.unchanged.append(("appVersion", old_app_version))
+        print(f"appVersion unchanged: {old_app_version} (already latest)")
     else:
         chart_data["appVersion"] = new_app_version
-        result.changes.append(("appVersion", old_app_version, new_app_version))
-        result.has_changes = True
+        print(f"Updated appVersion: {old_app_version} -> {new_app_version}")
 
     old_version = chart_data.get("version")
     new_version = bump_patch_version(old_version)
