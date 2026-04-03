@@ -252,9 +252,9 @@ dependencies:
         )
         assert runtime_api_dep["version"] == "0.2.0"
 
-    def test_runtime_api_unchanged_when_same_version(self, temp_chart_file, capsys):
+    def test_runtime_api_unchanged_when_same_version(self, temp_chart_file):
         """Test that runtime-api is not updated when version is the same."""
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.1.10")
+        result = update_openhands_chart(temp_chart_file, "2.0.0", "0.1.10")
 
         yaml = YAML()
         chart_data = yaml.load(temp_chart_file)
@@ -263,15 +263,14 @@ dependencies:
         )
         assert runtime_api_dep["version"] == "0.1.10"
 
-        captured = capsys.readouterr()
-        assert "runtime-api version unchanged" in captured.out
+        # Verify it was recorded as unchanged
+        assert ("runtime-api version", "0.1.10") in result.unchanged
 
-    def test_app_version_unchanged_when_same_version(self, temp_chart_file, capsys):
+    def test_app_version_unchanged_when_same_version(self, temp_chart_file):
         """Test that appVersion shows unchanged when same."""
-        update_openhands_chart(temp_chart_file, "1.0.0", "0.2.0")
+        result = update_openhands_chart(temp_chart_file, "1.0.0", "0.2.0")
 
-        captured = capsys.readouterr()
-        assert "appVersion unchanged: 1.0.0" in captured.out
+        assert ("appVersion", "1.0.0") in result.unchanged
 
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
@@ -382,7 +381,7 @@ runtime-api:
         content = temp_values_file.read_text()
         assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
 
-    def test_unchanged_when_same_values(self, temp_values_file, capsys):
+    def test_unchanged_when_same_values(self, temp_values_file):
         """Test messages when values are already up to date."""
         # First update to set the values
         update_openhands_values(
@@ -391,15 +390,16 @@ runtime-api:
         )
 
         # Second update with same values
-        update_openhands_values(
+        result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
         )
 
-        captured = capsys.readouterr()
-        assert "enterprise-server image tag unchanged" in captured.out
-        assert "runtime image tag unchanged" in captured.out
-        assert "warmRuntimes image tag unchanged" in captured.out
+        assert not result.has_changes
+        unchanged_keys = [u[0] for u in result.unchanged]
+        assert "enterprise-server image tag" in unchanged_keys
+        assert "runtime image tag" in unchanged_keys
+        assert "warmRuntimes image tag" in unchanged_keys
 
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
@@ -421,7 +421,7 @@ runtime-api:
             openhands_version="cloud-1.1.0",
         )
 
-        assert result is True
+        assert result.has_changes is True
 
     def test_returns_false_when_no_changes(self, temp_values_file):
         """Test that function returns False when no changes are needed."""
@@ -437,7 +437,7 @@ runtime-api:
             openhands_version="cloud-1.1.0",
         )
 
-        assert result is False
+        assert result.has_changes is False
 
 
 class TestUpdateOpenhandsChartConditional:
@@ -467,11 +467,11 @@ dependencies:
             yield Path(f.name)
         Path(f.name).unlink(missing_ok=True)
 
-    def test_no_version_bump_when_no_changes(self, temp_chart_file, capsys):
+    def test_no_version_bump_when_no_changes(self, temp_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
         from update_openhands_charts import update_openhands_chart
 
-        update_openhands_chart(
+        result = update_openhands_chart(
             temp_chart_file,
             new_app_version="cloud-1.0.0",
             new_runtime_api_version="0.2.6",
@@ -483,14 +483,14 @@ dependencies:
         assert chart_data["version"] == "0.3.11"  # Unchanged
         assert chart_data["appVersion"] == "cloud-1.0.0"  # Unchanged
 
-        captured = capsys.readouterr()
-        assert "openhands chart version unchanged" in captured.out
+        unchanged_keys = [u[0] for u in result.unchanged]
+        assert "openhands chart version" in unchanged_keys
 
-    def test_version_bump_when_has_changes(self, temp_chart_file, capsys):
+    def test_version_bump_when_has_changes(self, temp_chart_file):
         """Test that chart version is bumped when has_changes is True."""
         from update_openhands_charts import update_openhands_chart
 
-        update_openhands_chart(
+        result = update_openhands_chart(
             temp_chart_file,
             new_app_version="cloud-1.1.0",
             new_runtime_api_version="0.2.7",
@@ -502,9 +502,9 @@ dependencies:
         assert chart_data["version"] == "0.3.12"  # Bumped
         assert chart_data["appVersion"] == "cloud-1.1.0"  # Updated
 
-        captured = capsys.readouterr()
-        assert "Updated appVersion: cloud-1.0.0 -> cloud-1.1.0" in captured.out
-        assert "Updated version: 0.3.11 -> 0.3.12" in captured.out
+        changed_keys = [c[0] for c in result.changes]
+        assert "appVersion" in changed_keys
+        assert "version" in changed_keys
 
 
 class TestDryRun:
@@ -575,14 +575,14 @@ runtime-api:
 
         assert temp_chart_file.read_text() == original_content
 
-    def test_update_chart_dry_run_prints_changes(self, temp_chart_file, capsys):
-        """Test that dry-run still prints what would be changed."""
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+    def test_update_chart_dry_run_prints_changes(self, temp_chart_file):
+        """Test that dry-run still records what would be changed."""
+        result = update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
 
-        captured = capsys.readouterr()
-        assert "Updated appVersion: 1.0.0 -> 2.0.0" in captured.out
-        assert "Updated version: 0.1.0 -> 0.1.1" in captured.out
-        assert "Updated runtime-api version: 0.1.10 -> 0.2.0" in captured.out
+        changed_keys = [c[0] for c in result.changes]
+        assert "appVersion" in changed_keys
+        assert "version" in changed_keys
+        assert "runtime-api version" in changed_keys
 
     def test_update_values_dry_run_no_file_changes(self, temp_values_file):
         """Test that dry-run doesn't modify values.yaml."""
@@ -596,18 +596,18 @@ runtime-api:
 
         assert temp_values_file.read_text() == original_content
 
-    def test_update_values_dry_run_prints_changes(self, temp_values_file, capsys):
-        """Test that dry-run still prints what would be changed."""
-        update_openhands_values(
+    def test_update_values_dry_run_prints_changes(self, temp_values_file):
+        """Test that dry-run still records what would be changed."""
+        result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
             dry_run=True,
         )
 
-        captured = capsys.readouterr()
-        assert "Updated enterprise-server image tag:" in captured.out
-        assert "Updated runtime image tag:" in captured.out
-        assert "Updated warmRuntimes image tag:" in captured.out
+        changed_keys = [c[0] for c in result.changes]
+        assert "enterprise-server image tag" in changed_keys
+        assert "runtime image tag" in changed_keys
+        assert "warmRuntimes image tag" in changed_keys
 
     def test_update_chart_without_dry_run_modifies_file(self, temp_chart_file):
         """Test that without dry-run, Chart.yaml is modified."""
@@ -662,7 +662,7 @@ dependencies:
 
     def test_bump_runtime_api_version(self, temp_runtime_api_chart_file):
         """Test that runtime-api chart version is bumped correctly."""
-        new_version = update_runtime_api_chart(temp_runtime_api_chart_file)
+        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file)
 
         yaml = YAML()
         chart_data = yaml.load(temp_runtime_api_chart_file)
@@ -690,7 +690,7 @@ dependencies:
 
     def test_dry_run_returns_new_version(self, temp_runtime_api_chart_file):
         """Test that dry-run still returns the new version."""
-        new_version = update_runtime_api_chart(temp_runtime_api_chart_file, dry_run=True)
+        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, dry_run=True)
         assert new_version == "0.1.21"
 
 
@@ -756,7 +756,7 @@ warmRuntimes:
         # Should use cloud version format for warmRuntimes
         assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
 
-    def test_unchanged_when_same_value(self, temp_runtime_api_values_file, capsys):
+    def test_unchanged_when_same_value(self, temp_runtime_api_values_file):
         """Test message when value is already up to date."""
         # First update
         update_runtime_api_values(
@@ -766,15 +766,16 @@ warmRuntimes:
         )
 
         # Second update with same value
-        update_runtime_api_values(
+        result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             openhands_version="cloud-1.1.0",
         )
 
-        captured = capsys.readouterr()
-        assert "runtime-api image tag unchanged" in captured.out
-        assert "runtime-api warmRuntimes image tag unchanged" in captured.out
+        assert not result.has_changes
+        unchanged_keys = [u[0] for u in result.unchanged]
+        assert "runtime-api image tag" in unchanged_keys
+        assert "runtime-api warmRuntimes image tag" in unchanged_keys
 
     def test_preserves_other_content(self, temp_runtime_api_values_file):
         """Test that other content is preserved."""
@@ -809,7 +810,7 @@ warmRuntimes:
             openhands_version="cloud-1.1.0",
         )
 
-        assert result is True
+        assert result.has_changes is True
 
     def test_returns_false_when_no_changes(self, temp_runtime_api_values_file):
         """Test that function returns False when no changes are needed."""
@@ -827,7 +828,7 @@ warmRuntimes:
             openhands_version="cloud-1.1.0",
         )
 
-        assert result is False
+        assert result.has_changes is False
 
 
 class TestUpdateRuntimeApiChartConditional:
@@ -854,25 +855,25 @@ name: runtime-api
             yield Path(f.name)
         Path(f.name).unlink(missing_ok=True)
 
-    def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file, capsys):
+    def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
         from update_openhands_charts import update_runtime_api_chart
 
-        result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
+        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
 
-        assert result == "0.2.6"  # Version unchanged
-        captured = capsys.readouterr()
-        assert "runtime-api chart version unchanged" in captured.out
+        assert new_version == "0.2.6"  # Version unchanged
+        unchanged_keys = [u[0] for u in result.unchanged]
+        assert "runtime-api chart version" in unchanged_keys
 
-    def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file, capsys):
+    def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is bumped when has_changes is True."""
         from update_openhands_charts import update_runtime_api_chart
 
-        result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
+        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
 
-        assert result == "0.2.7"  # Version bumped
-        captured = capsys.readouterr()
-        assert "Updated runtime-api chart version: 0.2.6 -> 0.2.7" in captured.out
+        assert new_version == "0.2.7"  # Version bumped
+        changed_keys = [c[0] for c in result.changes]
+        assert "runtime-api chart version" in changed_keys
 
 
 class TestMainOutputMessages:
