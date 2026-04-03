@@ -5,8 +5,8 @@
 # ///
 """Unit tests for update_openhands_charts.py."""
 
-import base64
 import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
@@ -16,55 +16,19 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
-from conftest import (
-    assert_file_contains,
-    assert_file_contains_all,
-    assert_version_bumped,
-    get_chart_value,
-    get_dependency_version,
-    # Fixture baseline constants for self-documenting assertions
-    OPENHANDS_CHART_VERSION,
-    OPENHANDS_CHART_APP_VERSION,
-    OPENHANDS_CHART_RUNTIME_API_VERSION,
-    OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
-    RUNTIME_API_CHART_FULL_VERSION,
-    RUNTIME_API_CHART_FULL_APP_VERSION,
-    RUNTIME_API_CHART_MINIMAL_VERSION,
-    # Test input constants for update operations
-    NEW_APP_VERSION,
-    NEW_RUNTIME_API_VERSION,
-)
 from update_openhands_charts import (
+    CLOUD_SEMVER_PATTERN,
     DeployConfig,
+    SEMVER_PATTERN,
+    SHORT_SHA_LENGTH,
     bump_patch_version,
-    cloud_tag_exists,
-    extract_version_from_cloud_tag,
     format_sha_tag,
-    get_current_app_version,
-    get_deploy_config,
-    get_latest_cloud_tag,
     get_short_sha,
-    main,
-    parse_args,
     update_openhands_chart,
     update_openhands_values,
     update_runtime_api_chart,
     update_runtime_api_values,
 )
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
-
-bump_patch_version = module.bump_patch_version
-update_openhands_chart = module.update_openhands_chart
-update_openhands_values = module.update_openhands_values
-update_runtime_api_chart = module.update_runtime_api_chart
-update_runtime_api_values = module.update_runtime_api_values
-get_short_sha = module.get_short_sha
-format_sha_tag = module.format_sha_tag
-DeployConfig = module.DeployConfig
-SEMVER_PATTERN = module.SEMVER_PATTERN
-CLOUD_SEMVER_PATTERN = module.CLOUD_SEMVER_PATTERN
-SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
 
 
 # =============================================================================

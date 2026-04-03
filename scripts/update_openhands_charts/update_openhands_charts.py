@@ -481,16 +481,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
-    if dry_run:
-        print_section_header("DRY RUN MODE - No changes will be made")
-        print()
-
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("Environment variable GITHUB_TOKEN is required. Try getting with: gh auth status --show-token")
-        return
-
+def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = None) -> None:
     print("=" * 60)
     print("Fetching latest versions...")
     print("=" * 60)
@@ -584,6 +575,21 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
         has_changes=openhands_has_changes,
         dry_run=dry_run,
     )
+
+
+def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
+    if dry_run:
+        print("=" * 60)
+        print("DRY RUN MODE - No changes will be made")
+        print("=" * 60)
+        print()
+
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("Environment variable GITHUB_TOKEN is required. Try getting with: gh auth status --show-token")
+        return
+
+    process_updates(token, dry_run=dry_run, cloud_tag=cloud_tag)
 
 
 if __name__ == "__main__":
