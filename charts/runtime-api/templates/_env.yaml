@@ -36,26 +36,9 @@
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"resource": "GET /health", "sample_rate": 0.0}, {"resource": "GET /internal/metrics", "sample_rate": 0.0}]'
 {{- end }}
-{{- if .Values.postgresql.enabled }}
-- name: DB_HOST
-  value: "{{ .Release.Name }}-postgresql"
-- name: DB_USER
-  value: "{{ .Values.postgresql.auth.username }}"
-- name: DB_NAME
-  value: "{{ .Values.postgresql.auth.database }}"
-{{- else if .Values.database.create }} # should only be true for AWS deploys
-- name: DB_HOST
-  value: "{{.Values.database.host}}"
-- name: DB_PORT
-  value: "{{.Values.database.port}}"
-- name: DB_USER
-  value: "{{.Values.database.new_user}}"
-- name: DB_NAME
-  value: "{{.Values.database.name}}"
-{{- end }}
 - name: DB_PASS
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.postgresql.auth.existingSecret }}
+      name: {{ .Values.database.existingSecret | default "postgres-password" }}
       key: password
 {{- end }}
