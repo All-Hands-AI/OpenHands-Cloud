@@ -25,4 +25,9 @@ spec:
   {{- if .Values.cnpg.imageName }}
   imageName: {{ .Values.cnpg.imageName }}
   {{- end }}
+
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 {{- end }}
