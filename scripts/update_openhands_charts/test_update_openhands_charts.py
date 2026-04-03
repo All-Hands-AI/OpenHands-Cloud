@@ -1250,6 +1250,9 @@ class TestMainOutputMessages:
         """Test that the latest cloud tag message uses correct format."""
         from update_openhands_charts import main
 
+        # Mock GITHUB_TOKEN environment variable
+        monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
+
         # Mock get_latest_cloud_tag to return a known value
         monkeypatch.setattr(
             "update_openhands_charts.get_latest_cloud_tag",
@@ -1274,6 +1277,9 @@ class TestMainOutputMessages:
     def test_current_app_version_message_format(self, capsys, monkeypatch):
         """Test that the current appVersion message uses correct format."""
         from update_openhands_charts import main
+
+        # Mock GITHUB_TOKEN environment variable
+        monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
 
         # Mock get_latest_cloud_tag to return a known value
         monkeypatch.setattr(
