@@ -233,12 +233,12 @@ spec:
       mode:
         standalone:
           enabled: true
-          existingClaim:
-            dataClaim: "openhands-minio"
         distributed:
           enabled: false
       persistence:
         storageSize: 10Gi
+      storageclass:
+        name: openebs-hostpath
       image:
         rustfs:
           repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rustfs/rustfs'
