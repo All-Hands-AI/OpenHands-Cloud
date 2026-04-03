@@ -33,6 +33,32 @@ RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
 
 
+@dataclass
+class UpdateResult:
+    """Stores the outcome of a file update operation."""
+    has_changes: bool = False
+    changes: list[tuple[str, str, str]] = None  # [(key, old, new)]
+    unchanged: list[tuple[str, str]] = None     # [(key, val)]
+    errors: list[str] = None                    # [error_message]
+
+    def __post_init__(self):
+        if self.changes is None:
+            self.changes = []
+        if self.unchanged is None:
+            self.unchanged = []
+        if self.errors is None:
+            self.errors = []
+
+    def print_summary(self) -> None:
+        """Prints the outcome of the update."""
+        for key, old, new in self.changes:
+            print(f"Updated {key}: {old} -> {new}")
+        for key, val in self.unchanged:
+            print(f"{key} unchanged: {val} (already latest)")
+        for err in self.errors:
+            print(f"Error: {err}")
+
+
 def get_short_sha(sha: str) -> str:
     """Return the first 7 characters of a SHA hash."""
     return sha[:SHORT_SHA_LENGTH]
@@ -220,7 +246,7 @@ def update_openhands_chart(
     new_runtime_api_version: str | None,
     has_changes: bool = True,
     dry_run: bool = False,
-) -> None:
+) -> UpdateResult:
     """Update appVersion, bump patch version, and update runtime-api dependency.
 
     Only updates appVersion and bumps version if has_changes is True.
@@ -240,41 +266,30 @@ def update_openhands_chart(
         old_app_version = chart_data.get("appVersion")
         result.unchanged.append(("openhands chart version", f"{old_version} (no value changes)"))
         result.unchanged.append(("appVersion", f"{old_app_version} (no value changes)"))
-        update_runtime_api_dependency(chart_data, new_runtime_api_version, result)
-        if not dry_run and result.has_changes:
-            yaml.dump(chart_data, chart_path)
-        return result
-
-    if not has_changes:
-        old_version = chart_data.get("version")
-        old_app_version = chart_data.get("appVersion")
-        print(f"openhands chart version unchanged: {old_version} (no value changes)")
-        print(f"appVersion unchanged: {old_app_version} (no value changes)")
+        
         # Still update runtime-api dependency if needed
         if new_runtime_api_version:
             for dep in chart_data.get("dependencies", []):
                 if dep.get("name") == "runtime-api":
                     old_runtime_version = dep.get("version")
                     if old_runtime_version == new_runtime_api_version:
-                        print(
-                            f"runtime-api version unchanged: {old_runtime_version} (already latest)"
-                        )
+                        result.unchanged.append(("runtime-api version", old_runtime_version))
                     else:
                         dep["version"] = new_runtime_api_version
-                        print(
-                            f"Updated runtime-api version: {old_runtime_version} -> {new_runtime_api_version}"
-                        )
+                        result.changes.append(("runtime-api version", old_runtime_version, new_runtime_api_version))
+                        result.has_changes = True
                     break
-        if not dry_run:
+        if not dry_run and result.has_changes:
             yaml.dump(chart_data, chart_path)
-        return
+        return result
 
     old_app_version = chart_data.get("appVersion")
     if old_app_version == new_app_version:
-        print(f"appVersion unchanged: {old_app_version} (already latest)")
+        result.unchanged.append(("appVersion", old_app_version))
     else:
         chart_data["appVersion"] = new_app_version
-        print(f"Updated appVersion: {old_app_version} -> {new_app_version}")
+        result.changes.append(("appVersion", old_app_version, new_app_version))
+        result.has_changes = True
 
     old_version = chart_data.get("version")
     new_version = bump_patch_version(old_version)
@@ -282,7 +297,17 @@ def update_openhands_chart(
     result.changes.append(("version", old_version, new_version))
     result.has_changes = True
 
-    update_runtime_api_dependency(chart_data, new_runtime_api_version, result)
+    if new_runtime_api_version:
+        for dep in chart_data.get("dependencies", []):
+            if dep.get("name") == "runtime-api":
+                old_runtime_version = dep.get("version")
+                if old_runtime_version == new_runtime_api_version:
+                    result.unchanged.append(("runtime-api version", old_runtime_version))
+                else:
+                    dep["version"] = new_runtime_api_version
+                    result.changes.append(("runtime-api version", old_runtime_version, new_runtime_api_version))
+                    result.has_changes = True
+                break
 
     if not dry_run and result.has_changes:
         yaml.dump(chart_data, chart_path)
@@ -294,13 +319,13 @@ def update_openhands_values(
     values_path: Path,
     openhands_version: str,
     dry_run: bool = False,
-) -> bool:
+) -> UpdateResult:
     """Update image tags in values.yaml using cloud version format.
 
-    Returns True if any changes were made, False otherwise.
+    Returns UpdateResult containing changes made.
     """
     content = values_path.read_text()
-    has_changes = False
+    result = UpdateResult()
 
     # Update enterprise-server image tag using cloud version format (e.g., cloud-1.19.0)
     enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
@@ -309,13 +334,13 @@ def update_openhands_values(
     if enterprise_match:
         old_tag = enterprise_match.group(2)
         if old_tag == openhands_version:
-            print(f"enterprise-server image tag unchanged: {old_tag} (already latest)")
+            result.unchanged.append(("enterprise-server image tag", old_tag))
         else:
             content = re.sub(enterprise_pattern, rf"\g<1>{openhands_version}", content)
-            print(f"Updated enterprise-server image tag: {old_tag} -> {openhands_version}")
-            has_changes = True
+            result.changes.append(("enterprise-server image tag", old_tag, openhands_version))
+            result.has_changes = True
     else:
-        print("Could not find enterprise-server image tag in values.yaml")
+        result.errors.append("Could not find enterprise-server image tag in values.yaml")
 
     # Update runtime image tag using cloud version format (e.g., cloud-1.19.0-nikolaik)
     runtime_new_tag = f"{openhands_version}-nikolaik"
@@ -325,13 +350,13 @@ def update_openhands_values(
     if runtime_match:
         old_tag = runtime_match.group(2)
         if old_tag == runtime_new_tag:
-            print(f"runtime image tag unchanged: {old_tag} (already latest)")
+            result.unchanged.append(("runtime image tag", old_tag))
         else:
             content = re.sub(runtime_pattern, rf"\g<1>{runtime_new_tag}", content)
-            print(f"Updated runtime image tag: {old_tag} -> {runtime_new_tag}")
-            has_changes = True
+            result.changes.append(("runtime image tag", old_tag, runtime_new_tag))
+            result.has_changes = True
     else:
-        print("Could not find runtime image tag in values.yaml")
+        result.errors.append("Could not find runtime image tag in values.yaml")
 
     # Update warmRuntimes image using cloud version format (e.g., cloud-1.19.0-nikolaik)
     warm_runtime_new_tag = f"{openhands_version}-nikolaik"
@@ -341,25 +366,25 @@ def update_openhands_values(
     if warm_runtime_match:
         old_tag = warm_runtime_match.group(2)
         if old_tag == warm_runtime_new_tag:
-            print(f"warmRuntimes image tag unchanged: {old_tag} (already latest)")
+            result.unchanged.append(("warmRuntimes image tag", old_tag))
         else:
             content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
-            print(f"Updated warmRuntimes image tag: {old_tag} -> {warm_runtime_new_tag}")
-            has_changes = True
+            result.changes.append(("warmRuntimes image tag", old_tag, warm_runtime_new_tag))
+            result.has_changes = True
     else:
-        print("Could not find warmRuntimes image tag in values.yaml")
+        result.errors.append("Could not find warmRuntimes image tag in values.yaml")
 
-    if not dry_run:
+    if not dry_run and result.has_changes:
         values_path.write_text(content)
 
-    return has_changes
+    return result
 
 
 def update_runtime_api_chart(
     chart_path: Path,
     has_changes: bool = True,
     dry_run: bool = False,
-) -> str:
+) -> tuple[str, UpdateResult]:
     """Bump the patch version of the runtime-api chart and return the new/current version.
 
     Only bumps the version if has_changes is True.
@@ -373,10 +398,11 @@ def update_runtime_api_chart(
     yaml = create_yaml_parser()
     chart_data = yaml.load(chart_path)
     old_version = chart_data.get("version")
+    result = UpdateResult()
 
     if not has_changes:
-        print(f"runtime-api chart version unchanged: {old_version} (no value changes)")
-        return old_version
+        result.unchanged.append(("runtime-api chart version", f"{old_version} (no value changes)"))
+        return old_version, result
 
     new_version = bump_patch_version(old_version)
     chart_data["version"] = new_version
@@ -394,13 +420,13 @@ def update_runtime_api_values(
     runtime_api_sha: str,
     openhands_version: str,
     dry_run: bool = False,
-) -> bool:
+) -> UpdateResult:
     """Update image tag and warmRuntimes default config image in runtime-api values.yaml.
 
-    Returns True if any changes were made, False otherwise.
+    Returns UpdateResult containing changes made.
     """
     content = values_path.read_text()
-    has_changes = False
+    result = UpdateResult()
 
     Args:
         values_path: Path to the values.yaml file
@@ -432,13 +458,13 @@ def update_runtime_api_values(
     if image_tag_match:
         old_tag = image_tag_match.group(2)
         if old_tag == new_image_tag:
-            print(f"runtime-api image tag unchanged: {old_tag} (already latest)")
+            result.unchanged.append(("runtime-api image tag", old_tag))
         else:
             content = re.sub(image_tag_pattern, rf'\g<1>{new_image_tag}', content)
-            print(f"Updated runtime-api image tag: {old_tag} -> {new_image_tag}")
-            has_changes = True
+            result.changes.append(("runtime-api image tag", old_tag, new_image_tag))
+            result.has_changes = True
     else:
-        print("Could not find runtime-api image tag in values.yaml")
+        result.errors.append("Could not find runtime-api image tag in values.yaml")
 
     # Update warmRuntimes image using cloud version format (e.g., cloud-1.19.0-nikolaik)
     warm_runtime_new_tag = f"{openhands_version}-nikolaik"
@@ -448,18 +474,18 @@ def update_runtime_api_values(
     if warm_runtime_match:
         old_tag = warm_runtime_match.group(2)
         if old_tag == warm_runtime_new_tag:
-            print(f"runtime-api warmRuntimes image tag unchanged: {old_tag} (already latest)")
+            result.unchanged.append(("runtime-api warmRuntimes image tag", old_tag))
         else:
             content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
-            print(f"Updated runtime-api warmRuntimes image tag: {old_tag} -> {warm_runtime_new_tag}")
-            has_changes = True
+            result.changes.append(("runtime-api warmRuntimes image tag", old_tag, warm_runtime_new_tag))
+            result.has_changes = True
     else:
-        print("Could not find warmRuntimes image tag in runtime-api values.yaml")
+        result.errors.append("Could not find warmRuntimes image tag in runtime-api values.yaml")
 
-    if not dry_run:
+    if not dry_run and result.has_changes:
         values_path.write_text(content)
 
-    return has_changes
+    return result
 
 
 def parse_args() -> argparse.Namespace:
@@ -538,20 +564,23 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
     print("=" * 60)
 
     print("Updating runtime-api values.yaml...")
-    runtime_api_has_changes = update_runtime_api_values(
+    runtime_api_values_result = update_runtime_api_values(
         RUNTIME_API_VALUES_PATH,
         deploy_config.runtime_api_sha,
         openhands_version,
         dry_run=dry_run,
     )
+    runtime_api_values_result.print_summary()
+    runtime_api_has_changes = runtime_api_values_result.has_changes
 
     print()
     print("Updating runtime-api Chart.yaml...")
-    runtime_api_version = update_runtime_api_chart(
+    runtime_api_version, runtime_api_chart_result = update_runtime_api_chart(
         RUNTIME_API_CHART_PATH,
         has_changes=runtime_api_has_changes,
         dry_run=dry_run,
     )
+    runtime_api_chart_result.print_summary()
 
     # Update openhands values first to check if there are changes
     print()
@@ -560,21 +589,24 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
     print("=" * 60)
 
     print("Updating openhands values.yaml...")
-    openhands_has_changes = update_openhands_values(
+    openhands_values_result = update_openhands_values(
         VALUES_PATH,
         openhands_version,
         dry_run=dry_run,
     )
+    openhands_values_result.print_summary()
+    openhands_has_changes = openhands_values_result.has_changes
 
     print()
     print("Updating openhands Chart.yaml...")
-    update_openhands_chart(
+    openhands_chart_result = update_openhands_chart(
         CHART_PATH,
         openhands_version,
         runtime_api_version,
         has_changes=openhands_has_changes,
         dry_run=dry_run,
     )
+    openhands_chart_result.print_summary()
 
 
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
