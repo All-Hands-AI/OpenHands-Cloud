@@ -213,12 +213,13 @@ temporal:
               # connectAddr should be "host:port" format
               # Set this to your PostgreSQL instance (e.g., "my-postgresql:5432")
               connectAddr: ""
+              connectProtocol: "tcp"
               user: temporal_user
               # Use existing secret for password
               existingSecret: temporal-db-secret
               secretKey: password
-              # Create database and schema if not exists
-              createDatabase: true
+              # Database is created by temporal-db-init job, only manage schema here
+              createDatabase: false
               manageSchema: true
               maxConns: 20
               maxIdleConns: 20
@@ -229,10 +230,12 @@ temporal:
               databaseName: temporal_visibility
               # Same connectAddr as default store
               connectAddr: ""
+              connectProtocol: "tcp"
               user: temporal_user
               existingSecret: temporal-db-secret
               secretKey: password
-              createDatabase: true
+              # Database is created by temporal-db-init job, only manage schema here
+              createDatabase: false
               manageSchema: true
               maxConns: 10
               maxIdleConns: 10
