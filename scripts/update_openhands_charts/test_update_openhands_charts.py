@@ -5,32 +5,30 @@
 # ///
 """Unit tests for update_openhands_charts.py."""
 
-import importlib.util
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 from ruamel.yaml import YAML
 
-# Load the script as a module
-spec = importlib.util.spec_from_file_location(
-    "update_openhands_charts",
-    Path(__file__).parent / "update_openhands_charts.py",
-)
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+# Add the script's directory to sys.path so we can import it directly
+sys.path.insert(0, str(Path(__file__).parent))
 
-bump_patch_version = module.bump_patch_version
-update_openhands_chart = module.update_openhands_chart
-update_openhands_values = module.update_openhands_values
-update_runtime_api_chart = module.update_runtime_api_chart
-update_runtime_api_values = module.update_runtime_api_values
-get_short_sha = module.get_short_sha
-format_sha_tag = module.format_sha_tag
-DeployConfig = module.DeployConfig
-SEMVER_PATTERN = module.SEMVER_PATTERN
-CLOUD_SEMVER_PATTERN = module.CLOUD_SEMVER_PATTERN
-SHORT_SHA_LENGTH = module.SHORT_SHA_LENGTH
+import update_openhands_charts
+from update_openhands_charts import (
+    CLOUD_SEMVER_PATTERN,
+    DeployConfig,
+    SEMVER_PATTERN,
+    SHORT_SHA_LENGTH,
+    bump_patch_version,
+    format_sha_tag,
+    get_short_sha,
+    update_openhands_chart,
+    update_openhands_values,
+    update_runtime_api_chart,
+    update_runtime_api_values,
+)
 
 
 class TestSemverPattern:
