@@ -1,0 +1,93 @@
+{{- if .Values.temporal.enabled }}
+{{- /*
+  When Temporal is enabled, we need to:
+  1. Create the Temporal databases in PostgreSQL
+  2. Create the temporal_user with appropriate permissions
+  
+  This init job runs before Temporal starts and creates the necessary
+  database infrastructure. It reuses the automation's PostgreSQL connection.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: temporal-db-init
+  labels:
+    app: automation
+    component: temporal-db-init
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: automation
+        component: temporal-db-init
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: init-temporal-db
+        image: postgres:14
+        env:
+          - name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.database.superuserSecretName | default "postgres-password" }}
+                key: {{ .Values.database.superuserSecretKey | default "password" }}
+          - name: DB_HOST
+            value: {{ .Values.database.host | quote }}
+          - name: DB_PORT
+            value: {{ .Values.database.port | quote }}
+          - name: TEMPORAL_USER
+            value: {{ .Values.temporal.server.config.persistence.datastores.default.sql.user | default "temporal_user" | quote }}
+          - name: TEMPORAL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.temporal.server.config.persistence.datastores.default.sql.existingSecret | default "temporal-db-secret" }}
+                key: {{ .Values.temporal.server.config.persistence.datastores.default.sql.secretKey | default "password" }}
+          - name: TEMPORAL_DB
+            value: {{ .Values.temporal.server.config.persistence.datastores.default.sql.databaseName | default "temporal" | quote }}
+          - name: TEMPORAL_VISIBILITY_DB
+            value: {{ .Values.temporal.server.config.persistence.datastores.visibility.sql.databaseName | default "temporal_visibility" | quote }}
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for PostgreSQL at $DB_HOST to be available..."
+            for i in $(seq 1 60); do
+              if psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
+                echo "PostgreSQL is up!"
+
+                echo "Creating Temporal database $TEMPORAL_DB if it doesn't exist..."
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$TEMPORAL_DB'" | grep -q 1 || \
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "CREATE DATABASE $TEMPORAL_DB;"
+
+                echo "Creating Temporal visibility database $TEMPORAL_VISIBILITY_DB if it doesn't exist..."
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$TEMPORAL_VISIBILITY_DB'" | grep -q 1 || \
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "CREATE DATABASE $TEMPORAL_VISIBILITY_DB;"
+
+                echo "Creating Temporal user $TEMPORAL_USER if it doesn't exist..."
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='$TEMPORAL_USER'" | grep -q 1 || \
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "CREATE USER $TEMPORAL_USER WITH PASSWORD '$TEMPORAL_PASSWORD';"
+
+                echo "Granting privileges on $TEMPORAL_DB..."
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d $TEMPORAL_DB -c "GRANT ALL PRIVILEGES ON DATABASE $TEMPORAL_DB TO $TEMPORAL_USER; GRANT USAGE ON SCHEMA public TO $TEMPORAL_USER; GRANT CREATE ON SCHEMA public TO $TEMPORAL_USER; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $TEMPORAL_USER;"
+
+                echo "Granting privileges on $TEMPORAL_VISIBILITY_DB..."
+                psql -h $DB_HOST -p $DB_PORT -U postgres -d $TEMPORAL_VISIBILITY_DB -c "GRANT ALL PRIVILEGES ON DATABASE $TEMPORAL_VISIBILITY_DB TO $TEMPORAL_USER; GRANT USAGE ON SCHEMA public TO $TEMPORAL_USER; GRANT CREATE ON SCHEMA public TO $TEMPORAL_USER; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $TEMPORAL_USER;"
+
+                echo "Temporal database initialization complete!"
+                exit 0
+              fi
+              echo "Waiting for PostgreSQL... ($i/60)"
+              sleep 5
+            done
+            echo "PostgreSQL did not become available in time."
+            exit 1
+{{- end }}

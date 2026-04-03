@@ -23,6 +23,24 @@
     secretKeyRef:
       name: {{ .Values.database.secretName }}
       key: {{ .Values.database.secretKey }}
+# Temporal workflow engine configuration
+{{- if .Values.temporal.enabled }}
+# Temporal deployed as subchart - use internal service name
+- name: AUTOMATION_TEMPORAL_HOST
+  value: "{{ .Release.Name }}-temporal-frontend"
+- name: AUTOMATION_TEMPORAL_PORT
+  value: "7233"
+{{- else }}
+# Using external Temporal cluster
+- name: AUTOMATION_TEMPORAL_HOST
+  value: {{ .Values.temporal.external.host | quote }}
+- name: AUTOMATION_TEMPORAL_PORT
+  value: {{ .Values.temporal.external.port | quote }}
+{{- end }}
+- name: AUTOMATION_TEMPORAL_NAMESPACE
+  value: {{ .Values.temporal.external.namespace | default "default" | quote }}
+- name: AUTOMATION_TEMPORAL_TASK_QUEUE
+  value: {{ .Values.temporal.taskQueue | default "automations" | quote }}
 {{- if .Values.gcp.dbInstance }}
 - name: AUTOMATION_GCP_DB_INSTANCE
   value: {{ .Values.gcp.dbInstance | quote }}

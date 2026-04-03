@@ -1,0 +1,93 @@
+{{- /*
+  Automation Worker Deployment
+  
+  Runs the Temporal worker that processes automation workflows.
+  The worker polls the Temporal task queue and executes workflow/activity code.
+  
+  This is separate from the main automation API deployment to allow:
+  - Independent scaling of workers based on workload
+  - Worker-specific resource allocation
+  - Clean separation of API and worker concerns
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: automation-worker
+  labels:
+    app: automation
+    component: worker
+spec:
+  replicas: {{ .Values.worker.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: automation
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: automation
+        component: worker
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+      {{- if .Values.temporal.enabled }}
+      # Wait for Temporal to be ready before starting the worker
+      - name: wait-for-temporal
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+          - |
+            TEMPORAL_HOST="{{ .Release.Name }}-temporal-frontend"
+            TEMPORAL_PORT="7233"
+            echo "Waiting for Temporal at $TEMPORAL_HOST:$TEMPORAL_PORT to be ready..."
+            until nc -z $TEMPORAL_HOST $TEMPORAL_PORT; do
+              echo "Temporal is unavailable - sleeping for 2 seconds"
+              sleep 2
+            done
+            echo "Temporal is up and running!"
+      {{- else }}
+      # Wait for external Temporal to be reachable
+      - name: wait-for-temporal
+        image: busybox:latest
+        command: ['sh', '-c']
+        args:
+          - |
+            TEMPORAL_HOST="{{ .Values.temporal.external.host }}"
+            TEMPORAL_PORT="{{ .Values.temporal.external.port }}"
+            echo "Waiting for Temporal at $TEMPORAL_HOST:$TEMPORAL_PORT to be ready..."
+            until nc -z $TEMPORAL_HOST $TEMPORAL_PORT; do
+              echo "Temporal is unavailable - sleeping for 2 seconds"
+              sleep 2
+            done
+            echo "Temporal is up and running!"
+      {{- end }}
+      containers:
+      - name: worker
+        imagePullPolicy: Always
+        image: '{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}'
+        command: ["ddtrace-run"]
+        args:
+          - "python"
+          - "-m"
+          - "automation.temporal.worker"
+        resources:
+          {{- toYaml (.Values.worker.resources | default .Values.deployment.resources) | nindent 12 }}
+        livenessProbe:
+          exec:
+            command:
+              - python
+              - -c
+              - "import sys; sys.exit(0)"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          failureThreshold: 3
+        env:
+        {{- include "automation.env" . | nindent 8 }}
