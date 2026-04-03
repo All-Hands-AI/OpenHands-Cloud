@@ -668,6 +668,17 @@ automation:
       limits:
         memory: 512Mi
         cpu: 500m
+
+  # Temporal worker deployment configuration
+  worker:
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
   
   securityContext:
     runAsUser: 42420
@@ -764,6 +775,82 @@ automation:
   # PostgreSQL subchart - disabled when using parent's PostgreSQL
   postgresql:
     enabled: false
+
+  # Temporal workflow engine configuration
+  # When deployed as subchart of openhands, Temporal reuses parent's PostgreSQL
+  temporal:
+    # Enable Temporal for durable workflow execution
+    enabled: false
+    # External Temporal configuration (used when temporal.enabled=false)
+    external:
+      host: "temporal-frontend"
+      port: 7233
+      namespace: "default"
+    # Task queue for automation workflows
+    taskQueue: "automations"
+    # Temporal subchart configuration (when temporal.enabled=true)
+    # Persistence is configured to use the parent chart's PostgreSQL instance
+    server:
+      replicaCount: 1
+      config:
+        persistence:
+          defaultStore: default
+          visibilityStore: visibility
+          numHistoryShards: 128
+          datastores:
+            default:
+              sql:
+                pluginName: postgres12
+                driverName: postgres12
+                databaseName: temporal
+                # Uses parent's PostgreSQL (oh-main-postgresql:5432)
+                connectAddr: "oh-main-postgresql:5432"
+                user: temporal_user
+                existingSecret: temporal-db-secret
+                secretKey: password
+                createDatabase: true
+                manageSchema: true
+                maxConns: 20
+                maxIdleConns: 20
+            visibility:
+              sql:
+                pluginName: postgres12
+                driverName: postgres12
+                databaseName: temporal_visibility
+                connectAddr: "oh-main-postgresql:5432"
+                user: temporal_user
+                existingSecret: temporal-db-secret
+                secretKey: password
+                createDatabase: true
+                manageSchema: true
+                maxConns: 10
+                maxIdleConns: 10
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+    admintools:
+      enabled: true
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
+    web:
+      enabled: true
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
 
 replicated:
   enabled: false

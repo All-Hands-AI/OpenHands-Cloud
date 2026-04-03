@@ -1,0 +1,79 @@
+{{- if .Values.temporal.enabled }}
+{{- /*
+  Create the Temporal "default" namespace after Temporal services are running.
+  
+  This job waits for the Temporal frontend service to be available, then
+  creates the "default" namespace if it doesn't exist. The automation
+  worker and API both use this namespace for workflows.
+  
+  Note: This is intentionally NOT a Helm hook because Temporal is deployed
+  as part of the same release. Using post-install hooks would create timing
+  issues where the hook runs before Temporal pods are ready.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: temporal-namespace-init
+  labels:
+    app: automation
+    component: temporal-namespace-init
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        app: automation
+        component: temporal-namespace-init
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: create-namespace
+        # Use the Temporal admin-tools image which has the temporal CLI
+        image: temporalio/admin-tools:{{ .Values.temporal.server.image.tag | default "1.26.2" }}
+        env:
+          - name: TEMPORAL_ADDRESS
+            value: "{{ .Release.Name }}-frontend:7233"
+          - name: TEMPORAL_NAMESPACE
+            value: {{ .Values.temporal.namespace | default "default" | quote }}
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for Temporal frontend at $TEMPORAL_ADDRESS to be available..."
+            
+            # Wait for Temporal frontend to be reachable
+            for i in $(seq 1 90); do
+              if temporal operator cluster health 2>/dev/null | grep -q "SERVING"; then
+                echo "Temporal cluster is healthy!"
+                break
+              fi
+              echo "Waiting for Temporal to be ready... ($i/90)"
+              sleep 5
+            done
+            
+            # Check if namespace already exists
+            echo "Checking if namespace '$TEMPORAL_NAMESPACE' exists..."
+            if temporal operator namespace describe -n "$TEMPORAL_NAMESPACE" >/dev/null 2>&1; then
+              echo "Namespace '$TEMPORAL_NAMESPACE' already exists."
+              exit 0
+            fi
+            
+            # Create the namespace
+            echo "Creating namespace '$TEMPORAL_NAMESPACE'..."
+            temporal operator namespace create -n "$TEMPORAL_NAMESPACE" \
+              --retention 72h \
+              --description "Default namespace for automation workflows"
+            
+            if [ $? -eq 0 ]; then
+              echo "Namespace '$TEMPORAL_NAMESPACE' created successfully!"
+              exit 0
+            else
+              echo "Failed to create namespace '$TEMPORAL_NAMESPACE'"
+              exit 1
+            fi
+{{- end }}
