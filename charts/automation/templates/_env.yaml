@@ -31,6 +31,10 @@
   value: "{{ .Release.Name }}-frontend"
 - name: AUTOMATION_TEMPORAL_PORT
   value: "7233"
+# Skip in-process worker since we have a separate worker deployment.
+# This avoids conflicts between ddtrace and Temporal's workflow sandbox.
+- name: AUTOMATION_SKIP_WORKER
+  value: "true"
 {{- else }}
 # Using external Temporal cluster
 - name: AUTOMATION_TEMPORAL_HOST

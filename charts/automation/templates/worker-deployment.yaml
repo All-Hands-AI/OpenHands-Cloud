@@ -74,9 +74,11 @@ spec:
       - name: worker
         imagePullPolicy: Always
         image: '{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}'
-        command: ["ddtrace-run"]
+        # Note: We don't use ddtrace-run here because it conflicts with Temporal's
+        # workflow sandbox import system, causing circular import errors with beartype.
+        # Temporal has its own tracing/observability mechanisms for workflows.
+        command: ["python"]
         args:
-          - "python"
           - "-m"
           - "automation.temporal.worker"
         resources:
