@@ -14,17 +14,17 @@ dependencies:
 - name: minio
   repository: https://charts.min.io/
   version: 5.0.10
-- name: redis
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 20.3.0
+- name: valkey
+  repository: https://valkey.io/valkey-helm/
+  version: 0.9.3
 - name: replicated
   repository: oci://charts.shortrib.io/library
   version: 1.9.0
 - name: runtime-api
-  repository: file://../runtime-api
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
   version: 0.2.6
 - name: automation
-  repository: file://../automation
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
   version: 0.1.0
-digest: sha256:2230df276f33a5502593c36d3591ed6a6c0107fd8ef819135ee565e96d0971ec
-generated: "2026-04-03T15:23:23.723639-04:00"
+digest: sha256:2f3135f9d399b1fda95802adee04c571a630789d47129d7c9226e2c7e0a6055b
+generated: "2026-04-03T18:00:58.487975-04:00"

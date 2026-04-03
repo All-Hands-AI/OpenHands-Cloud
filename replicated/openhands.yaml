@@ -221,12 +221,10 @@ spec:
       apiHostname: 'http://openhands-runtime-api:5000'
     cnpg:
       enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
-    redis:
+    valkey:
       enabled: true
       image:
-        repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/redis'
-      auth:
-        password: '{{repl ConfigOption "redis_password" | Base64Encode }}'
+        repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/valkey/valkey'
     filestore:
       ephemeral: true
     minio:
@@ -388,9 +386,9 @@ spec:
             image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgres:16'
         cnpg:
           imageName: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:16'
-        redis:
+        valkey:
           image:
-            repository: '{{repl LocalRegistryNamespace }}/redis'
+            repository: '{{repl LocalRegistryNamespace }}/valkey'
         minio:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/minio'
@@ -519,7 +517,7 @@ spec:
       enabled: true
     minio:
       enabled: true
-    redis:
+    valkey:
       enabled: true
     runtime-api:
       enabled: true

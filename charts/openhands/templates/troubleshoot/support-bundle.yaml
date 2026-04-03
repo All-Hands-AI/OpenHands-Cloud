@@ -11,9 +11,9 @@ spec:
         key: postgres-password
         includeValue: false
     - secret:
-        name: {{ .Release.Name }}-redis
+        name: {{ .Release.Name }}-valkey
         namespace: {{ .Release.Namespace }}
-        key: redis-password
+        key: valkey-password
         includeValue: false
     - secret:
         name: sandbox-api-key
@@ -62,13 +62,13 @@ spec:
         limits:
           maxAge: 168h
     {{- end }}
-    {{- if .Values.redis.enabled }}
-    # Redis logs (Bitnami chart)
+    {{- if .Values.valkey.enabled }}
+    # Valkey logs
     - logs:
-        name: app/{{ .Release.Name }}-redis/logs
+        name: app/{{ .Release.Name }}-valkey/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app.kubernetes.io/name=redis
+          - app.kubernetes.io/name=valkey
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
@@ -135,13 +135,13 @@ spec:
           secretName: {{ .Values.cnpg.superuserSecret | default "postgres-password" }}
           secretKey: password
     {{- end }}
-    {{- if .Values.redis.enabled }}
+    {{- if .Values.valkey.enabled }}
     - redis:
-        collectorName: redis
-        uri: redis://{{ .Release.Name }}-redis-master:6379
+        collectorName: valkey
+        uri: redis://{{ .Release.Name }}-valkey:6379
         password:
-          secretName: {{ .Release.Name }}-redis
-          secretKey: redis-password
+          secretName: {{ .Release.Name }}-valkey
+          secretKey: valkey-password
     {{- end }}
   analyzers: {{- include "troubleshoot.analyzers.shared" .  | nindent 4 }}
     - deploymentStatus:
@@ -228,17 +228,17 @@ spec:
               when: ">= 1"
               message: "OpenHands PostgreSQL (CNPG) is ready"
     {{- end }}
-    {{- if .Values.redis.enabled }}
-    - statefulsetStatus:
-        name: {{ .Release.Name }}-redis-master
+    {{- if .Values.valkey.enabled }}
+    - deploymentStatus:
+        name: {{ .Release.Name }}-valkey
         namespace: {{ .Release.Namespace }}
         outcomes:
           - fail:
               when: "< 1"
-              message: "OpenHands Redis statefulset is not ready"
+              message: "OpenHands Valkey deployment is not ready"
           - pass:
               when: ">= 1"
-              message: "OpenHands Redis statefulset is ready"
+              message: "OpenHands Valkey deployment is ready"
     {{- end }}
     {{- if .Values.keycloak.enabled }}
     - statefulsetStatus:
@@ -277,22 +277,19 @@ spec:
               when: "connected == true"
               message: "PostgreSQL database is healthy"
     {{- end }}
-    {{- if .Values.redis.enabled }}
+    {{- if .Values.valkey.enabled }}
     - redis:
-        checkName: "Redis Cache Health"
-        collectorName: redis
+        checkName: "Valkey Cache Health"
+        collectorName: valkey
         outcomes:
           - fail:
               when: "connected == false"
-              message: "Cannot connect to Redis server"
+              message: "Cannot connect to Valkey server"
           - fail:
               when: "version == \"\""
-              message: "Redis version could not be determined"
-          - warn:
-              when: "version < 6.0.0"
-              message: "Redis version is older than recommended (6.0.0+)"
+              message: "Valkey version could not be determined"
           - pass:
               when: "connected == true"
-              message: "Redis server is healthy"
+              message: "Valkey server is healthy"
     {{- end }}
 {{- end -}}

@@ -93,8 +93,8 @@ kubectl create secret generic postgres-password -n openhands \
   --from-literal=password=$GLOBAL_SECRET \
   --from-literal=postgres-password=$GLOBAL_SECRET
 
-kubectl create secret generic redis -n openhands \
-  --from-literal=redis-password=$GLOBAL_SECRET
+kubectl create secret generic valkey -n openhands \
+  --from-literal=valkey-password=$GLOBAL_SECRET
 
 # NOTE: if you are using your own LiteLLM instance, then change $GLOBAL_SECRET to your LiteLLM API Key
 kubectl create secret generic lite-llm-api-key -n openhands \
@@ -134,7 +134,7 @@ langfuse-salt         Opaque   1      23s
 lite-llm-api-key      Opaque   1      28s
 litellm-env-secrets   Opaque   1      2m8s
 postgres-password     Opaque   3      39s
-redis                 Opaque   1      35s
+valkey                Opaque   1      35s
 sandbox-api-key       Opaque   1      3s
 ```
 
@@ -479,25 +479,27 @@ To use an external S3-compatible storage instead of MinIO:
 
 ### Bring Your Own Redis
 
-To use an external Redis instance:
+Any Redis-compatible cache (e.g., Redis, Valkey, KeyDB) can be used as an external cache.
 
-1. Disable the included Redis:
+To use an external instance:
+
+1. Disable the included Valkey:
 
    ```yaml
-   redis:
+   valkey:
      enabled: false
    ```
 
-2. Configure the external Redis connection:
+2. Configure the external cache connection:
 
    ```yaml
    externalRedis:
      host: your-redis-host
      port: 6379
-     existingSecret: redis
+     existingSecret: valkey
    # Make sure the secret exists with the correct credentials
-   # kubectl create secret generic redis \
-   #   --from-literal=redis-password=<your-redis-password>
+   # kubectl create secret generic valkey \
+   #   --from-literal=valkey-password=<your-password>
    ```
 
 ### Storage Class Configuration

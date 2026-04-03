@@ -400,10 +400,10 @@ langfuse:
       existingSecretKey: password
   redis:
     deploy: false
-    host: oh-main-redis
+    host: oh-main-valkey
     auth:
-      existingSecret: redis
-      existingSecretPasswordKey: redis-password
+      existingSecret: valkey
+      existingSecretPasswordKey: valkey-password
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
@@ -506,17 +506,19 @@ externalDatabase:
   enabled: false
   existingSecret: postgres-password
 
-redis:
+valkey:
   enabled: true
-  architecture: standalone
   auth:
     enabled: true
-    existingSecret: "redis"
-  master:
-    persistence:
-      enabled: false
+    usersExistingSecret: "valkey"
+    aclUsers:
+      default:
+        permissions: "~* &* +@all"
+        passwordKey: "valkey-password"
   replica:
-    replicaCount: 0
+    enabled: false
+  dataStorage:
+    enabled: false
   resources:
     requests:
       memory: 100Mi
@@ -524,8 +526,6 @@ redis:
     limits:
       memory: 512Mi
       cpu: 100m
-  image:
-    repository: bitnamilegacy/redis
 
 maintenanceTasks:
   enabled: true

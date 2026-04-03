@@ -234,9 +234,9 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
-        - name: redis_password
-          title: Redis Password
-          help_text: Password for embedded Redis
+        - name: valkey_password
+          title: Valkey Password
+          help_text: Password for embedded Valkey cache
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'

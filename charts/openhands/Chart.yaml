@@ -28,10 +28,10 @@ dependencies:
     version: 5.0.10
     condition: filestore.ephemeral
     repository: https://charts.min.io/
-  - name: redis
-    version: 20.3.0
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: redis.enabled
+  - name: valkey
+    version: 0.9.3
+    repository: https://valkey.io/valkey-helm/
+    condition: valkey.enabled
   - name: replicated
     repository: oci://charts.shortrib.io/library
     version: 1.9.0

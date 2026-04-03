@@ -9,7 +9,7 @@ config:
   postgres_username: "postgres"
   postgres_database: "openhands"
   postgres_password: ""
-  redis_password: ""
+  valkey_password: ""
   jwt_secret: ""
   keycloak_admin_password: ""
   keycloak_client_secret: ""

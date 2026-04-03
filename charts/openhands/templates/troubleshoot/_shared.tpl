@@ -51,7 +51,7 @@
     outcomes:
       - fail:
           when: "== false"
-          message: "No default storage class found - required for PostgreSQL, Redis, and file storage"
+          message: "No default storage class found - required for PostgreSQL, Valkey, and file storage"
       - pass:
           message: "Default storage class is available"
 {{- if .Values.externalDatabase.enabled }}

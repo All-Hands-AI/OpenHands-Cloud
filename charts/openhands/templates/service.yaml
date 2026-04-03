@@ -30,25 +30,23 @@ spec:
     app.kubernetes.io/name: runtime-api
     app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-{{- if and .Values.redis.enabled .Values.langfuse.enabled }}
+{{- if and .Values.valkey.enabled .Values.langfuse.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: oh-main-redis
+  name: oh-main-valkey
 spec:
   type: ClusterIP
   internalTrafficPolicy: Cluster
   sessionAffinity: None
   ports:
-    - name: tcp-redis
+    - name: tcp-valkey
       port: 6379
-      targetPort: redis
-      nodePort: null
+      targetPort: 6379
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/name: redis
-    app.kubernetes.io/component: master
+    app.kubernetes.io/name: valkey
 {{- end }}
 {{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
 ---
