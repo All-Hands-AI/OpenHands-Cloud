@@ -183,6 +183,10 @@ temporal:
   # Deploy Temporal as a subchart
   enabled: false
 
+  # Temporal namespace for automation workflows
+  # This namespace is auto-created when temporal.enabled=true
+  namespace: "default"
+
   # External Temporal configuration (used when enabled=false)
   # Configure this to point to an existing Temporal cluster
   external:
