@@ -1,0 +1,2 @@
+cloudnative-pg:
+  enabled: true

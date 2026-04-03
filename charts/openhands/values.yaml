@@ -313,7 +313,7 @@ keycloak:
   postgresql:
     enabled: false
   externalDatabase:
-    host: oh-main-postgresql
+    host: oh-main-postgresql-rw
     database: bitnami_keycloak
     existingSecret: postgres-password
     existingSecretUserKey: username
@@ -330,7 +330,7 @@ keycloak:
   image:
     repository: bitnamilegacy/keycloak
   waitForDb:
-    image: "bitnamilegacy/postgresql:latest"
+    image: "postgres:16"
   initContainers:
     - name: wait-for-db
       # The Bitnami Keycloak subchart renders initContainers through common.tplvalues.render,
@@ -392,7 +392,7 @@ langfuse:
       existingSecretKey: password
   postgresql:
     deploy: false
-    host: oh-main-postgresql
+    host: oh-main-postgresql-rw
     auth:
       username: postgres
       database: postgres_langfuse
@@ -424,7 +424,7 @@ litellm-helm:
     deployStandalone: false
     useExisting: true
     database: litellm
-    endpoint: "oh-main-postgresql"
+    endpoint: "oh-main-postgresql-rw"
     secret:
       name: postgres-password
       usernameKey: username
@@ -493,24 +493,14 @@ minio:
       memory: 512Mi
       cpu: 100m
 
-postgresql:
+cnpg:
   enabled: true
-  auth:
-    username: postgres
-    existingSecret: postgres-password
-  primary:
-    initdb:
-      scriptsConfigMap: ""
-    persistence:
-      enabled: false
-    # Add the following if using Karpenter with persistence
-    # podAnnotations:
-    #   karpenter.sh/do-not-evict: "true"
-  service:
-    ports:
-      postgresql: 5432
-  image:
-    repository: bitnamilegacy/postgresql
+  instances: 1
+  username: postgres
+  superuserSecret: postgres-password
+  storage:
+    size: 10Gi
+    storageClass: ""
 
 externalDatabase:
   enabled: false
@@ -603,13 +593,6 @@ runtime-api:
   databaseMigrations:
     createDatabases: false
     migrate: true
-  postgresql:
-    auth:
-      username: postgres
-      existingSecret: postgres-password
-  externalDatabase:
-    enabled: false
-    existingSecret: postgres-password
   ingress:
     enabled: false
     # REQUIRED: Update to a hostname in a DNS domain you own
@@ -619,7 +602,7 @@ runtime-api:
       cert-manager.io/cluster-issuer: letsencrypt-production
     tls: true
   env:
-    DB_HOST: oh-main-postgresql
+    DB_HOST: oh-main-postgresql-rw
     DB_USER: postgres
     DB_NAME: runtime_api_db
     K8S_NAMESPACE: "openhands"

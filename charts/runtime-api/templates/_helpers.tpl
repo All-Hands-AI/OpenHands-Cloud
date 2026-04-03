@@ -54,53 +54,33 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 PostgreSQL host
 */}}
 {{- define "runtime-api.postgresql.host" -}}
-{{- if .Values.postgresql.enabled }}
-{{- printf "%s-%s" .Release.Name "postgresql" | trunc 63 | trimSuffix "-" -}}
-{{- else }}
-{{- .Values.database.host -}}
-{{- end }}
+{{- .Values.env.DB_HOST | default "oh-main-postgresql-rw" -}}
 {{- end -}}
 
 {{/*
 PostgreSQL username
 */}}
 {{- define "runtime-api.postgresql.username" -}}
-{{- if .Values.postgresql.enabled }}
-{{- .Values.postgresql.auth.username -}}
-{{- else }}
-{{- .Values.database.user -}}
-{{- end }}
+{{- .Values.env.DB_USER | default "postgres" -}}
 {{- end -}}
 
 {{/*
 PostgreSQL database
 */}}
 {{- define "runtime-api.postgresql.database" -}}
-{{- if .Values.postgresql.enabled }}
-{{- .Values.postgresql.auth.database -}}
-{{- else }}
-{{- .Values.database.name -}}
-{{- end }}
+{{- .Values.env.DB_NAME | default "runtime_api_db" -}}
 {{- end -}}
 
 {{/*
 PostgreSQL secret name
 */}}
 {{- define "runtime-api.postgresql.secretName" -}}
-{{- if .Values.postgresql.enabled }}
-{{- printf "%s-%s" .Release.Name "postgresql" -}}
-{{- else }}
-{{- include "runtime-api.fullname" . -}}
-{{- end }}
+{{- .Values.database.existingSecret | default "postgres-password" -}}
 {{- end -}}
 
 {{/*
 PostgreSQL secret key
 */}}
 {{- define "runtime-api.postgresql.secretKey" -}}
-{{- if .Values.postgresql.enabled }}
-{{- printf "postgres-password" -}}
-{{- else }}
-{{- printf "db-password" -}}
-{{- end }}
+{{- printf "password" -}}
 {{- end -}}

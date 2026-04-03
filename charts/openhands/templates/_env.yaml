@@ -305,13 +305,13 @@
   value: "1"
 {{- end }}
 
-{{- if .Values.postgresql.enabled }}
+{{- if .Values.cnpg.enabled }}
 - name: DB_HOST
-  value: "{{ .Release.Name }}-postgresql"
+  value: "oh-main-postgresql-rw"
 - name: DB_USER
-  value: "{{ .Values.postgresql.auth.username }}"
+  value: "{{ .Values.cnpg.username | default "postgres" }}"
 - name: DB_NAME
-  value: "{{ .Values.postgresql.auth.database }}"
+  value: "{{ .Values.externalDatabase.database | default "openhands" }}"
 {{- else }}
 - name: DB_HOST
   value: "{{ .Values.externalDatabase.host }}"
@@ -342,7 +342,7 @@
 - name: DB_PASS
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.postgresql.auth.existingSecret }}
+      name: {{ .Values.cnpg.superuserSecret | default "postgres-password" }}
       key: password
 {{- if .Values.jira.enabled }}
 - name: ENABLE_JIRA

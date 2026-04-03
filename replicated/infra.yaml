@@ -1,0 +1,28 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: infra
+spec:
+  chart:
+    name: infra
+  releaseName: infra
+  namespace: openhands
+  weight: 5
+  helmUpgradeFlags: ["--wait", "--timeout", "300s"]
+  values:
+    cloudnative-pg:
+      enabled: true
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/cloudnative-pg/cloudnative-pg'
+
+  optionalValues:
+    - when: '{{repl HasLocalRegistry }}'
+      recursiveMerge: true
+      values:
+        cloudnative-pg:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cloudnative-pg'
+
+  builder:
+    cloudnative-pg:
+      enabled: true

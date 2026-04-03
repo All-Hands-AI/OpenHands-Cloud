@@ -29,9 +29,8 @@ spec:
     - openhands/statefulset/keycloak
     - openhands/service/keycloak
 
-    # postgres
-    - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/statefulset/openhands-postgresql{{repl end}}'
-    - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/service/openhands-postgresql{{repl end}}'
+    # postgres (CNPG)
+    - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/pod/oh-main-postgresql-1{{repl end}}'
 
     # redis
     - openhands/statefulset/openhands-redis-master
