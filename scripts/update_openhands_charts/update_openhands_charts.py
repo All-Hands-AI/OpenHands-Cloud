@@ -24,6 +24,7 @@ logging.getLogger("github").setLevel(logging.WARNING)
 SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
+OPENHANDS_REPO = "All-Hands-AI/OpenHands"
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
@@ -67,20 +68,6 @@ class DeployConfig:
     """Configuration values from the deploy workflow."""
 
     runtime_api_sha: str
-
-
-def get_latest_semver_tag(token: str, repo_name: str) -> str | None:
-    """Fetch the latest semantic version tag (x.y.z) from a GitHub repository."""
-    gh = Github(auth=Auth.Token(token))
-    try:
-        repo = gh.get_repo(repo_name)
-        tags = repo.get_tags()
-        for tag in tags:
-            if SEMVER_PATTERN.match(tag.name):
-                return tag.name
-    except Exception as e:
-        print(f"Error fetching tags from {repo_name}: {e}")
-    return None
 
 
 def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
@@ -396,11 +383,11 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
         openhands_version = cloud_tag
         print(f"Using specified cloud tag: {openhands_version}")
         # Validate that the specified cloud tag exists
-        if not cloud_tag_exists(token, "All-Hands-AI/OpenHands", cloud_tag):
-            print(f"Error: Cloud tag '{cloud_tag}' does not exist in All-Hands-AI/OpenHands")
+        if not cloud_tag_exists(token, OPENHANDS_REPO, cloud_tag):
+            print(f"Error: Cloud tag '{cloud_tag}' does not exist in {OPENHANDS_REPO}")
             return
     else:
-        openhands_version = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
+        openhands_version = get_latest_cloud_tag(token, OPENHANDS_REPO)
         if openhands_version:
             print(f"OpenHands cloud tag: {openhands_version}")
         else:
