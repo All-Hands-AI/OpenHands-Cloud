@@ -4,8 +4,14 @@
   1. Create the Temporal databases in PostgreSQL
   2. Create the temporal_user with appropriate permissions
   
-  This init job runs before Temporal starts and creates the necessary
-  database infrastructure. It reuses the automation's PostgreSQL connection.
+  This job runs alongside the main release and waits for PostgreSQL to be ready
+  before creating the necessary database infrastructure. It reuses the 
+  automation's PostgreSQL connection.
+  
+  Note: This is intentionally NOT a Helm hook because PostgreSQL is deployed
+  as part of the same release. Using pre-install/pre-upgrade hooks would create
+  a deadlock where this job waits for PostgreSQL, but PostgreSQL can't be 
+  deployed until the hooks complete.
 */}}
 apiVersion: batch/v1
 kind: Job
@@ -14,10 +20,6 @@ metadata:
   labels:
     app: automation
     component: temporal-db-init
-  annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-weight": "-5"
-    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
 spec:
   ttlSecondsAfterFinished: 300
   template:
