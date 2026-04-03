@@ -75,7 +75,7 @@ spec:
           maxAge: 168h
     {{- end }}
     {{- if .Values.keycloak.enabled }}
-    # Keycloak logs (Bitnami chart)
+    # Keycloak logs (KeycloakX chart)
     - logs:
         name: app/{{ .Release.Name }}-keycloak/logs
         namespace: {{ .Release.Namespace }}

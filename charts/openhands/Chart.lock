@@ -2,9 +2,9 @@ dependencies:
 - name: clickhouse
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 9.2.5
-- name: keycloak
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 24.7.5
+- name: keycloakx
+  repository: https://codecentric.github.io/helm-charts
+  version: 7.1.9
 - name: langfuse
   repository: https://langfuse.github.io/langfuse-k8s
   version: 1.2.13
@@ -25,6 +25,9 @@ dependencies:
   version: 1.9.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.24
-digest: sha256:bca3722cdd4840a4557955ea2b80e38991cc2d0a0211855a791cf98e37410e45
-generated: "2026-03-18T00:28:58.972983917-04:00"
+  version: 0.2.6
+- name: automation
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  version: 0.1.0
+digest: sha256:9704eb8e0893624e1ab033871f04966cc9446437d785a89dce7b249de8c05ac0
+generated: "2026-04-03T17:26:28.296356-04:00"
