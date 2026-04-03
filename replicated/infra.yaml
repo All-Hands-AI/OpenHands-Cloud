@@ -14,6 +14,8 @@ spec:
       enabled: true
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/cloudnative-pg/cloudnative-pg'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
 
   optionalValues:
     - when: '{{repl HasLocalRegistry }}'
