@@ -351,10 +351,6 @@ keycloak:
           key: admin-password
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
-    - name: KC_HTTP_ENABLED
-      value: "true"
-    - name: KC_PROXY_HEADERS
-      value: "xforwarded"
     - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
       value: "true"
     - name: KC_DB_USERNAME
