@@ -40,12 +40,13 @@ spec:
       initContainers:
       {{- if .Values.temporal.enabled }}
       # Wait for Temporal to be ready before starting the worker
+      # The Temporal subchart creates a service named {release-name}-frontend
       - name: wait-for-temporal
         image: busybox:latest
         command: ['sh', '-c']
         args:
           - |
-            TEMPORAL_HOST="{{ .Release.Name }}-temporal-frontend"
+            TEMPORAL_HOST="{{ .Release.Name }}-frontend"
             TEMPORAL_PORT="7233"
             echo "Waiting for Temporal at $TEMPORAL_HOST:$TEMPORAL_PORT to be ready..."
             until nc -z $TEMPORAL_HOST $TEMPORAL_PORT; do

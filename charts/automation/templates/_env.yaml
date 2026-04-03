@@ -26,8 +26,9 @@
 # Temporal workflow engine configuration
 {{- if .Values.temporal.enabled }}
 # Temporal deployed as subchart - use internal service name
+# The Temporal subchart creates a service named {release-name}-frontend
 - name: AUTOMATION_TEMPORAL_HOST
-  value: "{{ .Release.Name }}-temporal-frontend"
+  value: "{{ .Release.Name }}-frontend"
 - name: AUTOMATION_TEMPORAL_PORT
   value: "7233"
 {{- else }}
