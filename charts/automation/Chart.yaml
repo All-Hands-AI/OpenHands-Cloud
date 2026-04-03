@@ -4,8 +4,3 @@ description: OpenHands Automations Service — scheduled and event-driven automa
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
-dependencies:
-  - name: minio
-    version: 5.0.10
-    repository: https://charts.min.io/
-    condition: minio.enabled

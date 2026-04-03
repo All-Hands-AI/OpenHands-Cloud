@@ -229,11 +229,19 @@ spec:
         password: '{{repl ConfigOption "redis_password" | Base64Encode }}'
     filestore:
       ephemeral: true
-    minio:
+    rustfs:
+      mode:
+        standalone:
+          enabled: true
+          existingClaim:
+            dataClaim: "openhands-minio"
+        distributed:
+          enabled: false
       persistence:
-        enabled: true
+        storageSize: 10Gi
       image:
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/minio/minio'
+        rustfs:
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rustfs/rustfs'
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
     bitbucketDataCenter:
@@ -391,9 +399,10 @@ spec:
         redis:
           image:
             repository: '{{repl LocalRegistryNamespace }}/redis'
-        minio:
+        rustfs:
           image:
-            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/minio'
+            rustfs:
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/rustfs'
         clickhouse:
           image:
             repository: '{{repl LocalRegistryNamespace }}/clickhouse'
@@ -432,7 +441,7 @@ spec:
         {{repl $llmDomain := $derive | ternary (printf "llm-proxy.%s" $bd) (ConfigOption "llm_proxy_hostname") }}
         {{repl $runtimeApiDomain := $derive | ternary (printf "runtime-api.%s" $bd) (ConfigOption "runtime_api_hostname") }}
         {{repl $runtimeBaseDomain := $derive | ternary (printf "runtime.%s" $bd) (ConfigOption "runtime_base_hostname") }}
-        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak,keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
+        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak,keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-rustfs-svc,openhands-runtime-api,openhands-service,svc" }}
         {{repl if ne $bd "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $bd }}{{repl end }}
         {{repl if ne $appDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $appDomain }}{{repl end }}
         {{repl if ne $authDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $authDomain }}{{repl end }}
@@ -516,8 +525,6 @@ spec:
     litellm:
       enabled: true
     litellm-helm:
-      enabled: true
-    minio:
       enabled: true
     redis:
       enabled: true

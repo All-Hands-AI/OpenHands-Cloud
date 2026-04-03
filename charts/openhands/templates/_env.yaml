@@ -40,11 +40,11 @@
 - name: FILE_STORE
   value: s3
 - name: AWS_ACCESS_KEY_ID
-  value: {{ (index .Values.minio.svcaccts 0).accessKey }}
+  value: {{ .Values.rustfs.secret.rustfs.access_key }}
 - name: AWS_SECRET_ACCESS_KEY
-  value: {{ (index .Values.minio.svcaccts 0).secretKey }}
+  value: {{ .Values.rustfs.secret.rustfs.secret_key }}
 - name: AWS_S3_ENDPOINT
-  value: {{ printf "%s-%s" $.Release.Name "minio:9000" }}
+  value: {{ printf "%s-%s" $.Release.Name "rustfs-svc:9000" }}
 - name: AWS_S3_BUCKET
   value: {{ .Values.filestore.bucket }}
 - name: AWS_S3_SECURE

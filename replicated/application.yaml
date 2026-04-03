@@ -40,9 +40,9 @@ spec:
     - openhands/deployment/openhands-litellm
     - openhands/service/openhands-litellm
 
-    # minio
-    - openhands/deployment/openhands-minio
-    - openhands/service/openhands-minio
+    # rustfs
+    - openhands/deployment/openhands-rustfs
+    - openhands/service/openhands-rustfs-svc
 
     # runtime-api chart
     - openhands/deployment/openhands-runtime-api

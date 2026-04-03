@@ -35,32 +35,19 @@
 - name: FILE_STORE_PATH
   value: {{ .Values.filestore.bucket }}
 {{- if .Values.filestore.ephemeral }}
-# Ephemeral mode: use S3-compatible storage (minio)
 - name: FILE_STORE
   value: s3
-{{- if .Values.minio.enabled }}
-# Using deployed minio subchart
 - name: AWS_ACCESS_KEY_ID
-  value: {{ (index .Values.minio.svcaccts 0).accessKey }}
+  value: {{ .Values.s3.accessKey }}
 - name: AWS_SECRET_ACCESS_KEY
-  value: {{ (index .Values.minio.svcaccts 0).secretKey }}
+  value: {{ .Values.s3.secretKey }}
 - name: AWS_S3_ENDPOINT
-  value: {{ printf "%s-minio:9000" .Release.Name }}
-{{- else }}
-# Using external minio (e.g., parent chart's minio instance)
-- name: AWS_ACCESS_KEY_ID
-  value: {{ .Values.minio.external.accessKey }}
-- name: AWS_SECRET_ACCESS_KEY
-  value: {{ .Values.minio.external.secretKey }}
-- name: AWS_S3_ENDPOINT
-  value: {{ .Values.minio.external.endpoint }}
-{{- end }}
+  value: {{ .Values.s3.endpoint }}
 - name: AWS_S3_BUCKET
   value: {{ .Values.filestore.bucket }}
 - name: AWS_S3_SECURE
   value: "false"
 {{- else }}
-# Production mode: use cloud storage (gcs, s3, etc.)
 - name: FILE_STORE
   value: {{ .Values.filestore.type }}
 {{- end }}

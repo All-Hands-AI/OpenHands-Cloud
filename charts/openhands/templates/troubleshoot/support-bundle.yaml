@@ -85,13 +85,13 @@ spec:
           maxAge: 168h
     {{- end }}
     {{- if .Values.filestore.ephemeral }}
-    # MinIO logs (MinIO chart)
+    # RustFS logs
     - logs:
-        name: app/{{ .Release.Name }}-minio/logs
+        name: app/{{ .Release.Name }}-rustfs/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app=minio
-          - release={{ .Release.Name }}
+          - app.kubernetes.io/name=rustfs
+          - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
     {{- end }}
@@ -194,15 +194,15 @@ spec:
     {{- end }}
     {{- if .Values.filestore.ephemeral }}
     - deploymentStatus:
-        name: {{ .Release.Name }}-minio
+        name: {{ .Release.Name }}-rustfs
         namespace: {{ .Release.Namespace }}
         outcomes:
           - fail:
               when: "< 1"
-              message: "OpenHands MinIO deployment is not ready"
+              message: "OpenHands RustFS deployment is not ready"
           - pass:
               when: ">= 1"
-              message: "OpenHands MinIO deployment is ready"
+              message: "OpenHands RustFS deployment is ready"
     {{- end }}
     {{- if index .Values "runtime-api" "enabled" }}
     - deploymentStatus:

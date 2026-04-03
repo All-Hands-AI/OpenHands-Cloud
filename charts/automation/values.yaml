@@ -72,10 +72,10 @@ gcp:
   project: ""
   region: ""
 
-# File storage configuration (aligned with openhands chart pattern)
-# Supports multiple backends: gcs, s3, or in-cluster minio for ephemeral environments
+# File storage configuration
+# Supports multiple backends: gcs, s3, or in-cluster S3-compatible storage
 filestore:
-  # When true, uses S3-compatible storage (minio) for ephemeral/feature environments
+  # When true, uses S3-compatible storage for ephemeral/feature environments
   # When false, uses cloud storage specified by 'type' (for production)
   ephemeral: false
   # Bucket name for storing automation data
@@ -83,46 +83,13 @@ filestore:
   # Storage type when ephemeral=false (e.g., gcs, s3)
   type: gcs
 
-# Minio configuration for ephemeral storage (filestore.ephemeral=true)
-#
-# Two deployment modes:
-# 1. Standalone: Set minio.enabled=true to deploy minio as a subchart
-# 2. Subchart of openhands: Set minio.enabled=false and configure minio.external
-#    to use the parent chart's minio instance
-minio:
-  # Deploy minio as a subchart (for standalone deployments)
-  # Set to false when deployed as subchart of openhands (uses parent's minio)
-  enabled: false
-
-  # External minio configuration (used when enabled=false but filestore.ephemeral=true)
-  # Configure this to point to an existing minio instance (e.g., parent chart's minio)
-  external:
-    endpoint: "minio:9000"
-    accessKey: "default"
-    secretKey: "notasecret"
-
-  # Minio subchart configuration (used when enabled=true)
-  # These values are passed to the minio subchart
-  replicas: 1
-  mode: standalone
-  persistence:
-    enabled: false
-  buckets:
-    - name: automation-data
-      policy: none
-      purge: true
-  svcaccts:
-    - accessKey: "automationkey"
-      secretKey: "automationsecret"
-      user: root
-  rootUser: "root"
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: 50m
-    limits:
-      memory: 512Mi
-      cpu: 100m
+# S3-compatible storage configuration (used when filestore.ephemeral=true)
+# When deployed as subchart of openhands, these are passed from the parent chart
+# When deployed standalone, consumers must provide their own S3-compatible endpoint
+s3:
+  endpoint: ""
+  accessKey: ""
+  secretKey: ""
 
 # Service key from K8s secret (for staging/production)
 # Used by OpenHands SaaS to authenticate requests to the automation service
