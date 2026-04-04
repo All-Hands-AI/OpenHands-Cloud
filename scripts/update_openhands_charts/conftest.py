@@ -90,6 +90,29 @@ def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> No
         assert expected in content, f"Expected '{expected}' not found in file"
 
 
+def assert_version_bumped(file_path: Path, original_version: str) -> None:
+    """Assert that a chart's version was bumped from the original.
+
+    This helper encapsulates the common pattern of verifying that a chart
+    version was correctly incremented after an update operation.
+
+    Args:
+        file_path: Path to the Chart.yaml file
+        original_version: The version before the update operation
+
+    Raises:
+        AssertionError: If version was not bumped correctly
+    """
+    # Import here to avoid circular dependency
+    import sys
+    sys.path.insert(0, str(file_path.parent))
+    from update_openhands_charts import bump_patch_version
+
+    expected = bump_patch_version(original_version)
+    actual = get_chart_value(file_path, "version")
+    assert actual == expected, f"Expected version {expected}, got {actual}"
+
+
 @pytest.fixture
 def make_temp_yaml_file():
     """Factory fixture that creates temporary YAML files with cleanup.
