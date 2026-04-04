@@ -12,6 +12,24 @@ from unittest.mock import MagicMock
 import pytest
 
 
+def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> None:
+    """Assert that a file contains all expected strings.
+
+    This helper is useful for testing that YAML/config file modifications
+    preserve expected content that should not be changed.
+
+    Args:
+        file_path: Path to the file to check
+        expected_strings: List of strings that must appear in the file
+
+    Raises:
+        AssertionError: If any expected string is not found in the file
+    """
+    content = file_path.read_text()
+    for expected in expected_strings:
+        assert expected in content, f"Expected '{expected}' not found in file"
+
+
 @pytest.fixture
 def make_temp_yaml_file():
     """Factory fixture that creates temporary YAML files with cleanup.

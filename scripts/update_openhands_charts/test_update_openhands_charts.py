@@ -15,6 +15,7 @@ from ruamel.yaml import YAML
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
+from conftest import assert_file_contains_all
 from update_openhands_charts import (
     DeployConfig,
     SHORT_SHA_LENGTH,
@@ -624,11 +625,12 @@ class TestUpdateValues:
             openhands_version="cloud-1.1.0",
         )
 
-        content = temp_values_file.read_text()
-        assert "allowedUsers: null" in content
-        assert "runAsRoot: true" in content
-        assert "replicaCount: 1" in content
-        assert 'working_dir: "/openhands/code/"' in content
+        assert_file_contains_all(temp_values_file, [
+            "allowedUsers: null",
+            "runAsRoot: true",
+            "replicaCount: 1",
+            'working_dir: "/openhands/code/"',
+        ])
 
     def test_returns_true_when_changes_made(self, temp_values_file):
         """Test that function returns True when changes are made."""
@@ -891,9 +893,10 @@ class TestUpdateRuntimeApiValues:
             openhands_version="cloud-1.1.0",
         )
 
-        content = temp_runtime_api_values_file.read_text()
-        assert "replicaCount: 1" in content
-        assert 'working_dir: "/openhands/code/"' in content
+        assert_file_contains_all(temp_runtime_api_values_file, [
+            "replicaCount: 1",
+            'working_dir: "/openhands/code/"',
+        ])
 
     def test_dry_run_no_file_changes(self, temp_runtime_api_values_file):
         """Test that dry-run doesn't modify the file."""
