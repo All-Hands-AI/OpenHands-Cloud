@@ -94,8 +94,8 @@ spec:
       dbchecker:
         enabled: true
         image:
-          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/index.docker.io/bitnamilegacy/os-shell'
-          tag: "12"
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/library/busybox'
+          tag: "1.37"
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/keycloak/keycloak'
         tag: "26.5.5"
@@ -409,7 +409,7 @@ spec:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/keycloak'
           dbchecker:
             image:
-              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/os-shell'
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/busybox'
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
