@@ -413,6 +413,33 @@ def mock_main_early_exit(monkeypatch):
 
 
 @pytest.fixture
+def make_workflow_response():
+    """Factory fixture for creating mock GitHub API responses with workflow content.
+
+    Returns a function that creates a mock response object with base64-encoded
+    YAML content. Use this to test get_deploy_config with various workflow
+    configurations without repeating the mock setup boilerplate.
+
+    Usage:
+        def test_something(make_workflow_response, monkeypatch):
+            response = make_workflow_response("env:\\n  RUNTIME_API_SHA: abc123")
+            monkeypatch.setattr("update_openhands_charts.requests.get",
+                               MagicMock(return_value=response))
+            # ... test code ...
+    """
+    import base64
+
+    def _make_response(yaml_content: str) -> MagicMock:
+        encoded = base64.b64encode(yaml_content.encode()).decode()
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = {"content": encoded}
+        return mock_response
+
+    return _make_response
+
+
+@pytest.fixture
 def mock_github_ref(monkeypatch):
     """Factory fixture for mocking GitHub API git ref lookups.
 
