@@ -19,28 +19,28 @@ from ruamel.yaml import YAML
 # to make assertions self-documenting instead of using magic strings.
 # =============================================================================
 
+# Shared openhands chart constants (same across all variants)
+OPENHANDS_CHART_APP_VERSION = "cloud-1.0.0"  # OpenHands uses cloud-X.Y.Z tags
+
 # sample_openhands_chart_with_deps fixture values
 OPENHANDS_CHART_WITH_DEPS_VERSION = "0.1.0"
-OPENHANDS_CHART_WITH_DEPS_APP_VERSION = "cloud-1.0.0"  # OpenHands uses cloud-X.Y.Z tags
 OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION = "0.1.10"
 OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION = "1.0.0"
 
 # sample_openhands_chart_minimal fixture values
 OPENHANDS_CHART_MINIMAL_VERSION = "0.3.11"
-OPENHANDS_CHART_MINIMAL_APP_VERSION = "cloud-1.0.0"
 OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION = "0.2.6"
 
 # Consolidated openhands chart variants for parameterized testing
-# Each tuple: (fixture_name, version, app_version, runtime_api_version)
 OPENHANDS_CHART_VARIANTS = {
     "with_deps": {
         "version": OPENHANDS_CHART_WITH_DEPS_VERSION,
-        "app_version": OPENHANDS_CHART_WITH_DEPS_APP_VERSION,
+        "app_version": OPENHANDS_CHART_APP_VERSION,
         "runtime_api_version": OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION,
     },
     "minimal": {
         "version": OPENHANDS_CHART_MINIMAL_VERSION,
-        "app_version": OPENHANDS_CHART_MINIMAL_APP_VERSION,
+        "app_version": OPENHANDS_CHART_APP_VERSION,
         "runtime_api_version": OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION,
     },
 }
