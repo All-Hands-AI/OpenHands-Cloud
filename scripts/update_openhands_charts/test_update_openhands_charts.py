@@ -387,12 +387,6 @@ class TestUpdateResultHelpers:
         )
         assert result.is_unchanged(key) is expected
 
-    def test_is_unchanged_returns_false_for_empty_list(self):
-        """Verify is_unchanged returns False when unchanged list is empty."""
-        # Edge case: empty state after initialization (no updates performed yet)
-        result = update_openhands_charts.UpdateResult()
-        assert result.is_unchanged("any-key") is False
-
     @pytest.mark.parametrize("key,expected", [
         # Happy path: first key in changes list should be found
         ("appVersion", True),
@@ -408,12 +402,6 @@ class TestUpdateResultHelpers:
             changes=[("appVersion", "1.0.0", "2.0.0"), ("version", "0.1.0", "0.1.1")]
         )
         assert result.has_change_for(key) is expected
-
-    def test_has_change_for_returns_false_for_empty_list(self):
-        """Verify has_change_for returns False when changes list is empty."""
-        # Edge case: no changes made (dry run or values already current)
-        result = update_openhands_charts.UpdateResult()
-        assert result.has_change_for("any-key") is False
 
     @pytest.mark.parametrize("substring,expected", [
         # Happy path: exact substring match
@@ -433,50 +421,47 @@ class TestUpdateResultHelpers:
         )
         assert result.has_error_containing(substring) is expected
 
-    def test_has_error_containing_returns_false_for_empty_list(self):
-        """Verify has_error_containing returns False when errors list is empty."""
-        # Edge case: no errors occurred during update
+    @pytest.mark.parametrize("method_name,query", [
+        # Edge case: empty UpdateResult returns False for all lookup methods
+        pytest.param("is_unchanged", "any-key", id="is_unchanged on empty"),
+        pytest.param("has_change_for", "any-key", id="has_change_for on empty"),
+        pytest.param("has_error_containing", "any-error", id="has_error_containing on empty"),
+    ])
+    def test_lookup_methods_return_false_for_empty_result(self, method_name, query):
+        """Verify all lookup methods return False when their list is empty.
+
+        Consolidates edge case tests for is_unchanged, has_change_for, and
+        has_error_containing to verify consistent behavior on empty UpdateResult.
+        """
         result = update_openhands_charts.UpdateResult()
-        assert result.has_error_containing("any-error") is False
+        method = getattr(result, method_name)
+        assert method(query) is False
 
-    @pytest.mark.parametrize("errors,expected_count", [
-        # Happy path: multiple errors
-        (["error1", "error2", "error3"], 3),
-        # Boundary: single error
-        (["only one error"], 1),
-        # Boundary: empty list
-        ([], 0),
+    @pytest.mark.parametrize("field,data,expected_count", [
+        # error_count: multiple, single, empty
+        pytest.param("errors", ["error1", "error2", "error3"], 3, id="error_count: multiple"),
+        pytest.param("errors", ["only one error"], 1, id="error_count: single"),
+        pytest.param("errors", [], 0, id="error_count: empty"),
+        # change_count: multiple, single, empty
+        pytest.param("changes", [("k1", "old1", "new1"), ("k2", "old2", "new2")], 2, id="change_count: multiple"),
+        pytest.param("changes", [("key", "old", "new")], 1, id="change_count: single"),
+        pytest.param("changes", [], 0, id="change_count: empty"),
+        # unchanged_count: multiple, single, empty
+        pytest.param("unchanged", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")], 3, id="unchanged_count: multiple"),
+        pytest.param("unchanged", [("key", "value")], 1, id="unchanged_count: single"),
+        pytest.param("unchanged", [], 0, id="unchanged_count: empty"),
     ])
-    def test_error_count_returns_number_of_errors(self, errors, expected_count):
-        """Verify error_count property returns correct count of errors."""
-        result = update_openhands_charts.UpdateResult(errors=errors)
-        assert result.error_count == expected_count
+    def test_count_properties_return_correct_counts(self, field, data, expected_count):
+        """Verify count properties (error_count, change_count, unchanged_count) return correct values.
 
-    @pytest.mark.parametrize("changes,expected_count", [
-        # Happy path: multiple changes
-        ([("k1", "old1", "new1"), ("k2", "old2", "new2")], 2),
-        # Boundary: single change
-        ([("key", "old", "new")], 1),
-        # Boundary: empty list
-        ([], 0),
-    ])
-    def test_change_count_returns_number_of_changes(self, changes, expected_count):
-        """Verify change_count property returns correct count of changes."""
-        result = update_openhands_charts.UpdateResult(changes=changes)
-        assert result.change_count == expected_count
-
-    @pytest.mark.parametrize("unchanged,expected_count", [
-        # Happy path: multiple unchanged
-        ([("k1", "v1"), ("k2", "v2"), ("k3", "v3")], 3),
-        # Boundary: single unchanged
-        ([("key", "value")], 1),
-        # Boundary: empty list
-        ([], 0),
-    ])
-    def test_unchanged_count_returns_number_of_unchanged(self, unchanged, expected_count):
-        """Verify unchanged_count property returns correct count of unchanged items."""
-        result = update_openhands_charts.UpdateResult(unchanged=unchanged)
-        assert result.unchanged_count == expected_count
+        Consolidates count property tests into a single parameterized test that
+        covers all three properties with their boundary conditions (multiple,
+        single, empty).
+        """
+        result = update_openhands_charts.UpdateResult(**{field: data})
+        # Property name follows pattern: field_name -> field_count (errors -> error_count)
+        count_property = field.rstrip("s") + "_count"  # errors->error_count, changes->change_count
+        assert getattr(result, count_property) == expected_count
 
 
 class TestAssertVersionBumped:
