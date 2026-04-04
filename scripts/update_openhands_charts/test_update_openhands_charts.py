@@ -16,11 +16,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
 from update_openhands_charts import (
-    CLOUD_SEMVER_PATTERN,
     DeployConfig,
-    SEMVER_PATTERN,
     SHORT_SHA_LENGTH,
     bump_patch_version,
+    extract_version_from_cloud_tag,
     format_sha_tag,
     get_short_sha,
     update_openhands_chart,
@@ -30,110 +29,45 @@ from update_openhands_charts import (
 )
 
 
-# =============================================================================
-# PURE FUNCTION TESTS
-# Tests for stateless utility functions with no external dependencies.
-# These tests are fast, deterministic, and test behavior through public APIs.
-# =============================================================================
-
-
 class TestExtractVersionFromCloudTag:
     """Tests for extract_version_from_cloud_tag function.
 
-    OpenHands uses 'cloud-X.Y.Z' tags to identify production releases.
     These tests verify cloud tag parsing through the public interface rather
     than testing internal regex patterns directly. This approach is more
     maintainable as it tests behavior, not implementation.
-
-    TDD Rationale: Tests were designed to drive a simple regex pattern that
-    accepts only the strict 'cloud-X.Y.Z' format. Edge cases ensure the
-    implementation rejects common variations (v-prefix, pre-release suffixes)
-    that could cause version comparison bugs in production.
     """
 
-    @pytest.mark.parametrize("cloud_tag,expected", [
-        # Happy path: typical production versions
-        ("cloud-1.1.0", "1.1.0"),
-        ("cloud-2.0.0", "2.0.0"),
-        # Boundary: minimum valid version (all zeros) - ensures 0.0.0 is valid
-        ("cloud-0.0.0", "0.0.0"),
-        # Boundary: multi-digit components - regex must use \d+ not \d
-        ("cloud-10.20.30", "10.20.30"),
-        # Stress test: very large versions - ensures no arbitrary numeric limits
-        ("cloud-123.456.789", "123.456.789"),
-    ])
-    def test_extracts_version_from_valid_cloud_tags(self, cloud_tag, expected):
-        """Verify semver is correctly extracted from 'cloud-X.Y.Z' format tags."""
-        assert extract_version_from_cloud_tag(cloud_tag) == expected
-
-    @pytest.mark.parametrize("invalid_tag", [
-        # Prefix validation: must be exactly "cloud-" (case-sensitive, with hyphen)
-        pytest.param("1.1.0", id="missing cloud- prefix"),
-        pytest.param("v1.1.0", id="wrong prefix (v instead of cloud-)"),
-        pytest.param("Cloud-1.2.3", id="wrong case"),
-        pytest.param("cloud1.2.3", id="missing hyphen"),
-        # Semver structure: must be exactly X.Y.Z (three numeric parts)
-        pytest.param("cloud-1.2", id="missing patch"),
-        pytest.param("cloud-1.2.3.4", id="extra part"),
-        # Semver extensions: pre-release/build metadata breaks version comparison
-        pytest.param("cloud-1.2.3-beta", id="pre-release suffix"),
-        pytest.param("cloud-1.2.3+build", id="build metadata suffix"),
-        # Edge cases: defensive handling of malformed input
-        pytest.param("", id="empty string"),
-        pytest.param("latest", id="non-version tag"),
-        pytest.param("cloud-", id="missing version"),
-    ])
-    def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag):
-        """Verify invalid formats return None rather than raising exceptions.
-
-        TDD Rationale: Returning None (instead of raising) allows callers to
-        safely filter cloud tags from mixed tag lists without try/except blocks.
-        """
-        assert extract_version_from_cloud_tag(invalid_tag) is None
-
-
-class TestCloudSemverPattern:
-    """Tests for CLOUD_SEMVER_PATTERN regex."""
-
-    def test_valid_cloud_semver(self):
-        assert CLOUD_SEMVER_PATTERN.match("cloud-1.2.3")
-        assert CLOUD_SEMVER_PATTERN.match("cloud-0.0.0")
-        assert CLOUD_SEMVER_PATTERN.match("cloud-10.20.30")
-        assert CLOUD_SEMVER_PATTERN.match("cloud-1.1.0")
-
-    def test_extracts_version_group(self):
-        match = CLOUD_SEMVER_PATTERN.match("cloud-1.1.0")
-        assert match.group(1) == "1.1.0"
-
-    def test_invalid_cloud_semver(self):
-        assert not CLOUD_SEMVER_PATTERN.match("1.2.3")
-        assert not CLOUD_SEMVER_PATTERN.match("v1.2.3")
-        assert not CLOUD_SEMVER_PATTERN.match("cloud-1.2")
-        assert not CLOUD_SEMVER_PATTERN.match("cloud-1.2.3.4")
-        assert not CLOUD_SEMVER_PATTERN.match("Cloud-1.2.3")
-        assert not CLOUD_SEMVER_PATTERN.match("cloud1.2.3")
-        assert not CLOUD_SEMVER_PATTERN.match("")
-
-
-class TestExtractVersionFromCloudTag:
-    """Tests for extract_version_from_cloud_tag function."""
-
-    def test_extracts_version_from_cloud_tag(self):
-        """Test that version is extracted from cloud-X.Y.Z format."""
-        from update_openhands_charts import extract_version_from_cloud_tag
-
+    def test_extracts_version_from_valid_cloud_tags(self):
+        """Test that version is extracted from valid cloud-X.Y.Z formats."""
+        # Standard versions
         assert extract_version_from_cloud_tag("cloud-1.1.0") == "1.1.0"
         assert extract_version_from_cloud_tag("cloud-2.0.0") == "2.0.0"
+        assert extract_version_from_cloud_tag("cloud-0.0.0") == "0.0.0"
+
+        # Multi-digit versions
         assert extract_version_from_cloud_tag("cloud-10.20.30") == "10.20.30"
+        assert extract_version_from_cloud_tag("cloud-123.456.789") == "123.456.789"
 
-    def test_returns_none_for_invalid_format(self):
-        """Test that None is returned for invalid formats."""
-        from update_openhands_charts import extract_version_from_cloud_tag
-
+    def test_returns_none_for_invalid_cloud_tag_formats(self):
+        """Test that None is returned for strings that aren't cloud-X.Y.Z."""
+        # Missing cloud- prefix
         assert extract_version_from_cloud_tag("1.1.0") is None
         assert extract_version_from_cloud_tag("v1.1.0") is None
-        assert extract_version_from_cloud_tag("cloud-1.1") is None
+
+        # Wrong prefix format
+        assert extract_version_from_cloud_tag("Cloud-1.2.3") is None  # Wrong case
+        assert extract_version_from_cloud_tag("cloud1.2.3") is None   # Missing hyphen
+
+        # Invalid version parts
+        assert extract_version_from_cloud_tag("cloud-1.2") is None      # Missing patch
+        assert extract_version_from_cloud_tag("cloud-1.2.3.4") is None  # Extra part
+        assert extract_version_from_cloud_tag("cloud-1.2.3-beta") is None  # Pre-release
+        assert extract_version_from_cloud_tag("cloud-1.2.3+build") is None  # Build metadata
+
+        # Edge cases
         assert extract_version_from_cloud_tag("") is None
+        assert extract_version_from_cloud_tag("latest") is None
+        assert extract_version_from_cloud_tag("cloud-") is None
 
 
 class TestGetShortSha:
@@ -942,7 +876,11 @@ class TestGetLatestCloudTag:
     """Tests for get_latest_cloud_tag function."""
 
     def test_returns_cloud_tag_format(self):
-        """Test that function returns a cloud-X.Y.Z formatted tag."""
+        """Test that function returns a cloud-X.Y.Z formatted tag.
+
+        Validates the result through extract_version_from_cloud_tag rather
+        than directly testing with internal regex patterns.
+        """
         # This is an integration test that requires GITHUB_TOKEN
         import os
         token = os.environ.get("GITHUB_TOKEN")
@@ -953,7 +891,9 @@ class TestGetLatestCloudTag:
         result = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
 
         assert result is not None
-        assert CLOUD_SEMVER_PATTERN.match(result)
+        # Validate through public interface instead of internal pattern
+        assert result.startswith("cloud-")
+        assert extract_version_from_cloud_tag(result) is not None
 
     def test_returns_none_for_invalid_repo(self):
         """Test that function returns None for invalid repository."""

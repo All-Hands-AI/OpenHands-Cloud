@@ -21,7 +21,6 @@ from ruamel.yaml import YAML
 # Suppress PyGithub's redirect messages
 logging.getLogger("github").setLevel(logging.WARNING)
 
-SEMVER_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
