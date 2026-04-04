@@ -112,11 +112,15 @@ def assert_file_contains(file_path: Path, expected: str) -> None:
         expected: String that must appear in the file
 
     Raises:
-        AssertionError: If expected string is not found
+        AssertionError: If expected string is not found.
+            Error message format: "Expected '<expected>' not found in file"
+            This format shows the exact string being searched, making it easy
+            to identify typos or unexpected whitespace in test expectations.
 
     Example:
         >>> assert_file_contains(values_path, "tag: cloud-1.1.0")
-        # Passes silently if found, raises AssertionError if missing
+        # Passes silently if found
+        # Raises: AssertionError("Expected 'tag: cloud-1.1.0' not found in file")
     """
     content = file_path.read_text()
     assert expected in content, f"Expected '{expected}' not found in file"
@@ -134,13 +138,15 @@ def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> No
         expected_strings: List of strings that must appear in the file
 
     Raises:
-        AssertionError: If ANY expected string is not found, with message
-                        identifying which string was missing
+        AssertionError: If ANY expected string is not found. Fails fast on
+            first missing string with message format from assert_file_contains:
+            "Expected '<missing_string>' not found in file"
+            This allows quick identification of which specific string is missing.
 
     Example:
         >>> assert_file_contains_all(values_path, ["replicaCount: 1", "enabled: true"])
         # Passes silently if both strings found
-        # Raises AssertionError if either missing
+        # If "enabled: true" missing: AssertionError("Expected 'enabled: true' not found in file")
     """
     for expected in expected_strings:
         assert_file_contains(file_path, expected)
