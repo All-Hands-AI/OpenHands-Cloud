@@ -357,13 +357,13 @@ class TestUpdateChart:
         assert runtime_api_dep["version"] == "0.1.10"
 
         # Verify it was recorded as unchanged
-        assert ("runtime-api version", "0.1.10") in result.unchanged
+        assert result.is_unchanged("runtime-api version")
 
     def test_app_version_unchanged_when_same_version(self, temp_chart_file):
         """Test that appVersion shows unchanged when same."""
         result = update_openhands_chart(temp_chart_file, "1.0.0", "0.2.0")
 
-        assert ("appVersion", "1.0.0") in result.unchanged
+        assert result.is_unchanged("appVersion")
 
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
@@ -779,10 +779,9 @@ class TestUpdateValues:
         )
 
         assert not result.has_changes
-        unchanged_keys = [u[0] for u in result.unchanged]
-        assert "enterprise-server image tag" in unchanged_keys
-        assert "runtime image tag" in unchanged_keys
-        assert "warmRuntimes image tag" in unchanged_keys
+        assert result.is_unchanged("enterprise-server image tag")
+        assert result.is_unchanged("runtime image tag")
+        assert result.is_unchanged("warmRuntimes image tag")
 
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
@@ -848,8 +847,7 @@ class TestUpdateOpenhandsChartConditional:
         assert chart_data["version"] == "0.3.11"  # Unchanged
         assert chart_data["appVersion"] == "cloud-1.0.0"  # Unchanged
 
-        unchanged_keys = [u[0] for u in result.unchanged]
-        assert "openhands chart version" in unchanged_keys
+        assert result.is_unchanged("openhands chart version")
 
     def test_version_bump_when_has_changes(self, temp_chart_file):
         """Test that chart version is bumped when has_changes is True."""
@@ -867,9 +865,8 @@ class TestUpdateOpenhandsChartConditional:
         assert chart_data["version"] == "0.3.12"  # Bumped
         assert chart_data["appVersion"] == "cloud-1.1.0"  # Updated
 
-        changed_keys = [c[0] for c in result.changes]
-        assert "appVersion" in changed_keys
-        assert "version" in changed_keys
+        assert result.has_change_for("appVersion")
+        assert result.has_change_for("version")
 
 
         assert result.has_changes is True
@@ -913,10 +910,9 @@ dependencies:
         """Test that dry-run still records what would be changed."""
         result = update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
 
-        changed_keys = [c[0] for c in result.changes]
-        assert "appVersion" in changed_keys
-        assert "version" in changed_keys
-        assert "runtime-api version" in changed_keys
+        assert result.has_change_for("appVersion")
+        assert result.has_change_for("version")
+        assert result.has_change_for("runtime-api version")
 
     def test_update_values_dry_run_no_file_changes(self, temp_values_file):
         """Test that dry-run doesn't modify values.yaml."""
@@ -941,10 +937,9 @@ dependencies:
             dry_run=True,
         )
 
-        changed_keys = [c[0] for c in result.changes]
-        assert "enterprise-server image tag" in changed_keys
-        assert "runtime image tag" in changed_keys
-        assert "warmRuntimes image tag" in changed_keys
+        assert result.has_change_for("enterprise-server image tag")
+        assert result.has_change_for("runtime image tag")
+        assert result.has_change_for("warmRuntimes image tag")
 
     def test_update_chart_without_dry_run_modifies_file(self, temp_chart_file):
         """Test that without dry-run, Chart.yaml is modified."""
@@ -1058,9 +1053,8 @@ class TestUpdateRuntimeApiValues:
         )
 
         assert not result.has_changes
-        unchanged_keys = [u[0] for u in result.unchanged]
-        assert "runtime-api image tag" in unchanged_keys
-        assert "runtime-api warmRuntimes image tag" in unchanged_keys
+        assert result.is_unchanged("runtime-api image tag")
+        assert result.is_unchanged("runtime-api warmRuntimes image tag")
 
     def test_preserves_other_content(self, temp_runtime_api_values_file):
         """Test that other content is preserved."""
@@ -1132,8 +1126,7 @@ class TestUpdateRuntimeApiChartConditional:
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
 
         assert new_version == "0.2.6"  # Version unchanged
-        unchanged_keys = [u[0] for u in result.unchanged]
-        assert "runtime-api chart version" in unchanged_keys
+        assert result.is_unchanged("runtime-api chart version")
 
     def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is bumped when has_changes is True."""
@@ -1142,8 +1135,7 @@ class TestUpdateRuntimeApiChartConditional:
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
 
         assert new_version == "0.2.7"  # Version bumped
-        changed_keys = [c[0] for c in result.changes]
-        assert "runtime-api chart version" in changed_keys
+        assert result.has_change_for("runtime-api chart version")
 
 
 class TestMainOutputMessages:
