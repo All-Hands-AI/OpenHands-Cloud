@@ -38,6 +38,16 @@ RUNTIME_API_CHART_FULL_APP_VERSION = "1.0.0"
 RUNTIME_API_CHART_MINIMAL_VERSION = "0.2.6"
 RUNTIME_API_CHART_MINIMAL_APP_VERSION = "0.1.0"
 
+# =============================================================================
+# Test input constants
+# These values are used as inputs when testing update operations.
+# Using named constants makes tests self-documenting.
+# =============================================================================
+
+# New versions used when testing chart updates
+NEW_APP_VERSION = "2.0.0"
+NEW_RUNTIME_API_VERSION = "0.2.0"
+
 
 def get_dependency_version(file_path: Path, dep_name: str) -> str | None:
     """Get the version of a dependency from a Chart.yaml file.

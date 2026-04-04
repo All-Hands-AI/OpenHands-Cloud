@@ -29,6 +29,9 @@ from conftest import (
     RUNTIME_API_CHART_FULL_VERSION,
     RUNTIME_API_CHART_FULL_APP_VERSION,
     RUNTIME_API_CHART_MINIMAL_VERSION,
+    # Test input constants for update operations
+    NEW_APP_VERSION,
+    NEW_RUNTIME_API_VERSION,
 )
 from update_openhands_charts import (
     DeployConfig,
@@ -172,26 +175,25 @@ class TestUpdateChart:
 
     def test_update_app_version(self, temp_chart_file):
         """Test that appVersion is updated correctly."""
-        update_openhands_chart(temp_chart_file, "2.0.0", None)
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
 
-        assert get_chart_value(temp_chart_file, "appVersion") == "2.0.0"
+        assert get_chart_value(temp_chart_file, "appVersion") == NEW_APP_VERSION
 
     def test_bump_chart_version(self, temp_chart_file):
         """Test that version is bumped correctly."""
-        update_openhands_chart(temp_chart_file, "2.0.0", None)
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
 
         assert_version_bumped(temp_chart_file, OPENHANDS_CHART_WITH_DEPS_VERSION)
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
-        new_runtime_api_version = "0.2.0"
-        update_openhands_chart(temp_chart_file, "2.0.0", new_runtime_api_version)
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
-        assert get_dependency_version(temp_chart_file, "runtime-api") == new_runtime_api_version
+        assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
 
     @pytest.mark.parametrize("app_version,runtime_api_version,unchanged_key", [
-        pytest.param(OPENHANDS_CHART_WITH_DEPS_APP_VERSION, "0.2.0", "appVersion", id="appVersion_unchanged_when_same"),
-        pytest.param("2.0.0", OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION, "runtime-api version", id="runtime_api_unchanged_when_same"),
+        pytest.param(OPENHANDS_CHART_WITH_DEPS_APP_VERSION, NEW_RUNTIME_API_VERSION, "appVersion", id="appVersion_unchanged_when_same"),
+        pytest.param(NEW_APP_VERSION, OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION, "runtime-api version", id="runtime_api_unchanged_when_same"),
     ])
     def test_unchanged_when_same_version(self, temp_chart_file, app_version, runtime_api_version, unchanged_key):
         """Test that keys show unchanged when values already match fixture."""
@@ -201,13 +203,13 @@ class TestUpdateChart:
 
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
     def test_preserves_yaml_structure(self, temp_chart_file):
         """Test that YAML structure is preserved."""
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         # Verify structure is preserved
         assert get_chart_value(temp_chart_file, "apiVersion") == "v2"
@@ -926,13 +928,13 @@ dependencies:
         """Test that dry-run doesn't modify Chart.yaml."""
         original_content = temp_chart_file.read_text()
 
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION, dry_run=True)
 
         assert temp_chart_file.read_text() == original_content
 
     def test_update_chart_dry_run_prints_changes(self, temp_chart_file):
         """Test that dry-run still records what would be changed."""
-        result = update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=True)
+        result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION, dry_run=True)
 
         assert result.has_change_for("appVersion")
         assert result.has_change_for("version")
@@ -966,7 +968,7 @@ dependencies:
         """Test that without dry-run, Chart.yaml is modified."""
         original_content = temp_chart_file.read_text()
 
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0", dry_run=False)
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION, dry_run=False)
 
         assert temp_chart_file.read_text() != original_content
 
