@@ -58,17 +58,22 @@ class TestExtractVersionFromCloudTag:
     These tests verify cloud tag parsing through the public interface rather
     than testing internal regex patterns directly. This approach is more
     maintainable as it tests behavior, not implementation.
+
+    TDD Rationale: Tests were designed to drive a simple regex pattern that
+    accepts only the strict 'cloud-X.Y.Z' format. Edge cases ensure the
+    implementation rejects common variations (v-prefix, pre-release suffixes)
+    that could cause version comparison bugs in production.
     """
 
     @pytest.mark.parametrize("cloud_tag,expected", [
         # Happy path: typical production versions
         ("cloud-1.1.0", "1.1.0"),
         ("cloud-2.0.0", "2.0.0"),
-        # Boundary: minimum valid version (all zeros)
+        # Boundary: minimum valid version (all zeros) - ensures 0.0.0 is valid
         ("cloud-0.0.0", "0.0.0"),
-        # Boundary: multi-digit components (regex must not limit to single digits)
+        # Boundary: multi-digit components - regex must use \d+ not \d
         ("cloud-10.20.30", "10.20.30"),
-        # Stress test: very large version numbers (ensures no arbitrary limits)
+        # Stress test: very large versions - ensures no arbitrary numeric limits
         ("cloud-123.456.789", "123.456.789"),
     ])
     def test_extracts_version_from_valid_cloud_tags(self, cloud_tag, expected):
@@ -76,18 +81,18 @@ class TestExtractVersionFromCloudTag:
         assert extract_version_from_cloud_tag(cloud_tag) == expected
 
     @pytest.mark.parametrize("invalid_tag", [
-        # Prefix validation: must be exactly "cloud-"
+        # Prefix validation: must be exactly "cloud-" (case-sensitive, with hyphen)
         pytest.param("1.1.0", id="missing cloud- prefix"),
         pytest.param("v1.1.0", id="wrong prefix (v instead of cloud-)"),
         pytest.param("Cloud-1.2.3", id="wrong case"),
         pytest.param("cloud1.2.3", id="missing hyphen"),
-        # Semver structure: must be exactly X.Y.Z (three parts)
+        # Semver structure: must be exactly X.Y.Z (three numeric parts)
         pytest.param("cloud-1.2", id="missing patch"),
         pytest.param("cloud-1.2.3.4", id="extra part"),
-        # Semver extensions: pre-release and build metadata not supported
+        # Semver extensions: pre-release/build metadata breaks version comparison
         pytest.param("cloud-1.2.3-beta", id="pre-release suffix"),
         pytest.param("cloud-1.2.3+build", id="build metadata suffix"),
-        # Edge cases: empty/malformed input
+        # Edge cases: defensive handling of malformed input
         pytest.param("", id="empty string"),
         pytest.param("latest", id="non-version tag"),
         pytest.param("cloud-", id="missing version"),
@@ -95,7 +100,8 @@ class TestExtractVersionFromCloudTag:
     def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag):
         """Verify invalid formats return None rather than raising exceptions.
 
-        This allows callers to safely filter cloud tags from mixed tag lists.
+        TDD Rationale: Returning None (instead of raising) allows callers to
+        safely filter cloud tags from mixed tag lists without try/except blocks.
         """
         assert extract_version_from_cloud_tag(invalid_tag) is None
 
@@ -105,6 +111,10 @@ class TestGetShortSha:
 
     Git short SHAs are conventionally 7 characters for readability while
     maintaining uniqueness in most repositories.
+
+    TDD Rationale: Tests drive a simple slice operation. Boundary cases
+    (exactly 7 chars, shorter than 7) ensure the implementation handles
+    edge cases gracefully without raising IndexError.
     """
 
     @pytest.mark.parametrize("sha,expected", [
@@ -171,6 +181,10 @@ class TestBumpPatchVersion:
 
     Semantic versioning (semver) uses MAJOR.MINOR.PATCH format where
     patch bumps indicate backwards-compatible bug fixes.
+
+    TDD Rationale: Tests drive a split-increment-join implementation.
+    Invalid format tests ensure ValueError is raised early with clear
+    messages, preventing silent corruption of chart versions.
     """
 
     @pytest.mark.parametrize("version,expected", [
@@ -178,7 +192,7 @@ class TestBumpPatchVersion:
         ("1.2.3", "1.2.4"),
         # Boundary: patch starts at zero (common for new minor releases)
         ("1.0.0", "1.0.1"),
-        # Boundary: 99→100 rollover (ensures no single/double digit assumptions)
+        # Boundary: 99→100 rollover - implementation must use int() not string ops
         ("1.2.99", "1.2.100"),
         # Verification: major/minor preserved during patch bump
         ("5.10.15", "5.10.16"),
@@ -188,12 +202,12 @@ class TestBumpPatchVersion:
         assert bump_patch_version(version) == expected
 
     @pytest.mark.parametrize("invalid_version", [
-        # Structure: must have exactly 3 parts (major.minor.patch)
+        # Structure: must have exactly 3 parts - fail fast on malformed input
         pytest.param("1.2", id="missing patch"),
         pytest.param("1.2.3.4", id="too many parts"),
-        # Format: no prefixes allowed (unlike git tags)
+        # Format: no prefixes allowed - caller must strip prefix first
         pytest.param("v1.2.3", id="has prefix"),
-        # Edge cases: empty and non-numeric inputs
+        # Edge cases: defensive handling prevents int() conversion errors
         pytest.param("", id="empty string"),
         pytest.param("1.2.abc", id="non-numeric patch"),
         pytest.param("a.b.c", id="all non-numeric"),
@@ -209,6 +223,12 @@ class TestUpdateChartAcrossVariants:
 
     Uses the parameterized openhands_chart_variant fixture to ensure core
     functionality works with both rich (with_deps) and minimal chart structures.
+
+    Test Structure:
+    - test_chart_app_version_updates: Core update behavior
+    - test_chart_version_bumps: Version increment on change
+    - test_runtime_api_dependency: Dependency update
+    - test_*_unchanged_when_already_current: Idempotency checks
     """
 
     @pytest.fixture
@@ -718,7 +738,15 @@ def _make_invalid_yaml_response(Mock, base64_module, invalid_yaml):
 
 
 class TestUpdateValues:
-    """Tests for update_values function."""
+    """Tests for update_openhands_values function.
+
+    Test Structure:
+    - test_update_*_tag: Image tag update behavior for each component
+    - test_unchanged_when_same_values: Idempotency verification
+    - test_preserves_other_content: Non-destructive update check
+    - test_returns_*: Return value behavior
+    - test_reports_error_*: Error handling for missing patterns
+    """
 
     @pytest.fixture
     def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_full):
@@ -900,46 +928,88 @@ serviceAccount:
         assert "warmRuntimes" in error_messages
 
 
-class TestUpdateOpenhandsChartConditional:
-    """Tests for conditional openhands chart version update."""
+class TestConditionalChartVersionBump:
+    """Tests for conditional chart version bumping across both chart types.
+
+    Both openhands and runtime-api charts use the same pattern: only bump
+    the chart version when has_changes=True. This consolidates testing of
+    that behavior to reduce redundancy (Necessary property).
+
+    TDD Rationale: These tests drive the has_changes flag behavior that
+    prevents unnecessary version bumps when only checking for updates.
+    """
 
     @pytest.fixture
-    def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_minimal):
-        """Create a temporary openhands Chart.yaml file using shared fixtures."""
+    def temp_openhands_chart_file(self, make_temp_yaml_file, sample_openhands_chart_minimal):
+        """Create a temporary openhands Chart.yaml file."""
         return make_temp_yaml_file(sample_openhands_chart_minimal)
 
-    def test_no_version_bump_when_no_changes(self, temp_chart_file):
-        """Test that chart version is not bumped when has_changes is False."""
+    @pytest.fixture
+    def temp_runtime_api_chart_file(self, make_temp_yaml_file, sample_runtime_api_chart_minimal):
+        """Create a temporary runtime-api Chart.yaml file."""
+        return make_temp_yaml_file(sample_runtime_api_chart_minimal)
+
+    # --- Openhands chart tests ---
+
+    def test_openhands_no_version_bump_when_no_changes(self, temp_openhands_chart_file):
+        """Test that openhands chart version is not bumped when has_changes is False."""
         result = update_openhands_chart(
-            temp_chart_file,
+            temp_openhands_chart_file,
             new_app_version=OPENHANDS_CHART_APP_VERSION,
             new_runtime_api_version=OPENHANDS_CHART_RUNTIME_API_VERSION,
             has_changes=False,
         )
 
-        assert get_chart_value(temp_chart_file, "version") == OPENHANDS_CHART_VERSION
-        assert get_chart_value(temp_chart_file, "appVersion") == OPENHANDS_CHART_APP_VERSION
-
+        assert get_chart_value(temp_openhands_chart_file, "version") == OPENHANDS_CHART_VERSION
+        assert get_chart_value(temp_openhands_chart_file, "appVersion") == OPENHANDS_CHART_APP_VERSION
         assert result.is_unchanged("openhands chart version")
 
-    def test_version_bump_when_has_changes(self, temp_chart_file):
-        """Test that chart version is bumped when has_changes is True."""
+    def test_openhands_version_bump_when_has_changes(self, temp_openhands_chart_file):
+        """Test that openhands chart version is bumped when has_changes is True."""
         result = update_openhands_chart(
-            temp_chart_file,
+            temp_openhands_chart_file,
             new_app_version="cloud-1.1.0",
             new_runtime_api_version="0.2.7",
             has_changes=True,
         )
 
-        assert get_chart_value(temp_chart_file, "version") == "0.1.1"  # Bumped from 0.1.0
-        assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.1.0"  # Updated
-
+        assert get_chart_value(temp_openhands_chart_file, "version") == "0.1.1"  # Bumped from 0.1.0
+        assert get_chart_value(temp_openhands_chart_file, "appVersion") == "cloud-1.1.0"
         assert result.has_change_for("appVersion")
         assert result.has_change_for("version")
 
+    # --- Runtime-api chart tests ---
+
+    def test_runtime_api_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
+        """Test that runtime-api chart version is not bumped when has_changes is False."""
+        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
+
+        assert new_version == RUNTIME_API_CHART_MINIMAL_VERSION  # Version unchanged
+        assert result.is_unchanged("runtime-api chart version")
+
+    def test_runtime_api_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
+        """Test that runtime-api chart version is bumped when has_changes is True."""
+        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
+
+        expected_version = bump_patch_version(RUNTIME_API_CHART_MINIMAL_VERSION)
+        assert new_version == expected_version  # Version bumped
+        assert result.has_change_for("runtime-api chart version")
+
 
 class TestDryRun:
-    """Tests for dry-run functionality."""
+    """Tests for dry-run functionality.
+
+    Dry-run mode allows users to preview changes without modifying files.
+    These tests verify that:
+    1. Files remain unchanged when dry_run=True
+    2. Return values still reflect what *would* change
+    3. Files are modified when dry_run=False (control tests)
+
+    Test Structure:
+    - test_*_dry_run_no_file_changes: File content unchanged
+    - test_*_dry_run_prints_changes: Return value reflects changes
+    - test_*_without_dry_run_modifies_file: Control to verify normal behavior
+    """
 
     @pytest.fixture
     def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
@@ -1154,30 +1224,6 @@ class TestUpdateRuntimeApiValues:
         )
 
         assert result.has_changes is False
-
-
-class TestUpdateRuntimeApiChartConditional:
-    """Tests for conditional runtime-api chart version update."""
-
-    @pytest.fixture
-    def temp_runtime_api_chart_file(self, make_temp_yaml_file, sample_runtime_api_chart_minimal):
-        """Create a temporary runtime-api Chart.yaml file using shared fixtures."""
-        return make_temp_yaml_file(sample_runtime_api_chart_minimal)
-
-    def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
-        """Test that chart version is not bumped when has_changes is False."""
-        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
-
-        assert new_version == RUNTIME_API_CHART_MINIMAL_VERSION  # Version unchanged
-        assert result.is_unchanged("runtime-api chart version")
-
-    def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
-        """Test that chart version is bumped when has_changes is True."""
-        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
-
-        expected_version = bump_patch_version(RUNTIME_API_CHART_MINIMAL_VERSION)
-        assert new_version == expected_version  # Version bumped
-        assert result.has_change_for("runtime-api chart version")
 
 
 class TestMainOutputMessages:
