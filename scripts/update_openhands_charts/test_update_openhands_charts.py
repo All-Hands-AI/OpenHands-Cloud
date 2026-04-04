@@ -20,8 +20,8 @@ from conftest import (
     get_chart_value,
     get_dependency_version,
     # Fixture baseline constants for self-documenting assertions
+    OPENHANDS_CHART_APP_VERSION,
     OPENHANDS_CHART_WITH_DEPS_VERSION,
-    OPENHANDS_CHART_WITH_DEPS_APP_VERSION,
     OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION,
     OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
     OPENHANDS_CHART_MINIMAL_VERSION,
