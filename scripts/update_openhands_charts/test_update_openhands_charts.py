@@ -179,18 +179,15 @@ class TestUpdateChart:
 
         assert get_dependency_version(temp_chart_file, "runtime-api") == "0.2.0"
 
-    def test_runtime_api_unchanged_when_same_version(self, temp_chart_file):
-        """Test that runtime-api is not updated when version is the same."""
-        result = update_openhands_chart(temp_chart_file, "2.0.0", "0.1.10")
+    @pytest.mark.parametrize("app_version,runtime_api_version,unchanged_key", [
+        pytest.param("1.0.0", "0.2.0", "appVersion", id="appVersion_unchanged_when_same"),
+        pytest.param("2.0.0", "0.1.10", "runtime-api version", id="runtime_api_unchanged_when_same"),
+    ])
+    def test_unchanged_when_same_version(self, temp_chart_file, app_version, runtime_api_version, unchanged_key):
+        """Test that keys show unchanged when values already match fixture."""
+        result = update_openhands_chart(temp_chart_file, app_version, runtime_api_version)
 
-        assert get_dependency_version(temp_chart_file, "runtime-api") == "0.1.10"
-        assert result.is_unchanged("runtime-api version")
-
-    def test_app_version_unchanged_when_same_version(self, temp_chart_file):
-        """Test that appVersion shows unchanged when same."""
-        result = update_openhands_chart(temp_chart_file, "1.0.0", "0.2.0")
-
-        assert result.is_unchanged("appVersion")
+        assert result.is_unchanged(unchanged_key)
 
     def test_other_dependencies_unchanged(self, temp_chart_file):
         """Test that other dependencies are not affected."""
