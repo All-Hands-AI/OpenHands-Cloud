@@ -65,6 +65,16 @@ class UpdateResult:
         """Return the number of errors recorded."""
         return len(self.errors)
 
+    @property
+    def change_count(self) -> int:
+        """Return the number of changes recorded."""
+        return len(self.changes)
+
+    @property
+    def unchanged_count(self) -> int:
+        """Return the number of unchanged items recorded."""
+        return len(self.unchanged)
+
     def print_summary(self) -> None:
         """Prints the outcome of the update."""
         for key, old, new in self.changes:
