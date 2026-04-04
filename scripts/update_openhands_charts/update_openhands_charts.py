@@ -515,6 +515,13 @@ def update_runtime_api_values(
     return result
 
 
+def print_section_header(title: str) -> None:
+    """Print a visually distinct section header."""
+    print(SEPARATOR)
+    print(title)
+    print(SEPARATOR)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -535,9 +542,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = None) -> None:
-    print(SEPARATOR)
-    print("Fetching latest versions...")
-    print(SEPARATOR)
+    print_section_header("Fetching latest versions...")
 
     # Use provided cloud tag or fetch the latest from OpenHands releases
     if cloud_tag:
@@ -561,9 +566,7 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
         print(f"OpenHands-Cloud openhands chart appVersion: {current_app_version}")
         if current_app_version == openhands_version:
             print()
-            print(SEPARATOR)
-            print("Charts are already up to date - no changes needed")
-            print(SEPARATOR)
+            print_section_header("Charts are already up to date - no changes needed")
             return
 
     # Extract version number to use as deploy tag (e.g., 1.19.0)
@@ -586,9 +589,7 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     # Update runtime-api values first to check if there are changes
     print()
-    print(SEPARATOR)
-    print("Updating runtime-api chart...")
-    print(SEPARATOR)
+    print_section_header("Updating runtime-api chart...")
 
     print("Updating runtime-api values.yaml...")
     runtime_api_values_result = update_runtime_api_values(
@@ -611,9 +612,7 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     # Update openhands values first to check if there are changes
     print()
-    print(SEPARATOR)
-    print("Updating openhands chart...")
-    print(SEPARATOR)
+    print_section_header("Updating openhands chart...")
 
     print("Updating openhands values.yaml...")
     openhands_values_result = update_openhands_values(
@@ -638,9 +637,7 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     if dry_run:
-        print(SEPARATOR)
-        print("DRY RUN MODE - No changes will be made")
-        print(SEPARATOR)
+        print_section_header("DRY RUN MODE - No changes will be made")
         print()
 
     token = os.environ.get("GITHUB_TOKEN")
