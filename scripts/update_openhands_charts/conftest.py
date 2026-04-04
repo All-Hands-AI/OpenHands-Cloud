@@ -21,7 +21,7 @@ from ruamel.yaml import YAML
 
 # sample_openhands_chart_with_deps fixture values
 OPENHANDS_CHART_WITH_DEPS_VERSION = "0.1.0"
-OPENHANDS_CHART_WITH_DEPS_APP_VERSION = "1.0.0"
+OPENHANDS_CHART_WITH_DEPS_APP_VERSION = "cloud-1.0.0"  # OpenHands uses cloud-X.Y.Z tags
 OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION = "0.1.10"
 OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION = "1.0.0"
 
@@ -45,7 +45,7 @@ RUNTIME_API_CHART_MINIMAL_APP_VERSION = "0.1.0"
 # =============================================================================
 
 # New versions used when testing chart updates
-NEW_APP_VERSION = "2.0.0"
+NEW_APP_VERSION = "cloud-2.0.0"  # OpenHands appVersion uses cloud-X.Y.Z tags
 NEW_RUNTIME_API_VERSION = "0.2.0"
 
 
@@ -168,7 +168,7 @@ def sample_openhands_chart_with_deps():
 apiVersion: v2
 description: Test chart
 name: test-chart
-appVersion: 1.0.0
+appVersion: cloud-1.0.0
 version: 0.1.0
 maintainers:
   - name: test
