@@ -972,60 +972,24 @@ class TestMainOutputMessages:
     # Use a test constant to avoid magic strings scattered throughout tests
     MOCK_CLOUD_TAG = "cloud-1.20.0"
 
-    def test_latest_cloud_tag_message_format(self, capsys, monkeypatch):
+    def test_latest_cloud_tag_message_format(self, capsys, mock_main_early_exit):
         """Test that the latest cloud tag message uses correct format."""
         from update_openhands_charts import main
 
         mock_tag = self.MOCK_CLOUD_TAG
-
-        # Mock GITHUB_TOKEN environment variable
-        monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
-
-        # Mock get_latest_cloud_tag to return a known value
-        monkeypatch.setattr(
-            "update_openhands_charts.get_latest_cloud_tag",
-            lambda token, repo: mock_tag
-        )
-        # Mock cloud_tag_exists
-        monkeypatch.setattr(
-            "update_openhands_charts.cloud_tag_exists",
-            lambda token, repo, tag: True
-        )
-        # Mock get_current_app_version to return matching version (early exit)
-        monkeypatch.setattr(
-            "update_openhands_charts.get_current_app_version",
-            lambda path: mock_tag
-        )
+        mock_main_early_exit(mock_tag)
 
         main(dry_run=True)
 
         captured = capsys.readouterr()
         assert f"OpenHands cloud tag: {mock_tag}" in captured.out
 
-    def test_current_app_version_message_format(self, capsys, monkeypatch):
+    def test_current_app_version_message_format(self, capsys, mock_main_early_exit):
         """Test that the current appVersion message uses correct format."""
         from update_openhands_charts import main
 
         mock_tag = self.MOCK_CLOUD_TAG
-
-        # Mock GITHUB_TOKEN environment variable
-        monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
-
-        # Mock get_latest_cloud_tag to return a known value
-        monkeypatch.setattr(
-            "update_openhands_charts.get_latest_cloud_tag",
-            lambda token, repo: mock_tag
-        )
-        # Mock cloud_tag_exists
-        monkeypatch.setattr(
-            "update_openhands_charts.cloud_tag_exists",
-            lambda token, repo, tag: True
-        )
-        # Mock get_current_app_version to return matching version (early exit)
-        monkeypatch.setattr(
-            "update_openhands_charts.get_current_app_version",
-            lambda path: mock_tag
-        )
+        mock_main_early_exit(mock_tag)
 
         main(dry_run=True)
 
