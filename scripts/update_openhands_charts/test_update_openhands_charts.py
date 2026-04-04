@@ -278,6 +278,56 @@ class TestUpdateResultHelpers:
         assert result.has_change_for("any-key") is False
 
 
+class TestAssertVersionBumped:
+    """Tests for assert_version_bumped helper function.
+
+    This helper verifies that a chart's version was correctly bumped,
+    encapsulating the common pattern of bump_patch_version + get_chart_value.
+    """
+
+    def test_passes_when_version_correctly_bumped(self, make_temp_yaml_file):
+        """Test helper passes when version is incremented by one patch."""
+        from conftest import assert_version_bumped
+
+        chart_content = """\
+apiVersion: v2
+name: test-chart
+version: 1.2.4
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+
+        # Should not raise - version 1.2.4 is bump of 1.2.3
+        assert_version_bumped(temp_file, original_version="1.2.3")
+
+    def test_fails_when_version_not_bumped(self, make_temp_yaml_file):
+        """Test helper raises AssertionError when version unchanged."""
+        from conftest import assert_version_bumped
+
+        chart_content = """\
+apiVersion: v2
+name: test-chart
+version: 1.2.3
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+
+        with pytest.raises(AssertionError, match="Expected version 1.2.4"):
+            assert_version_bumped(temp_file, original_version="1.2.3")
+
+    def test_fails_when_version_bumped_incorrectly(self, make_temp_yaml_file):
+        """Test helper raises AssertionError when version bumped by wrong amount."""
+        from conftest import assert_version_bumped
+
+        chart_content = """\
+apiVersion: v2
+name: test-chart
+version: 1.2.5
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+
+        with pytest.raises(AssertionError, match="Expected version 1.2.4, got 1.2.5"):
+            assert_version_bumped(temp_file, original_version="1.2.3")
+
+
 class TestGetDependencyVersion:
     """Tests for get_dependency_version helper function.
 
