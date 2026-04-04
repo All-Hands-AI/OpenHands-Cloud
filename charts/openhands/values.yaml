@@ -305,10 +305,21 @@ keycloak:
     existingSecretKey: password
 
   dbchecker:
-    enabled: true
-    image:
-      repository: docker.io/library/busybox
-      tag: "1.37"
+    enabled: false
+
+  waitForDbImage: "bitnamilegacy/postgresql:latest"
+  extraInitContainers: |
+    - name: wait-for-db
+      image: "{{ .Values.waitForDbImage }}"
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Waiting for PostgreSQL at {{ .Values.database.hostname }}:{{ .Values.database.port }}..."
+          until pg_isready -h "{{ .Values.database.hostname }}" -p "{{ .Values.database.port }}" > /dev/null 2>&1; do
+            echo "PostgreSQL is unavailable - sleeping 2s"
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
 
   proxy:
     enabled: true

@@ -90,10 +90,8 @@ spec:
         existingSecret: postgres-password
         existingSecretKey: password
       dbchecker:
-        enabled: true
-        image:
-          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/os-shell'
-          tag: "12"
+        enabled: false
+      waitForDbImage: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/keycloak/keycloak'
         tag: "26.5.5"
@@ -405,9 +403,7 @@ spec:
         keycloak:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/keycloak'
-          dbchecker:
-            image:
-              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/os-shell'
+          waitForDbImage: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
