@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import update_openhands_charts
 from conftest import (
     assert_file_contains_all,
+    assert_version_bumped,
     get_chart_value,
     get_dependency_version,
     # Fixture baseline constants for self-documenting assertions
@@ -186,8 +187,7 @@ class TestUpdateChart:
         """Test that version is bumped correctly."""
         update_openhands_chart(temp_chart_file, "2.0.0", None)
 
-        expected_version = bump_patch_version(OPENHANDS_CHART_WITH_DEPS_VERSION)
-        assert get_chart_value(temp_chart_file, "version") == expected_version
+        assert_version_bumped(temp_chart_file, OPENHANDS_CHART_WITH_DEPS_VERSION)
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
