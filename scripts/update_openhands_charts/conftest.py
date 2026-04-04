@@ -30,6 +30,21 @@ OPENHANDS_CHART_MINIMAL_VERSION = "0.3.11"
 OPENHANDS_CHART_MINIMAL_APP_VERSION = "cloud-1.0.0"
 OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION = "0.2.6"
 
+# Consolidated openhands chart variants for parameterized testing
+# Each tuple: (fixture_name, version, app_version, runtime_api_version)
+OPENHANDS_CHART_VARIANTS = {
+    "with_deps": {
+        "version": OPENHANDS_CHART_WITH_DEPS_VERSION,
+        "app_version": OPENHANDS_CHART_WITH_DEPS_APP_VERSION,
+        "runtime_api_version": OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION,
+    },
+    "minimal": {
+        "version": OPENHANDS_CHART_MINIMAL_VERSION,
+        "app_version": OPENHANDS_CHART_MINIMAL_APP_VERSION,
+        "runtime_api_version": OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION,
+    },
+}
+
 # sample_runtime_api_chart_full fixture values
 RUNTIME_API_CHART_FULL_VERSION = "0.1.20"
 RUNTIME_API_CHART_FULL_APP_VERSION = "1.0.0"
@@ -194,6 +209,33 @@ dependencies:
   - name: runtime-api
     version: 0.2.6
 """
+
+
+@pytest.fixture(params=["with_deps", "minimal"])
+def openhands_chart_variant(request, sample_openhands_chart_with_deps, sample_openhands_chart_minimal):
+    """Parameterized fixture providing both openhands chart variants.
+
+    Use this fixture when a test should verify behavior works across
+    different chart structures (rich vs minimal).
+
+    Yields a dict with:
+        - content: The chart YAML content
+        - variant: The variant name ("with_deps" or "minimal")
+        - version: The chart version
+        - app_version: The appVersion
+        - runtime_api_version: The runtime-api dependency version
+    """
+    variant_name = request.param
+    if variant_name == "with_deps":
+        content = sample_openhands_chart_with_deps
+    else:
+        content = sample_openhands_chart_minimal
+
+    return {
+        "content": content,
+        "variant": variant_name,
+        **OPENHANDS_CHART_VARIANTS[variant_name],
+    }
 
 
 @pytest.fixture
