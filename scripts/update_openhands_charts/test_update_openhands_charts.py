@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
-from conftest import assert_file_contains_all, get_dependency_version
+from conftest import assert_file_contains_all, get_chart_value, get_dependency_version
 from update_openhands_charts import (
     DeployConfig,
     bump_patch_version,
@@ -165,17 +165,13 @@ class TestUpdateChart:
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["appVersion"] == "2.0.0"
+        assert get_chart_value(temp_chart_file, "appVersion") == "2.0.0"
 
     def test_bump_chart_version(self, temp_chart_file):
         """Test that version is bumped correctly."""
         update_openhands_chart(temp_chart_file, "2.0.0", None)
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["version"] == "0.1.1"
+        assert get_chart_value(temp_chart_file, "version") == "0.1.1"
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
@@ -205,9 +201,6 @@ class TestUpdateChart:
     def test_preserves_yaml_structure(self, temp_chart_file):
         """Test that YAML structure is preserved."""
         update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
-
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
 
         # Verify structure is preserved
         assert get_chart_value(temp_chart_file, "apiVersion") == "v2"
@@ -328,8 +321,6 @@ class TestGetChartValue:
 
     def test_returns_value_when_key_exists(self, make_temp_yaml_file):
         """Test that value is returned when key exists."""
-        from conftest import get_chart_value
-
         chart_content = """\
 apiVersion: v2
 appVersion: 1.0.0
@@ -341,8 +332,6 @@ name: openhands
 
     def test_returns_value_for_any_top_level_key(self, make_temp_yaml_file):
         """Test that value is returned for any top-level key."""
-        from conftest import get_chart_value
-
         chart_content = """\
 apiVersion: v2
 appVersion: cloud-2.0.0
@@ -357,8 +346,6 @@ description: A test chart
 
     def test_returns_none_when_key_not_found(self, make_temp_yaml_file):
         """Test that None is returned when key doesn't exist."""
-        from conftest import get_chart_value
-
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -836,10 +823,8 @@ class TestUpdateOpenhandsChartConditional:
             has_changes=False,
         )
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["version"] == "0.3.11"  # Unchanged
-        assert chart_data["appVersion"] == "cloud-1.0.0"  # Unchanged
+        assert get_chart_value(temp_chart_file, "version") == "0.3.11"  # Unchanged
+        assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.0.0"  # Unchanged
 
         assert result.is_unchanged("openhands chart version")
 
@@ -854,10 +839,8 @@ class TestUpdateOpenhandsChartConditional:
             has_changes=True,
         )
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["version"] == "0.3.12"  # Bumped
-        assert chart_data["appVersion"] == "cloud-1.1.0"  # Updated
+        assert get_chart_value(temp_chart_file, "version") == "0.3.12"  # Bumped
+        assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.1.0"  # Updated
 
         assert result.has_change_for("appVersion")
         assert result.has_change_for("version")
