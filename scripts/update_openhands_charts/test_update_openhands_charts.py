@@ -21,11 +21,10 @@ from conftest import (
     get_chart_value,
     get_dependency_version,
     # Fixture baseline constants for self-documenting assertions
+    OPENHANDS_CHART_VERSION,
     OPENHANDS_CHART_APP_VERSION,
     OPENHANDS_CHART_RUNTIME_API_VERSION,
-    OPENHANDS_CHART_WITH_DEPS_VERSION,
     OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
-    OPENHANDS_CHART_MINIMAL_VERSION,
     OPENHANDS_CHART_VARIANTS,
     RUNTIME_API_CHART_FULL_VERSION,
     RUNTIME_API_CHART_FULL_APP_VERSION,
@@ -925,7 +924,7 @@ class TestUpdateOpenhandsChartConditional:
             has_changes=False,
         )
 
-        assert get_chart_value(temp_chart_file, "version") == OPENHANDS_CHART_MINIMAL_VERSION
+        assert get_chart_value(temp_chart_file, "version") == OPENHANDS_CHART_VERSION
         assert get_chart_value(temp_chart_file, "appVersion") == OPENHANDS_CHART_APP_VERSION
 
         assert result.is_unchanged("openhands chart version")
@@ -941,7 +940,7 @@ class TestUpdateOpenhandsChartConditional:
             has_changes=True,
         )
 
-        assert get_chart_value(temp_chart_file, "version") == "0.3.12"  # Bumped
+        assert get_chart_value(temp_chart_file, "version") == "0.1.1"  # Bumped from 0.1.0
         assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.1.0"  # Updated
 
         assert result.has_change_for("appVersion")
