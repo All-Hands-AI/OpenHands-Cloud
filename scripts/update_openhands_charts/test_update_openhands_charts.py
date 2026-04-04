@@ -18,7 +18,6 @@ import update_openhands_charts
 from conftest import assert_file_contains_all
 from update_openhands_charts import (
     DeployConfig,
-    SHORT_SHA_LENGTH,
     bump_patch_version,
     extract_version_from_cloud_tag,
     format_sha_tag,
@@ -79,10 +78,6 @@ class TestGetShortSha:
     def test_returns_first_seven_chars(self, sha, expected):
         """Test that get_short_sha returns the first 7 characters."""
         assert get_short_sha(sha) == expected
-
-    def test_short_sha_length_constant(self):
-        """Test that SHORT_SHA_LENGTH constant is 7."""
-        assert SHORT_SHA_LENGTH == 7
 
 
 class TestFormatShaTag:
