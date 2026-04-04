@@ -21,11 +21,10 @@ from conftest import (
     get_dependency_version,
     # Fixture baseline constants for self-documenting assertions
     OPENHANDS_CHART_APP_VERSION,
+    OPENHANDS_CHART_RUNTIME_API_VERSION,
     OPENHANDS_CHART_WITH_DEPS_VERSION,
-    OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION,
     OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
     OPENHANDS_CHART_MINIMAL_VERSION,
-    OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION,
     OPENHANDS_CHART_VARIANTS,
     RUNTIME_API_CHART_FULL_VERSION,
     RUNTIME_API_CHART_FULL_APP_VERSION,
@@ -383,7 +382,7 @@ class TestGetDependencyVersion:
     def test_returns_version_when_dependency_exists(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
         """Test that version is returned when dependency exists."""
         temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, "runtime-api") == OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION
+        assert get_dependency_version(temp_file, "runtime-api") == OPENHANDS_CHART_RUNTIME_API_VERSION
 
     def test_returns_version_for_other_dependencies(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
         """Test that version is returned for any named dependency."""
@@ -912,13 +911,13 @@ class TestUpdateOpenhandsChartConditional:
 
         result = update_openhands_chart(
             temp_chart_file,
-            new_app_version="cloud-1.0.0",
-            new_runtime_api_version="0.2.6",
+            new_app_version=OPENHANDS_CHART_APP_VERSION,
+            new_runtime_api_version=OPENHANDS_CHART_RUNTIME_API_VERSION,
             has_changes=False,
         )
 
-        assert get_chart_value(temp_chart_file, "version") == "0.3.11"  # Unchanged
-        assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.0.0"  # Unchanged
+        assert get_chart_value(temp_chart_file, "version") == OPENHANDS_CHART_MINIMAL_VERSION
+        assert get_chart_value(temp_chart_file, "appVersion") == OPENHANDS_CHART_APP_VERSION
 
         assert result.is_unchanged("openhands chart version")
 
