@@ -170,9 +170,9 @@ git add -A && git commit -m "refactor: consolidate tests with parameterization"
 
 ---
 
-## Step 5: Unbiased Final Audit
+## Step 5: Unbiased Re-evaluation
 
-**Critical**: Run the final audit in a **new conversation** to ensure unbiased evaluation.
+**Critical**: Run the workflow again in a **new conversation** to ensure unbiased evaluation.
 
 ### Why a New Conversation?
 
@@ -180,22 +180,22 @@ git add -A && git commit -m "refactor: consolidate tests with parameterization"
 - No context bias from implementation work
 - Objective assessment of current code state only
 
-### Instructions for Final Audit
+### Instructions for Re-evaluation
 
 Start a new OpenHands conversation with:
 
 ```
-test-design-reviewer audit test quality of each test file and make a report of results
+test-improvement-workflow
 ```
 
 **Important**: Do NOT include any target scores or expectations in the prompt.
 
 ### Comparing Results
 
-After receiving the new audit:
+After the new workflow run completes its audit:
 1. Compare Farley Scores (before vs after)
 2. Review individual property improvements
-3. Document any remaining recommendations for future work
+3. Continue with additional improvement phases if recommended
 
 ---
 
@@ -276,7 +276,7 @@ assert_file_contains_all(file, ["key1", "key2"])
 | 2 | Prioritize recommendations | test-design-reviewer |
 | 3 | Create implementation plan | TDD + Refactoring |
 | 4 | Execute plan with commits | TDD + Refactoring |
-| 5 | Re-audit in new conversation | test-design-reviewer |
+| 5 | Re-run workflow in new conversation | test-improvement-workflow |
 
 ---
 
@@ -292,4 +292,4 @@ To begin the test improvement workflow:
 
 4. **Execute**: Follow the plan, committing after each phase
 
-5. **Re-audit**: Start a NEW conversation with: `test-design-reviewer audit test quality of each test file and make a report of results`
+5. **Re-evaluate**: Start a NEW conversation with: `test-improvement-workflow`
