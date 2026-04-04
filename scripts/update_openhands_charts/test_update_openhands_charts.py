@@ -243,6 +243,11 @@ class TestUpdateChartAcrossVariants:
     - test_chart_version_bumps: Version increment on change
     - test_runtime_api_dependency: Dependency update
     - test_*_unchanged_when_already_current: Idempotency checks
+
+    TDD Rationale: Tests drive the update_openhands_chart function to handle
+    both minimal and full Chart.yaml structures. Parameterized variants ensure
+    the implementation doesn't accidentally depend on optional fields (like
+    maintainers or extra dependencies) that may not exist in all chart files.
     """
 
     @pytest.fixture
@@ -286,6 +291,10 @@ class TestUpdateChart:
 
     These tests require the with_deps fixture specifically because they test
     features only present in that variant (e.g., multiple dependencies, maintainers).
+
+    TDD Rationale: Tests drive selective dependency updates - only runtime-api
+    should be modified while other dependencies remain untouched. This prevents
+    accidental side effects when updating charts with multiple dependencies.
     """
 
     @pytest.fixture
@@ -766,6 +775,11 @@ class TestUpdateValues:
     - test_preserves_other_content: Non-destructive update check
     - test_returns_*: Return value behavior
     - test_reports_error_*: Error handling for missing patterns
+
+    TDD Rationale: Tests drive regex-based image tag replacement that must
+    handle three distinct tag locations (enterprise-server, runtime, warmRuntimes).
+    Error tests ensure graceful handling when expected patterns are missing,
+    preventing silent failures in CI/CD pipelines.
     """
 
     @pytest.fixture
@@ -1049,6 +1063,11 @@ class TestDryRun:
     - test_*_dry_run_no_file_changes: File content unchanged
     - test_*_dry_run_prints_changes: Return value reflects changes
     - test_*_without_dry_run_modifies_file: Control to verify normal behavior
+
+    TDD Rationale: Tests drive the dry_run parameter behavior, ensuring
+    separation between change detection (always happens) and file writing
+    (only when dry_run=False). Control tests verify the default behavior
+    hasn't regressed.
     """
 
     @pytest.fixture
