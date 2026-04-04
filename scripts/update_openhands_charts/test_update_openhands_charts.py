@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
-from conftest import assert_file_contains_all
+from conftest import assert_file_contains_all, get_dependency_version
 from update_openhands_charts import (
     DeployConfig,
     bump_patch_version,
@@ -181,25 +181,13 @@ class TestUpdateChart:
         """Test that runtime-api dependency version is updated."""
         update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        runtime_api_dep = next(
-            d for d in chart_data["dependencies"] if d["name"] == "runtime-api"
-        )
-        assert runtime_api_dep["version"] == "0.2.0"
+        assert get_dependency_version(temp_chart_file, "runtime-api") == "0.2.0"
 
     def test_runtime_api_unchanged_when_same_version(self, temp_chart_file):
         """Test that runtime-api is not updated when version is the same."""
         result = update_openhands_chart(temp_chart_file, "2.0.0", "0.1.10")
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        runtime_api_dep = next(
-            d for d in chart_data["dependencies"] if d["name"] == "runtime-api"
-        )
-        assert runtime_api_dep["version"] == "0.1.10"
-
-        # Verify it was recorded as unchanged
+        assert get_dependency_version(temp_chart_file, "runtime-api") == "0.1.10"
         assert result.is_unchanged("runtime-api version")
 
     def test_app_version_unchanged_when_same_version(self, temp_chart_file):
@@ -212,12 +200,7 @@ class TestUpdateChart:
         """Test that other dependencies are not affected."""
         update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        other_dep = next(
-            d for d in chart_data["dependencies"] if d["name"] == "other-dep"
-        )
-        assert other_dep["version"] == "1.0.0"
+        assert get_dependency_version(temp_chart_file, "other-dep") == "1.0.0"
 
     def test_preserves_yaml_structure(self, temp_chart_file):
         """Test that YAML structure is preserved."""
@@ -301,6 +284,39 @@ class TestUpdateResultHelpers:
         """Test that has_change_for returns False when changes list is empty."""
         result = update_openhands_charts.UpdateResult()
         assert result.has_change_for("any-key") is False
+
+
+class TestGetDependencyVersion:
+    """Tests for get_dependency_version helper function.
+
+    This helper extracts dependency versions from Chart.yaml files,
+    reducing coupling to internal YAML data structures in tests.
+    """
+
+    def test_returns_version_when_dependency_exists(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
+        """Test that version is returned when dependency exists."""
+        temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
+        assert get_dependency_version(temp_file, "runtime-api") == "0.1.10"
+
+    def test_returns_version_for_other_dependencies(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
+        """Test that version is returned for any named dependency."""
+        temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
+        assert get_dependency_version(temp_file, "other-dep") == "1.0.0"
+
+    def test_returns_none_when_dependency_not_found(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
+        """Test that None is returned when dependency doesn't exist."""
+        temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
+        assert get_dependency_version(temp_file, "nonexistent-dep") is None
+
+    def test_returns_none_when_no_dependencies(self, make_temp_yaml_file):
+        """Test that None is returned when chart has no dependencies."""
+        chart_content = """\
+apiVersion: v2
+name: test-chart
+version: 1.0.0
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+        assert get_dependency_version(temp_file, "any-dep") is None
 
 
 class TestGetDeployConfig:

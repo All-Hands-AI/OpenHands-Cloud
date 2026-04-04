@@ -7,9 +7,29 @@ maintainability.
 
 import tempfile
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from ruamel.yaml import YAML
+
+
+def get_dependency_version(file_path: Path, dep_name: str) -> str | None:
+    """Get the version of a dependency from a Chart.yaml file.
+
+    Args:
+        file_path: Path to the Chart.yaml file
+        dep_name: Name of the dependency to find
+
+    Returns:
+        The version string if found, None otherwise
+    """
+    yaml = YAML()
+    chart_data = yaml.load(file_path)
+    for dep in chart_data.get("dependencies", []):
+        if dep.get("name") == dep_name:
+            return dep.get("version")
+    return None
 
 
 def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> None:
