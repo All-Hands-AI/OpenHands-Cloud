@@ -27,6 +27,7 @@ from conftest import (
     OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
     OPENHANDS_CHART_MINIMAL_VERSION,
     OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION,
+    OPENHANDS_CHART_VARIANTS,
     RUNTIME_API_CHART_FULL_VERSION,
     RUNTIME_API_CHART_FULL_APP_VERSION,
     RUNTIME_API_CHART_MINIMAL_VERSION,
@@ -186,15 +187,57 @@ class TestBumpPatchVersion:
             bump_patch_version(invalid_version)
 
 
+class TestUpdateChartAcrossVariants:
+    """Tests for update_chart that verify behavior across both chart variants.
+
+    Uses the parameterized openhands_chart_variant fixture to ensure core
+    functionality works with both rich (with_deps) and minimal chart structures.
+    """
+
+    @pytest.fixture
+    def temp_chart_file(self, make_temp_yaml_file, openhands_chart_variant):
+        """Create a temporary Chart.yaml from the parameterized variant."""
+        return make_temp_yaml_file(openhands_chart_variant["content"])
+
+    def test_update_app_version(self, temp_chart_file, openhands_chart_variant):
+        """Test that appVersion is updated correctly across chart variants."""
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
+
+        assert get_chart_value(temp_chart_file, "appVersion") == NEW_APP_VERSION
+
+    def test_bump_chart_version(self, temp_chart_file, openhands_chart_variant):
+        """Test that version is bumped correctly across chart variants."""
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
+
+        original_version = openhands_chart_variant["version"]
+        assert_version_bumped(temp_chart_file, original_version)
+
+    def test_update_runtime_api_version(self, temp_chart_file, openhands_chart_variant):
+        """Test that runtime-api dependency version is updated across chart variants."""
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
+
+        assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
+
+    def test_unchanged_when_same_app_version(self, temp_chart_file, openhands_chart_variant):
+        """Test that appVersion shows unchanged when value matches across variants."""
+        current_app_version = openhands_chart_variant["app_version"]
+        result = update_openhands_chart(temp_chart_file, current_app_version, NEW_RUNTIME_API_VERSION)
+
+        assert result.is_unchanged("appVersion")
+
+    def test_unchanged_when_same_runtime_api_version(self, temp_chart_file, openhands_chart_variant):
+        """Test that runtime-api shows unchanged when value matches across variants."""
+        current_runtime_api = openhands_chart_variant["runtime_api_version"]
+        result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, current_runtime_api)
+
+        assert result.is_unchanged("runtime-api version")
+
+
 class TestUpdateChart:
     """Tests for update_chart function with specific fixture requirements.
 
     These tests require the with_deps fixture specifically because they test
     features only present in that variant (e.g., multiple dependencies, maintainers).
-
-    TDD Rationale: Tests drive selective dependency updates - only runtime-api
-    should be modified while other dependencies remain untouched. This prevents
-    accidental side effects when updating charts with multiple dependencies.
     """
 
     @pytest.fixture
@@ -202,42 +245,14 @@ class TestUpdateChart:
         """Create a temporary Chart.yaml file using shared fixtures."""
         return make_temp_yaml_file(sample_openhands_chart_with_deps)
 
-    def test_update_app_version(self, temp_chart_file):
-        """Test that appVersion is updated correctly."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
-
-        assert get_chart_value(temp_chart_file, "appVersion") == NEW_APP_VERSION
-
-    def test_bump_chart_version(self, temp_chart_file):
-        """Test that version is bumped correctly."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
-
-        assert_version_bumped(temp_chart_file, OPENHANDS_CHART_WITH_DEPS_VERSION)
-
-    def test_update_runtime_api_version(self, temp_chart_file):
-        """Test that runtime-api dependency version is updated."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
-
-        assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
-
-    @pytest.mark.parametrize("app_version,runtime_api_version,unchanged_key", [
-        pytest.param(OPENHANDS_CHART_WITH_DEPS_APP_VERSION, NEW_RUNTIME_API_VERSION, "appVersion", id="appVersion_unchanged_when_same"),
-        pytest.param(NEW_APP_VERSION, OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION, "runtime-api version", id="runtime_api_unchanged_when_same"),
-    ])
-    def test_unchanged_when_same_version(self, temp_chart_file, app_version, runtime_api_version, unchanged_key):
-        """Test that keys show unchanged when values already match fixture."""
-        result = update_openhands_chart(temp_chart_file, app_version, runtime_api_version)
-
-        assert result.is_unchanged(unchanged_key)
-
     def test_other_dependencies_unchanged(self, temp_chart_file):
-        """Test that other dependencies are not affected."""
+        """Test that other dependencies are not affected (requires with_deps fixture)."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
     def test_preserves_yaml_structure(self, temp_chart_file):
-        """Test that YAML structure is preserved."""
+        """Test that YAML structure is preserved (requires with_deps fixture)."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         # Verify structure is preserved
