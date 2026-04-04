@@ -14,7 +14,21 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
-from conftest import assert_file_contains_all, get_chart_value, get_dependency_version
+from conftest import (
+    assert_file_contains_all,
+    get_chart_value,
+    get_dependency_version,
+    # Fixture baseline constants for self-documenting assertions
+    OPENHANDS_CHART_WITH_DEPS_VERSION,
+    OPENHANDS_CHART_WITH_DEPS_APP_VERSION,
+    OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION,
+    OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
+    OPENHANDS_CHART_MINIMAL_VERSION,
+    OPENHANDS_CHART_MINIMAL_RUNTIME_API_VERSION,
+    RUNTIME_API_CHART_FULL_VERSION,
+    RUNTIME_API_CHART_FULL_APP_VERSION,
+    RUNTIME_API_CHART_MINIMAL_VERSION,
+)
 from update_openhands_charts import (
     DeployConfig,
     bump_patch_version,
@@ -164,17 +178,19 @@ class TestUpdateChart:
         """Test that version is bumped correctly."""
         update_openhands_chart(temp_chart_file, "2.0.0", None)
 
-        assert get_chart_value(temp_chart_file, "version") == "0.1.1"
+        expected_version = bump_patch_version(OPENHANDS_CHART_WITH_DEPS_VERSION)
+        assert get_chart_value(temp_chart_file, "version") == expected_version
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
-        update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
+        new_runtime_api_version = "0.2.0"
+        update_openhands_chart(temp_chart_file, "2.0.0", new_runtime_api_version)
 
-        assert get_dependency_version(temp_chart_file, "runtime-api") == "0.2.0"
+        assert get_dependency_version(temp_chart_file, "runtime-api") == new_runtime_api_version
 
     @pytest.mark.parametrize("app_version,runtime_api_version,unchanged_key", [
-        pytest.param("1.0.0", "0.2.0", "appVersion", id="appVersion_unchanged_when_same"),
-        pytest.param("2.0.0", "0.1.10", "runtime-api version", id="runtime_api_unchanged_when_same"),
+        pytest.param(OPENHANDS_CHART_WITH_DEPS_APP_VERSION, "0.2.0", "appVersion", id="appVersion_unchanged_when_same"),
+        pytest.param("2.0.0", OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION, "runtime-api version", id="runtime_api_unchanged_when_same"),
     ])
     def test_unchanged_when_same_version(self, temp_chart_file, app_version, runtime_api_version, unchanged_key):
         """Test that keys show unchanged when values already match fixture."""
@@ -186,7 +202,7 @@ class TestUpdateChart:
         """Test that other dependencies are not affected."""
         update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
-        assert get_dependency_version(temp_chart_file, "other-dep") == "1.0.0"
+        assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
     def test_preserves_yaml_structure(self, temp_chart_file):
         """Test that YAML structure is preserved."""
@@ -271,12 +287,12 @@ class TestGetDependencyVersion:
     def test_returns_version_when_dependency_exists(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
         """Test that version is returned when dependency exists."""
         temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, "runtime-api") == "0.1.10"
+        assert get_dependency_version(temp_file, "runtime-api") == OPENHANDS_CHART_WITH_DEPS_RUNTIME_API_VERSION
 
     def test_returns_version_for_other_dependencies(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
         """Test that version is returned for any named dependency."""
         temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, "other-dep") == "1.0.0"
+        assert get_dependency_version(temp_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
     def test_returns_none_when_dependency_not_found(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
         """Test that None is returned when dependency doesn't exist."""
@@ -1074,7 +1090,7 @@ class TestUpdateRuntimeApiChartConditional:
 
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
 
-        assert new_version == "0.2.6"  # Version unchanged
+        assert new_version == RUNTIME_API_CHART_MINIMAL_VERSION  # Version unchanged
         assert result.is_unchanged("runtime-api chart version")
 
     def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
@@ -1083,7 +1099,8 @@ class TestUpdateRuntimeApiChartConditional:
 
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
 
-        assert new_version == "0.2.7"  # Version bumped
+        expected_version = bump_patch_version(RUNTIME_API_CHART_MINIMAL_VERSION)
+        assert new_version == expected_version  # Version bumped
         assert result.has_change_for("runtime-api chart version")
 
 
