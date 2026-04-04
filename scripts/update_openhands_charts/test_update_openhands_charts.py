@@ -6,7 +6,6 @@
 """Unit tests for update_openhands_charts.py."""
 
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -139,31 +138,17 @@ class TestFormatShaTag:
 class TestGetCurrentAppVersion:
     """Tests for get_current_app_version function."""
 
-    @pytest.fixture
-    def sample_chart_yaml(self):
-        """Create a sample Chart.yaml content."""
-        return """\
+    def test_returns_app_version(self, make_temp_yaml_file):
+        """Test that function returns the appVersion from chart."""
+        from update_openhands_charts import get_current_app_version
+
+        chart_content = """\
 apiVersion: v2
 appVersion: cloud-1.1.0
 version: 0.3.11
 name: openhands
 """
-
-    @pytest.fixture
-    def temp_chart_file(self, sample_chart_yaml):
-        """Create a temporary Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
-
-    def test_returns_app_version(self, temp_chart_file):
-        """Test that function returns the appVersion from chart."""
-        from update_openhands_charts import get_current_app_version
-
+        temp_chart_file = make_temp_yaml_file(chart_content)
         result = get_current_app_version(temp_chart_file)
         assert result == "cloud-1.1.0"
 
@@ -195,35 +180,9 @@ class TestUpdateChart:
     """Tests for update_chart function."""
 
     @pytest.fixture
-    def sample_chart_yaml(self):
-        """Create a sample Chart.yaml content."""
-        return """\
-apiVersion: v2
-description: Test chart
-name: test-chart
-appVersion: 1.0.0
-version: 0.1.0
-maintainers:
-  - name: test
-dependencies:
-  - name: runtime-api
-    repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.10
-    condition: runtime-api.enabled
-  - name: other-dep
-    version: 1.0.0
-"""
-
-    @pytest.fixture
-    def temp_chart_file(self, sample_chart_yaml):
-        """Create a temporary Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
+        """Create a temporary Chart.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_openhands_chart_with_deps)
 
     def test_update_app_version(self, temp_chart_file):
         """Test that appVersion is updated correctly."""
@@ -313,43 +272,9 @@ class TestUpdateValues:
     """Tests for update_values function."""
 
     @pytest.fixture
-    def sample_values_yaml(self):
-        """Create a sample values.yaml content."""
-        return """\
-allowedUsers: null
-
-image:
-  repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.0.0
-
-runtime:
-  image:
-    repository: ghcr.io/openhands/runtime
-    tag: cloud-1.0.0-nikolaik
-  runAsRoot: true
-
-runtime-api:
-  enabled: true
-  replicaCount: 1
-  warmRuntimes:
-    enabled: true
-    count: 1
-    configs:
-      - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
-        working_dir: "/openhands/code/"
-"""
-
-    @pytest.fixture
-    def temp_values_file(self, sample_values_yaml):
-        """Create a temporary values.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_values_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_full):
+        """Create a temporary values.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_openhands_values_full)
 
     def test_update_enterprise_server_tag_uses_cloud_version(self, temp_values_file):
         """Test that enterprise-server image tag uses cloud version format."""
@@ -444,28 +369,9 @@ class TestUpdateOpenhandsChartConditional:
     """Tests for conditional openhands chart version update."""
 
     @pytest.fixture
-    def sample_chart_yaml(self):
-        """Create a sample openhands Chart.yaml content."""
-        return """\
-apiVersion: v2
-appVersion: cloud-1.0.0
-version: 0.3.11
-name: openhands
-dependencies:
-  - name: runtime-api
-    version: 0.2.6
-"""
-
-    @pytest.fixture
-    def temp_chart_file(self, sample_chart_yaml):
-        """Create a temporary openhands Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_minimal):
+        """Create a temporary openhands Chart.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_openhands_chart_minimal)
 
     def test_no_version_bump_when_no_changes(self, temp_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
@@ -512,7 +418,7 @@ class TestDryRun:
 
     @pytest.fixture
     def sample_chart_yaml(self):
-        """Create a sample Chart.yaml content."""
+        """Create a sample Chart.yaml content for dry-run tests."""
         return """\
 apiVersion: v2
 description: Test chart
@@ -525,47 +431,14 @@ dependencies:
 """
 
     @pytest.fixture
-    def sample_values_yaml(self):
-        """Create a sample values.yaml content."""
-        return """\
-image:
-  repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.0.0
-
-runtime:
-  image:
-    repository: ghcr.io/openhands/runtime
-    tag: cloud-1.0.0-nikolaik
-
-runtime-api:
-  enabled: true
-  warmRuntimes:
-    configs:
-      - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
-"""
+    def temp_chart_file(self, make_temp_yaml_file, sample_chart_yaml):
+        """Create a temporary Chart.yaml file using shared fixture."""
+        return make_temp_yaml_file(sample_chart_yaml)
 
     @pytest.fixture
-    def temp_chart_file(self, sample_chart_yaml):
-        """Create a temporary Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
-
-    @pytest.fixture
-    def temp_values_file(self, sample_values_yaml):
-        """Create a temporary values.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_values_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_minimal):
+        """Create a temporary values.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_openhands_values_minimal)
 
     def test_update_chart_dry_run_no_file_changes(self, temp_chart_file):
         """Test that dry-run doesn't modify Chart.yaml."""
@@ -634,31 +507,9 @@ class TestUpdateRuntimeApiChart:
     """Tests for update_runtime_api_chart function."""
 
     @pytest.fixture
-    def sample_runtime_api_chart_yaml(self):
-        """Create a sample runtime-api Chart.yaml content."""
-        return """\
-apiVersion: v2
-name: runtime-api
-description: A Helm chart for the Flask application
-version: 0.1.20 # Change this to trigger a new helm chart version being published
-appVersion: "1.0.0"
-dependencies:
-  - name: postgresql
-    version: 15.x.x
-    repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
-"""
-
-    @pytest.fixture
-    def temp_runtime_api_chart_file(self, sample_runtime_api_chart_yaml):
-        """Create a temporary runtime-api Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_runtime_api_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_runtime_api_chart_file(self, make_temp_yaml_file, sample_runtime_api_chart_full):
+        """Create a temporary runtime-api Chart.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_runtime_api_chart_full)
 
     def test_bump_runtime_api_version(self, temp_runtime_api_chart_file):
         """Test that runtime-api chart version is bumped correctly."""
@@ -698,40 +549,9 @@ class TestUpdateRuntimeApiValues:
     """Tests for update_runtime_api_values function."""
 
     @pytest.fixture
-    def sample_runtime_api_values_yaml(self):
-        """Create a sample runtime-api values.yaml content."""
-        return """\
-nameOverride: ""
-fullnameOverride: ""
-
-replicaCount: 1
-
-image:
-  repository: ghcr.io/openhands/runtime-api
-  tag: sha-0c907c9
-  pullPolicy: Always
-
-warmRuntimes:
-  enabled: false
-  configMapName: warm-runtimes-config
-  count: 0
-  configs:
-    - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
-      working_dir: "/openhands/code/"
-      environment: {}
-"""
-
-    @pytest.fixture
-    def temp_runtime_api_values_file(self, sample_runtime_api_values_yaml):
-        """Create a temporary runtime-api values.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_runtime_api_values_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_runtime_api_values_file(self, make_temp_yaml_file, sample_runtime_api_values):
+        """Create a temporary runtime-api values.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_runtime_api_values)
 
     def test_update_image_tag(self, temp_runtime_api_values_file):
         """Test that runtime-api image tag is updated correctly."""
@@ -835,25 +655,9 @@ class TestUpdateRuntimeApiChartConditional:
     """Tests for conditional runtime-api chart version update."""
 
     @pytest.fixture
-    def sample_runtime_api_chart_yaml(self):
-        """Create a sample runtime-api Chart.yaml content."""
-        return """\
-apiVersion: v2
-appVersion: 0.1.0
-version: 0.2.6
-name: runtime-api
-"""
-
-    @pytest.fixture
-    def temp_runtime_api_chart_file(self, sample_runtime_api_chart_yaml):
-        """Create a temporary runtime-api Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_runtime_api_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_runtime_api_chart_file(self, make_temp_yaml_file, sample_runtime_api_chart_minimal):
+        """Create a temporary runtime-api Chart.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_runtime_api_chart_minimal)
 
     def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
