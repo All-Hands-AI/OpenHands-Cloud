@@ -49,12 +49,23 @@ NEW_RUNTIME_API_VERSION = "0.2.0"
 def get_dependency_version(file_path: Path, dep_name: str) -> str | None:
     """Get the version of a dependency from a Chart.yaml file.
 
+    Searches the 'dependencies' array for a matching name and returns its version.
+    This abstracts YAML structure details, making tests more maintainable when
+    the Chart.yaml format changes.
+
     Args:
         file_path: Path to the Chart.yaml file
-        dep_name: Name of the dependency to find
+        dep_name: Name of the dependency to find (e.g., "runtime-api")
 
     Returns:
-        The version string if found, None otherwise
+        str: The version string (e.g., "0.1.10") if dependency exists
+        None: If dependency not found OR if chart has no dependencies section
+
+    Example:
+        >>> get_dependency_version(chart_path, "runtime-api")
+        "0.1.10"
+        >>> get_dependency_version(chart_path, "nonexistent")
+        None
     """
     yaml = YAML()
     chart_data = yaml.load(file_path)
@@ -67,12 +78,23 @@ def get_dependency_version(file_path: Path, dep_name: str) -> str | None:
 def get_chart_value(file_path: Path, key: str) -> Any:
     """Get a top-level value from a Chart.yaml file.
 
+    Provides a simple interface for reading chart metadata without exposing
+    YAML parsing details to tests. Only reads top-level keys; for nested
+    values, use get_dependency_version or access the YAML directly.
+
     Args:
         file_path: Path to the Chart.yaml file
-        key: The top-level key to retrieve
+        key: The top-level key to retrieve (e.g., "version", "appVersion", "name")
 
     Returns:
-        The value if found, None otherwise
+        Any: The value at the key (str, list, dict, etc.) if key exists
+        None: If key not found in the chart
+
+    Example:
+        >>> get_chart_value(chart_path, "appVersion")
+        "cloud-1.0.0"
+        >>> get_chart_value(chart_path, "dependencies")
+        [{"name": "runtime-api", "version": "0.1.10"}]
     """
     yaml = YAML()
     chart_data = yaml.load(file_path)
@@ -82,15 +104,22 @@ def get_chart_value(file_path: Path, key: str) -> Any:
 def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> None:
     """Assert that a file contains all expected strings.
 
-    This helper is useful for testing that YAML/config file modifications
-    preserve expected content that should not be changed.
+    Verifies that YAML/config file modifications preserve content that should
+    not be changed. Useful for ensuring update functions don't accidentally
+    remove or corrupt unrelated configuration.
 
     Args:
         file_path: Path to the file to check
         expected_strings: List of strings that must appear in the file
 
     Raises:
-        AssertionError: If any expected string is not found in the file
+        AssertionError: If ANY expected string is not found, with message
+                        identifying which string was missing
+
+    Example:
+        >>> assert_file_contains_all(values_path, ["replicaCount: 1", "enabled: true"])
+        # Passes silently if both strings found
+        # Raises AssertionError if either missing
     """
     content = file_path.read_text()
     for expected in expected_strings:
@@ -98,17 +127,24 @@ def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> No
 
 
 def assert_version_bumped(file_path: Path, original_version: str) -> None:
-    """Assert that a chart's version was bumped from the original.
+    """Assert that a chart's version was bumped by exactly one patch increment.
 
-    This helper encapsulates the common pattern of verifying that a chart
-    version was correctly incremented after an update operation.
+    Encapsulates the pattern: read current version, verify it equals
+    bump_patch_version(original). Catches both "forgot to bump" and
+    "bumped too much" errors.
 
     Args:
-        file_path: Path to the Chart.yaml file
-        original_version: The version before the update operation
+        file_path: Path to the Chart.yaml file (must contain 'version' key)
+        original_version: The semver version before update (e.g., "0.1.0")
 
     Raises:
-        AssertionError: If version was not bumped correctly
+        AssertionError: If current version != original + 1 patch, with message
+                        showing expected vs actual (e.g., "Expected 0.1.1, got 0.1.0")
+
+    Example:
+        >>> # If chart was updated from 1.2.3 to 1.2.4
+        >>> assert_version_bumped(chart_path, "1.2.3")  # passes
+        >>> assert_version_bumped(chart_path, "1.2.2")  # fails: expected 1.2.3
     """
     # Import here to avoid circular dependency
     import sys
