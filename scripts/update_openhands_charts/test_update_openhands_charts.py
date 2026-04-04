@@ -319,6 +319,55 @@ version: 1.0.0
         assert get_dependency_version(temp_file, "any-dep") is None
 
 
+class TestGetChartValue:
+    """Tests for get_chart_value helper function.
+
+    This helper extracts top-level values from Chart.yaml files,
+    reducing coupling to internal YAML data structures in tests.
+    """
+
+    def test_returns_value_when_key_exists(self, make_temp_yaml_file):
+        """Test that value is returned when key exists."""
+        from conftest import get_chart_value
+
+        chart_content = """\
+apiVersion: v2
+appVersion: 1.0.0
+version: 0.3.11
+name: openhands
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+        assert get_chart_value(temp_file, "appVersion") == "1.0.0"
+
+    def test_returns_value_for_any_top_level_key(self, make_temp_yaml_file):
+        """Test that value is returned for any top-level key."""
+        from conftest import get_chart_value
+
+        chart_content = """\
+apiVersion: v2
+appVersion: cloud-2.0.0
+version: 0.1.0
+name: test-chart
+description: A test chart
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+        assert get_chart_value(temp_file, "name") == "test-chart"
+        assert get_chart_value(temp_file, "version") == "0.1.0"
+        assert get_chart_value(temp_file, "description") == "A test chart"
+
+    def test_returns_none_when_key_not_found(self, make_temp_yaml_file):
+        """Test that None is returned when key doesn't exist."""
+        from conftest import get_chart_value
+
+        chart_content = """\
+apiVersion: v2
+name: test-chart
+version: 1.0.0
+"""
+        temp_file = make_temp_yaml_file(chart_content)
+        assert get_chart_value(temp_file, "nonexistent-key") is None
+
+
 class TestGetDeployConfig:
     """Tests for get_deploy_config function.
 
