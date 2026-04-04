@@ -24,6 +24,7 @@ logging.getLogger("github").setLevel(logging.WARNING)
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
+DEPLOY_REPO = "OpenHands/deploy"
 SEPARATOR = "=" * 60
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -31,6 +32,18 @@ CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
 RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
+
+# Regex patterns for values.yaml image tag updates
+ENTERPRISE_SERVER_TAG_PATTERN = (
+    r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
+)
+RUNTIME_TAG_PATTERN = (
+    r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
+)
+WARM_RUNTIMES_TAG_PATTERN = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
+RUNTIME_API_TAG_PATTERN = (
+    r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
+)
 
 
 @dataclass
@@ -327,28 +340,23 @@ def update_openhands_values(
     result = UpdateResult()
     runtime_tag = f"{openhands_version}-nikolaik"
 
-    # Update enterprise-server image tag (e.g., cloud-1.19.0)
     content = update_tag_in_content(
         content,
-        r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)",
+        ENTERPRISE_SERVER_TAG_PATTERN,
         openhands_version,
         "enterprise-server image tag",
         result,
     )
-
-    # Update runtime image tag (e.g., cloud-1.19.0-nikolaik)
     content = update_tag_in_content(
         content,
-        r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)",
+        RUNTIME_TAG_PATTERN,
         runtime_tag,
         "runtime image tag",
         result,
     )
-
-    # Update warmRuntimes image (e.g., cloud-1.19.0-nikolaik)
     content = update_tag_in_content(
         content,
-        r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"',
+        WARM_RUNTIMES_TAG_PATTERN,
         runtime_tag,
         "warmRuntimes image tag",
         result,
@@ -403,19 +411,16 @@ def update_runtime_api_values(
     content = values_path.read_text()
     result = UpdateResult()
 
-    # Update image.tag with sha-SHORT_SHA format
     content = update_tag_in_content(
         content,
-        r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)',
+        RUNTIME_API_TAG_PATTERN,
         format_sha_tag(runtime_api_sha),
         "runtime-api image tag",
         result,
     )
-
-    # Update warmRuntimes image (e.g., cloud-1.19.0-nikolaik)
     content = update_tag_in_content(
         content,
-        r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"',
+        WARM_RUNTIMES_TAG_PATTERN,
         f"{openhands_version}-nikolaik",
         "runtime-api warmRuntimes image tag",
         result,
@@ -454,26 +459,90 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_openhands_version(token: str, cloud_tag: str | None) -> str | None:
+    """Resolve the OpenHands cloud version to use for updates.
+
+    Returns the cloud tag (e.g., 'cloud-1.19.0') or None if resolution fails.
+    """
+    if cloud_tag:
+        print(f"Using specified cloud tag: {cloud_tag}")
+        if not cloud_tag_exists(token, OPENHANDS_REPO, cloud_tag):
+            print(f"Error: Cloud tag '{cloud_tag}' does not exist in {OPENHANDS_REPO}")
+            return None
+        return cloud_tag
+
+    openhands_version = get_latest_cloud_tag(token, OPENHANDS_REPO)
+    if openhands_version:
+        print(f"OpenHands cloud tag: {openhands_version}")
+    else:
+        print("No cloud tag found in OpenHands releases")
+    return openhands_version
+
+
+def update_runtime_api_workflow(
+    deploy_config: DeployConfig,
+    openhands_version: str,
+    dry_run: bool,
+) -> str:
+    """Update runtime-api chart and values. Returns the new chart version."""
+    print_section_header("Updating runtime-api chart...")
+
+    print("Updating runtime-api values.yaml...")
+    values_result = update_runtime_api_values(
+        RUNTIME_API_VALUES_PATH,
+        deploy_config.runtime_api_sha,
+        openhands_version,
+        dry_run=dry_run,
+    )
+    values_result.print_summary()
+
+    print()
+    print("Updating runtime-api Chart.yaml...")
+    chart_version, chart_result = update_runtime_api_chart(
+        RUNTIME_API_CHART_PATH,
+        has_changes=values_result.has_changes,
+        dry_run=dry_run,
+    )
+    chart_result.print_summary()
+
+    return chart_version
+
+
+def update_openhands_workflow(
+    openhands_version: str,
+    runtime_api_version: str,
+    dry_run: bool,
+) -> None:
+    """Update openhands chart and values."""
+    print_section_header("Updating openhands chart...")
+
+    print("Updating openhands values.yaml...")
+    values_result = update_openhands_values(
+        VALUES_PATH,
+        openhands_version,
+        dry_run=dry_run,
+    )
+    values_result.print_summary()
+
+    print()
+    print("Updating openhands Chart.yaml...")
+    chart_result = update_openhands_chart(
+        CHART_PATH,
+        openhands_version,
+        runtime_api_version,
+        has_changes=values_result.has_changes,
+        dry_run=dry_run,
+    )
+    chart_result.print_summary()
+
+
 def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = None) -> None:
     print_section_header("Fetching latest versions...")
 
-    # Use provided cloud tag or fetch the latest from OpenHands releases
-    if cloud_tag:
-        openhands_version = cloud_tag
-        print(f"Using specified cloud tag: {openhands_version}")
-        # Validate that the specified cloud tag exists
-        if not cloud_tag_exists(token, OPENHANDS_REPO, cloud_tag):
-            print(f"Error: Cloud tag '{cloud_tag}' does not exist in {OPENHANDS_REPO}")
-            return
-    else:
-        openhands_version = get_latest_cloud_tag(token, OPENHANDS_REPO)
-        if openhands_version:
-            print(f"OpenHands cloud tag: {openhands_version}")
-        else:
-            print("No cloud tag found in OpenHands releases")
-            return
+    openhands_version = resolve_openhands_version(token, cloud_tag)
+    if not openhands_version:
+        return
 
-    # Check if openhands chart is already at the target version
     current_app_version = get_current_app_version(CHART_PATH)
     if current_app_version:
         print(f"OpenHands-Cloud openhands chart appVersion: {current_app_version}")
@@ -482,70 +551,28 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
             print_section_header("Charts are already up to date - no changes needed")
             return
 
-    # Extract version number to use as deploy tag (e.g., 1.19.0)
     version_number = extract_version_from_cloud_tag(openhands_version)
     if not version_number:
         print(f"Could not extract version from cloud tag: {openhands_version}")
         return
 
-    deploy_tag = version_number
-    print(f"Using deploy tag: {deploy_tag}")
+    print(f"Using deploy tag: {version_number}")
 
-    # Fetch deploy config from the corresponding deploy repo tag
-    deploy_config = get_deploy_config(token, "OpenHands/deploy", ref=deploy_tag)
+    deploy_config = get_deploy_config(token, DEPLOY_REPO, ref=version_number)
     if not deploy_config:
-        print(f"Could not fetch deploy config from tag {deploy_tag}")
+        print(f"Could not fetch deploy config from tag {version_number}")
         return
 
-    print(f"Deploy config (from {deploy_tag}):")
+    print(f"Deploy config (from {version_number}):")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
 
-    # Update runtime-api values first to check if there are changes
     print()
-    print_section_header("Updating runtime-api chart...")
-
-    print("Updating runtime-api values.yaml...")
-    runtime_api_values_result = update_runtime_api_values(
-        RUNTIME_API_VALUES_PATH,
-        deploy_config.runtime_api_sha,
-        openhands_version,
-        dry_run=dry_run,
+    runtime_api_version = update_runtime_api_workflow(
+        deploy_config, openhands_version, dry_run
     )
-    runtime_api_values_result.print_summary()
-    runtime_api_has_changes = runtime_api_values_result.has_changes
 
     print()
-    print("Updating runtime-api Chart.yaml...")
-    runtime_api_version, runtime_api_chart_result = update_runtime_api_chart(
-        RUNTIME_API_CHART_PATH,
-        has_changes=runtime_api_has_changes,
-        dry_run=dry_run,
-    )
-    runtime_api_chart_result.print_summary()
-
-    # Update openhands values first to check if there are changes
-    print()
-    print_section_header("Updating openhands chart...")
-
-    print("Updating openhands values.yaml...")
-    openhands_values_result = update_openhands_values(
-        VALUES_PATH,
-        openhands_version,
-        dry_run=dry_run,
-    )
-    openhands_values_result.print_summary()
-    openhands_has_changes = openhands_values_result.has_changes
-
-    print()
-    print("Updating openhands Chart.yaml...")
-    openhands_chart_result = update_openhands_chart(
-        CHART_PATH,
-        openhands_version,
-        runtime_api_version,
-        has_changes=openhands_has_changes,
-        dry_run=dry_run,
-    )
-    openhands_chart_result.print_summary()
+    update_openhands_workflow(openhands_version, runtime_api_version, dry_run)
 
 
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
