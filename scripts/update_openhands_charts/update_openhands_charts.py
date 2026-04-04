@@ -180,6 +180,42 @@ def create_yaml_parser() -> YAML:
     return yaml
 
 
+def update_tag_in_content(
+    content: str,
+    pattern: str,
+    new_tag: str,
+    tag_name: str,
+    result: UpdateResult,
+    replacement_suffix: str = "",
+) -> str:
+    """Update a regex-matched tag in content and track the result.
+    
+    Args:
+        content: The file content to update
+        pattern: Regex pattern with group(2) capturing the old tag
+        new_tag: The new tag value to set
+        tag_name: Human-readable name for reporting (e.g., "enterprise-server image tag")
+        result: UpdateResult to record changes/unchanged/errors
+        replacement_suffix: Optional suffix to append after new_tag in replacement
+        
+    Returns:
+        Updated content string
+    """
+    match = re.search(pattern, content)
+    if match:
+        old_tag = match.group(2)
+        if old_tag == new_tag:
+            result.unchanged.append((tag_name, old_tag))
+        else:
+            replacement = rf"\g<1>{new_tag}{replacement_suffix}"
+            content = re.sub(pattern, replacement, content)
+            result.changes.append((tag_name, old_tag, new_tag))
+            result.has_changes = True
+    else:
+        result.errors.append(f"Could not find {tag_name} in values.yaml")
+    return content
+
+
 def update_runtime_api_dependency(
     chart_data: dict,
     new_version: str | None,
@@ -287,53 +323,35 @@ def update_openhands_values(
     """
     content = values_path.read_text()
     result = UpdateResult()
+    runtime_tag = f"{openhands_version}-nikolaik"
 
-    # Update enterprise-server image tag using cloud version format (e.g., cloud-1.19.0)
-    enterprise_pattern = r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
-    enterprise_match = re.search(enterprise_pattern, content)
+    # Update enterprise-server image tag (e.g., cloud-1.19.0)
+    content = update_tag_in_content(
+        content,
+        r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)",
+        openhands_version,
+        "enterprise-server image tag",
+        result,
+    )
 
-    if enterprise_match:
-        old_tag = enterprise_match.group(2)
-        if old_tag == openhands_version:
-            result.unchanged.append(("enterprise-server image tag", old_tag))
-        else:
-            content = re.sub(enterprise_pattern, rf"\g<1>{openhands_version}", content)
-            result.changes.append(("enterprise-server image tag", old_tag, openhands_version))
-            result.has_changes = True
-    else:
-        result.errors.append("Could not find enterprise-server image tag in values.yaml")
+    # Update runtime image tag (e.g., cloud-1.19.0-nikolaik)
+    content = update_tag_in_content(
+        content,
+        r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)",
+        runtime_tag,
+        "runtime image tag",
+        result,
+    )
 
-    # Update runtime image tag using cloud version format (e.g., cloud-1.19.0-nikolaik)
-    runtime_new_tag = f"{openhands_version}-nikolaik"
-    runtime_pattern = r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
-    runtime_match = re.search(runtime_pattern, content)
-
-    if runtime_match:
-        old_tag = runtime_match.group(2)
-        if old_tag == runtime_new_tag:
-            result.unchanged.append(("runtime image tag", old_tag))
-        else:
-            content = re.sub(runtime_pattern, rf"\g<1>{runtime_new_tag}", content)
-            result.changes.append(("runtime image tag", old_tag, runtime_new_tag))
-            result.has_changes = True
-    else:
-        result.errors.append("Could not find runtime image tag in values.yaml")
-
-    # Update warmRuntimes image using cloud version format (e.g., cloud-1.19.0-nikolaik)
-    warm_runtime_new_tag = f"{openhands_version}-nikolaik"
-    warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
-    warm_runtime_match = re.search(warm_runtime_pattern, content)
-
-    if warm_runtime_match:
-        old_tag = warm_runtime_match.group(2)
-        if old_tag == warm_runtime_new_tag:
-            result.unchanged.append(("warmRuntimes image tag", old_tag))
-        else:
-            content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
-            result.changes.append(("warmRuntimes image tag", old_tag, warm_runtime_new_tag))
-            result.has_changes = True
-    else:
-        result.errors.append("Could not find warmRuntimes image tag in values.yaml")
+    # Update warmRuntimes image (e.g., cloud-1.19.0-nikolaik)
+    content = update_tag_in_content(
+        content,
+        r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"',
+        runtime_tag,
+        "warmRuntimes image tag",
+        result,
+        replacement_suffix='"',
+    )
 
     if not dry_run and result.has_changes:
         values_path.write_text(content)
@@ -384,36 +402,23 @@ def update_runtime_api_values(
     result = UpdateResult()
 
     # Update image.tag with sha-SHORT_SHA format
-    new_image_tag = format_sha_tag(runtime_api_sha)
-    image_tag_pattern = r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
-    image_tag_match = re.search(image_tag_pattern, content)
+    content = update_tag_in_content(
+        content,
+        r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)',
+        format_sha_tag(runtime_api_sha),
+        "runtime-api image tag",
+        result,
+    )
 
-    if image_tag_match:
-        old_tag = image_tag_match.group(2)
-        if old_tag == new_image_tag:
-            result.unchanged.append(("runtime-api image tag", old_tag))
-        else:
-            content = re.sub(image_tag_pattern, rf'\g<1>{new_image_tag}', content)
-            result.changes.append(("runtime-api image tag", old_tag, new_image_tag))
-            result.has_changes = True
-    else:
-        result.errors.append("Could not find runtime-api image tag in values.yaml")
-
-    # Update warmRuntimes image using cloud version format (e.g., cloud-1.19.0-nikolaik)
-    warm_runtime_new_tag = f"{openhands_version}-nikolaik"
-    warm_runtime_pattern = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
-    warm_runtime_match = re.search(warm_runtime_pattern, content)
-
-    if warm_runtime_match:
-        old_tag = warm_runtime_match.group(2)
-        if old_tag == warm_runtime_new_tag:
-            result.unchanged.append(("runtime-api warmRuntimes image tag", old_tag))
-        else:
-            content = re.sub(warm_runtime_pattern, rf'\g<1>{warm_runtime_new_tag}"', content)
-            result.changes.append(("runtime-api warmRuntimes image tag", old_tag, warm_runtime_new_tag))
-            result.has_changes = True
-    else:
-        result.errors.append("Could not find warmRuntimes image tag in runtime-api values.yaml")
+    # Update warmRuntimes image (e.g., cloud-1.19.0-nikolaik)
+    content = update_tag_in_content(
+        content,
+        r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"',
+        f"{openhands_version}-nikolaik",
+        "runtime-api warmRuntimes image tag",
+        result,
+        replacement_suffix='"',
+    )
 
     if not dry_run and result.has_changes:
         values_path.write_text(content)
