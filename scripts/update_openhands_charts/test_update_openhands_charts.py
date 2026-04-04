@@ -5,6 +5,7 @@
 # ///
 """Unit tests for update_openhands_charts.py."""
 
+import base64
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
@@ -536,8 +537,6 @@ class TestGetDeployConfig:
     All error scenarios should return None and print an error message.
     """
 
-    import base64
-
     # Valid workflow YAML for success case tests
     VALID_WORKFLOW_YAML = """\
 env:
@@ -548,8 +547,6 @@ env:
     @pytest.fixture
     def mock_successful_response(self):
         """Create a mock response with valid workflow content."""
-        import base64
-
         encoded_content = base64.b64encode(self.VALID_WORKFLOW_YAML.encode()).decode()
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
@@ -718,8 +715,6 @@ env:
         1. Return None (not raise an exception)
         2. Print an error message containing "Error fetching deploy config"
         """
-        import base64
-
         mock_get = setup_mock(Mock, base64)
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
