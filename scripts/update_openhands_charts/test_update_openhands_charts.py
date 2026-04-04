@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
 from conftest import (
+    assert_file_contains,
     assert_file_contains_all,
     assert_version_bumped,
     get_chart_value,
@@ -243,7 +244,7 @@ class TestUpdateChartAcrossVariants:
     - test_chart_app_version_updates: Core update behavior
     - test_chart_version_bumps: Version increment on change
     - test_runtime_api_dependency: Dependency update
-    - test_*_unchanged_when_already_current: Idempotency checks
+    - test_version_unchanged_when_already_current: Consolidated idempotency checks
 
     TDD Rationale: Tests drive the update_openhands_chart function to handle
     both minimal and full Chart.yaml structures. Parameterized variants ensure
@@ -274,17 +275,30 @@ class TestUpdateChartAcrossVariants:
 
         assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
 
-    def test_app_version_unchanged_when_already_current(self, temp_chart_file):
-        """Verify no change is recorded when appVersion already matches target."""
-        result = update_openhands_chart(temp_chart_file, OPENHANDS_CHART_APP_VERSION, NEW_RUNTIME_API_VERSION)
+    @pytest.mark.parametrize("app_version,runtime_api_version,unchanged_key", [
+        # When appVersion already matches target, it should be reported as unchanged
+        pytest.param(
+            OPENHANDS_CHART_APP_VERSION, NEW_RUNTIME_API_VERSION, "appVersion",
+            id="appVersion unchanged when already current"
+        ),
+        # When runtime-api version already matches target, it should be reported as unchanged
+        pytest.param(
+            NEW_APP_VERSION, OPENHANDS_CHART_RUNTIME_API_VERSION, "runtime-api version",
+            id="runtime-api version unchanged when already current"
+        ),
+    ])
+    def test_version_unchanged_when_already_current(
+        self, temp_chart_file, app_version, runtime_api_version, unchanged_key
+    ):
+        """Verify no change is recorded when a version already matches target.
 
-        assert result.is_unchanged("appVersion")
+        Idempotency verification: Ensures the update function correctly identifies
+        when values are already at their target state, preventing spurious version
+        bumps and unnecessary commits in CI/CD pipelines.
+        """
+        result = update_openhands_chart(temp_chart_file, app_version, runtime_api_version)
 
-    def test_runtime_api_version_unchanged_when_already_current(self, temp_chart_file):
-        """Verify no change is recorded when runtime-api version already matches target."""
-        result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, OPENHANDS_CHART_RUNTIME_API_VERSION)
-
-        assert result.is_unchanged("runtime-api version")
+        assert result.is_unchanged(unchanged_key)
 
 
 class TestUpdateChart:
@@ -635,10 +649,18 @@ env:
 
     # =========================================================================
     # Parameterized error path tests
+    #
+    # Recovery behavior: All errors return None rather than raising exceptions.
+    # This design allows the caller (main()) to gracefully skip the update when
+    # deploy config is unavailable, rather than failing the entire CI/CD run.
+    # The printed error message enables operators to diagnose issues from logs.
     # =========================================================================
 
     @pytest.mark.parametrize("error_name,setup_mock", [
-        # Network-level errors
+        # =====================================================================
+        # Network-level errors (transient, typically retryable)
+        # Recovery: Caller should retry with exponential backoff or skip update
+        # =====================================================================
         (
             "connection_timeout",
             lambda Mock, _: Mock(side_effect=Exception("Connection timed out")),
@@ -651,7 +673,11 @@ env:
             "dns_resolution_failed",
             lambda Mock, _: Mock(side_effect=Exception("Name resolution failed")),
         ),
-        # HTTP error responses
+        # =====================================================================
+        # HTTP error responses (4xx client errors vs 5xx server errors)
+        # Recovery: 4xx errors indicate config issues (check token/repo path);
+        #           5xx errors are transient (retry or wait for GitHub recovery)
+        # =====================================================================
         (
             "http_401_unauthorized",
             lambda Mock, _: _make_http_error_response(Mock, 401, "Unauthorized"),
@@ -676,7 +702,11 @@ env:
             "http_503_unavailable",
             lambda Mock, _: _make_http_error_response(Mock, 503, "Service Unavailable"),
         ),
-        # Response parsing errors
+        # =====================================================================
+        # Response parsing errors (data corruption or API contract violations)
+        # Recovery: These indicate unexpected API behavior; check GitHub status
+        #           or report bug if persistent. Update should be skipped.
+        # =====================================================================
         (
             "invalid_json_response",
             lambda Mock, _: _make_json_error_response(Mock),
@@ -689,7 +719,11 @@ env:
             "null_content_value",
             lambda Mock, _: _make_missing_key_response(Mock, {"content": None}),
         ),
-        # Base64 decoding errors
+        # =====================================================================
+        # Base64 decoding errors (corrupted file content in repository)
+        # Recovery: Check the workflow file in the repository for corruption;
+        #           these errors indicate the file content itself is invalid.
+        # =====================================================================
         (
             "invalid_base64_content",
             lambda Mock, _: _make_invalid_base64_response(Mock, "not-valid-base64!!!"),
@@ -698,7 +732,11 @@ env:
             "corrupted_base64_content",
             lambda Mock, _: _make_invalid_base64_response(Mock, "YWJj==="),  # Invalid padding
         ),
-        # YAML parsing errors
+        # =====================================================================
+        # YAML parsing errors (malformed workflow file syntax)
+        # Recovery: Fix the workflow YAML syntax in the source repository.
+        #           These errors indicate the deploy workflow file is invalid.
+        # =====================================================================
         (
             "invalid_yaml_syntax",
             lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "{{invalid: yaml: ::"),
@@ -712,8 +750,12 @@ env:
         """Test that error scenarios return None and print an error message.
 
         All error paths in get_deploy_config should:
-        1. Return None (not raise an exception)
-        2. Print an error message containing "Error fetching deploy config"
+        1. Return None (not raise an exception) - enables graceful degradation
+        2. Print an error message containing "Error fetching deploy config" - enables debugging
+
+        This fail-safe design ensures CI/CD pipelines can continue even when
+        deploy config is temporarily unavailable, while providing clear diagnostic
+        output for operators to investigate and resolve the underlying issue.
         """
         mock_get = setup_mock(Mock, base64)
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
@@ -797,8 +839,7 @@ class TestUpdateValues:
             openhands_version="cloud-1.1.0",
         )
 
-        content = temp_values_file.read_text()
-        assert "tag: cloud-1.1.0" in content
+        assert_file_contains(temp_values_file, "tag: cloud-1.1.0")
 
     def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
         """Test that runtime image tag uses cloud version format."""
@@ -807,8 +848,7 @@ class TestUpdateValues:
             openhands_version="cloud-1.1.0",
         )
 
-        content = temp_values_file.read_text()
-        assert "tag: cloud-1.1.0-nikolaik" in content
+        assert_file_contains(temp_values_file, "tag: cloud-1.1.0-nikolaik")
 
     def test_update_warm_runtimes_tag_uses_cloud_version(self, temp_values_file):
         """Test that warmRuntimes image tag uses cloud version format."""
@@ -817,8 +857,7 @@ class TestUpdateValues:
             openhands_version="cloud-1.1.0",
         )
 
-        content = temp_values_file.read_text()
-        assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
+        assert_file_contains(temp_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
 
     def test_idempotent_when_reapplying_same_values(self, temp_values_file):
         """Test that reapplying identical values is idempotent.
@@ -1218,9 +1257,8 @@ class TestUpdateRuntimeApiValues:
             openhands_version="cloud-1.1.0",
         )
 
-        content = temp_runtime_api_values_file.read_text()
         # Should use cloud version format for warmRuntimes
-        assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
+        assert_file_contains(temp_runtime_api_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
 
     def test_idempotent_when_reapplying_same_values(self, temp_runtime_api_values_file):
         """Test that reapplying identical values is idempotent.
