@@ -665,6 +665,92 @@ class TestUpdateValues:
 
         assert result.has_changes is False
 
+    def test_reports_error_when_enterprise_server_tag_missing(self, make_temp_yaml_file):
+        """Test that error is reported when enterprise-server image tag pattern not found."""
+        # YAML without enterprise-server image section
+        values_content = """\
+image:
+  repository: ghcr.io/other/image
+  tag: v1.0.0
+
+runtime:
+  image:
+    repository: ghcr.io/openhands/runtime
+    tag: cloud-1.0.0-nikolaik
+
+runtime-api:
+  warmRuntimes:
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+"""
+        temp_file = make_temp_yaml_file(values_content)
+
+        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+
+        assert "Could not find enterprise-server image tag" in result.errors[0]
+
+    def test_reports_error_when_runtime_tag_missing(self, make_temp_yaml_file):
+        """Test that error is reported when runtime image tag pattern not found."""
+        # YAML without runtime image section
+        values_content = """\
+image:
+  repository: ghcr.io/openhands/enterprise-server
+  tag: cloud-1.0.0
+
+runtime-api:
+  warmRuntimes:
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+"""
+        temp_file = make_temp_yaml_file(values_content)
+
+        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+
+        assert "Could not find runtime image tag" in result.errors[0]
+
+    def test_reports_error_when_warm_runtimes_tag_missing(self, make_temp_yaml_file):
+        """Test that error is reported when warmRuntimes image tag pattern not found."""
+        # YAML without warmRuntimes image
+        values_content = """\
+image:
+  repository: ghcr.io/openhands/enterprise-server
+  tag: cloud-1.0.0
+
+runtime:
+  image:
+    repository: ghcr.io/openhands/runtime
+    tag: cloud-1.0.0-nikolaik
+
+runtime-api:
+  warmRuntimes:
+    enabled: false
+"""
+        temp_file = make_temp_yaml_file(values_content)
+
+        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+
+        assert "Could not find warmRuntimes image tag" in result.errors[0]
+
+    def test_collects_multiple_errors_when_multiple_patterns_missing(self, make_temp_yaml_file):
+        """Test that all missing patterns are reported as errors."""
+        # Minimal YAML with none of the expected patterns
+        values_content = """\
+replicaCount: 1
+serviceAccount:
+  create: true
+"""
+        temp_file = make_temp_yaml_file(values_content)
+
+        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+
+        assert len(result.errors) == 3
+        error_messages = " ".join(result.errors)
+        assert "enterprise-server" in error_messages
+        assert "runtime image tag" in error_messages
+        assert "warmRuntimes" in error_messages
+
 
 class TestUpdateOpenhandsChartConditional:
     """Tests for conditional openhands chart version update."""
