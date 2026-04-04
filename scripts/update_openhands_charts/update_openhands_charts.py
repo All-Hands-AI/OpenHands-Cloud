@@ -24,6 +24,7 @@ logging.getLogger("github").setLevel(logging.WARNING)
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
+SEPARATOR = "=" * 60
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
@@ -440,9 +441,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = None) -> None:
-    print("=" * 60)
+    print(SEPARATOR)
     print("Fetching latest versions...")
-    print("=" * 60)
+    print(SEPARATOR)
 
     # Use provided cloud tag or fetch the latest from OpenHands releases
     if cloud_tag:
@@ -466,9 +467,9 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
         print(f"OpenHands-Cloud openhands chart appVersion: {current_app_version}")
         if current_app_version == openhands_version:
             print()
-            print("=" * 60)
+            print(SEPARATOR)
             print("Charts are already up to date - no changes needed")
-            print("=" * 60)
+            print(SEPARATOR)
             return
 
     # Extract version number to use as deploy tag (e.g., 1.19.0)
@@ -491,9 +492,9 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     # Update runtime-api values first to check if there are changes
     print()
-    print("=" * 60)
+    print(SEPARATOR)
     print("Updating runtime-api chart...")
-    print("=" * 60)
+    print(SEPARATOR)
 
     print("Updating runtime-api values.yaml...")
     runtime_api_values_result = update_runtime_api_values(
@@ -516,9 +517,9 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     # Update openhands values first to check if there are changes
     print()
-    print("=" * 60)
+    print(SEPARATOR)
     print("Updating openhands chart...")
-    print("=" * 60)
+    print(SEPARATOR)
 
     print("Updating openhands values.yaml...")
     openhands_values_result = update_openhands_values(
@@ -543,9 +544,9 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
     if dry_run:
-        print("=" * 60)
+        print(SEPARATOR)
         print("DRY RUN MODE - No changes will be made")
-        print("=" * 60)
+        print(SEPARATOR)
         print()
 
     token = os.environ.get("GITHUB_TOKEN")
