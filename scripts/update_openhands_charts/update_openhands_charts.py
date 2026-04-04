@@ -145,9 +145,32 @@ def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> Dep
 
 
 def bump_patch_version(version: str) -> str:
-    """Bump the patch version of a semantic version string."""
-    major, minor, patch = version.split(".")
-    return f"{major}.{minor}.{int(patch) + 1}"
+    """Bump the patch version of a semantic version string.
+
+    Args:
+        version: A semantic version string in X.Y.Z format (e.g., "1.2.3")
+
+    Returns:
+        The version with patch incremented (e.g., "1.2.4")
+
+    Raises:
+        ValueError: If version is not a valid X.Y.Z semver format
+    """
+    parts = version.split(".")
+    if len(parts) != 3:
+        raise ValueError(f"Invalid semver format: '{version}' (expected X.Y.Z)")
+
+    major, minor, patch = parts
+
+    # Validate all parts are numeric
+    try:
+        int(major)
+        int(minor)
+        new_patch = int(patch) + 1
+    except ValueError:
+        raise ValueError(f"Invalid semver format: '{version}' (all parts must be numeric)")
+
+    return f"{major}.{minor}.{new_patch}"
 
 
 def update_openhands_chart(
