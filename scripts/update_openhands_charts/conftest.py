@@ -262,6 +262,45 @@ def mock_github_tags(monkeypatch):
 
 
 @pytest.fixture
+def mock_main_early_exit(monkeypatch):
+    """Factory fixture for mocking main() dependencies for early exit scenarios.
+
+    Sets up all mocks needed to run main() in a controlled way where it
+    exits early (when current appVersion matches latest cloud tag).
+
+    Returns a function that accepts a cloud_tag and sets up all necessary mocks.
+
+    Usage:
+        def test_something(mock_main_early_exit, capsys):
+            mock_main_early_exit("cloud-1.20.0")
+            main(dry_run=True)
+            captured = capsys.readouterr()
+            assert "cloud-1.20.0" in captured.out
+    """
+    def _mock_main(cloud_tag: str):
+        # Mock GITHUB_TOKEN environment variable
+        monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
+
+        # Mock get_latest_cloud_tag to return the specified cloud tag
+        monkeypatch.setattr(
+            "update_openhands_charts.get_latest_cloud_tag",
+            lambda token, repo: cloud_tag
+        )
+        # Mock cloud_tag_exists to return True
+        monkeypatch.setattr(
+            "update_openhands_charts.cloud_tag_exists",
+            lambda token, repo, tag: True
+        )
+        # Mock get_current_app_version to return matching version (triggers early exit)
+        monkeypatch.setattr(
+            "update_openhands_charts.get_current_app_version",
+            lambda path: cloud_tag
+        )
+
+    return _mock_main
+
+
+@pytest.fixture
 def mock_github_ref(monkeypatch):
     """Factory fixture for mocking GitHub API git ref lookups.
 
