@@ -776,19 +776,29 @@ class TestUpdateValues:
         assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
 
     def test_unchanged_when_same_values(self, temp_values_file):
-        """Test messages when values are already up to date."""
-        # First update to set the values
+        """Test that is_unchanged() reports specific keys when values already match.
+
+        Idempotency pattern: The two-step (apply → reapply) structure is intentional.
+        It verifies that calling the function with identical values:
+        1. Does not mark the result as having changes
+        2. Reports specific keys as unchanged via is_unchanged()
+
+        Note: This pattern is kept inline rather than extracted to a fixture because
+        the setup-and-verify steps ARE the test - extracting would hide the behavior.
+        """
+        # Step 1: Apply initial values (establishes baseline state)
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
         )
 
-        # Second update with same values
+        # Step 2: Reapply same values (tests idempotency)
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
         )
 
+        # Verify: No changes detected, specific keys reported as unchanged
         assert not result.has_changes
         assert result.is_unchanged("enterprise-server image tag")
         assert result.is_unchanged("runtime image tag")
@@ -818,19 +828,25 @@ class TestUpdateValues:
         assert result.has_changes is True
 
     def test_returns_false_when_no_changes(self, temp_values_file):
-        """Test that function returns False when no changes are needed."""
-        # First update
+        """Test that has_changes is False when reapplying identical values.
+
+        Complements test_unchanged_when_same_values by testing the boolean flag
+        rather than specific unchanged keys. Both tests use the idempotency
+        pattern (apply → reapply) to verify update functions are deterministic.
+        """
+        # Step 1: Apply initial values
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
         )
 
-        # Second update with same values
+        # Step 2: Reapply same values
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
         )
 
+        # Verify: Boolean flag correctly indicates no changes
         assert result.has_changes is False
 
     def test_reports_error_when_enterprise_server_tag_missing(self, make_temp_yaml_file):
@@ -1168,21 +1184,26 @@ class TestUpdateRuntimeApiValues:
         assert 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"' in content
 
     def test_unchanged_when_same_value(self, temp_runtime_api_values_file):
-        """Test message when value is already up to date."""
-        # First update
+        """Test that is_unchanged() reports specific keys when values already match.
+
+        Idempotency pattern: Verifies runtime-api update function is deterministic.
+        See TestUpdateValues.test_unchanged_when_same_values for pattern rationale.
+        """
+        # Step 1: Apply initial values
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             openhands_version="cloud-1.1.0",
         )
 
-        # Second update with same value
+        # Step 2: Reapply same values
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             openhands_version="cloud-1.1.0",
         )
 
+        # Verify: No changes detected, specific keys reported as unchanged
         assert not result.has_changes
         assert result.is_unchanged("runtime-api image tag")
         assert result.is_unchanged("runtime-api warmRuntimes image tag")
@@ -1224,21 +1245,26 @@ class TestUpdateRuntimeApiValues:
         assert result.has_changes is True
 
     def test_returns_false_when_no_changes(self, temp_runtime_api_values_file):
-        """Test that function returns False when no changes are needed."""
-        # First update
+        """Test that has_changes is False when reapplying identical values.
+
+        Idempotency pattern: Complements test_unchanged_when_same_value.
+        See TestUpdateValues.test_returns_false_when_no_changes for pattern rationale.
+        """
+        # Step 1: Apply initial values
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             openhands_version="cloud-1.1.0",
         )
 
-        # Second update with same values
+        # Step 2: Reapply same values
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             openhands_version="cloud-1.1.0",
         )
 
+        # Verify: Boolean flag correctly indicates no changes
         assert result.has_changes is False
 
 
