@@ -54,6 +54,7 @@ from update_openhands_charts import (
 class TestExtractVersionFromCloudTag:
     """Tests for extract_version_from_cloud_tag function.
 
+    OpenHands uses 'cloud-X.Y.Z' tags to identify production releases.
     These tests verify cloud tag parsing through the public interface rather
     than testing internal regex patterns directly. This approach is more
     maintainable as it tests behavior, not implementation.
@@ -71,7 +72,7 @@ class TestExtractVersionFromCloudTag:
         ("cloud-123.456.789", "123.456.789"),
     ])
     def test_extracts_version_from_valid_cloud_tags(self, cloud_tag, expected):
-        """Test that version is extracted from valid cloud-X.Y.Z formats."""
+        """Verify semver is correctly extracted from 'cloud-X.Y.Z' format tags."""
         assert extract_version_from_cloud_tag(cloud_tag) == expected
 
     @pytest.mark.parametrize("invalid_tag", [
@@ -92,7 +93,10 @@ class TestExtractVersionFromCloudTag:
         pytest.param("cloud-", id="missing version"),
     ])
     def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag):
-        """Test that None is returned for strings that aren't cloud-X.Y.Z."""
+        """Verify invalid formats return None rather than raising exceptions.
+
+        This allows callers to safely filter cloud tags from mixed tag lists.
+        """
         assert extract_version_from_cloud_tag(invalid_tag) is None
 
 
@@ -121,7 +125,8 @@ class TestGetShortSha:
 class TestFormatShaTag:
     """Tests for format_sha_tag function.
 
-    Note: Truncation behavior is tested in TestGetShortSha.
+    Container registries use 'sha-<hash>' tags to identify images built from
+    specific commits. Note: Truncation behavior is tested in TestGetShortSha.
     These tests focus on the sha- prefix formatting.
     """
 
