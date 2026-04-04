@@ -3,6 +3,7 @@ name: Scan Docker Images
 env:
   REGISTRY: ghcr.io
 on:
+  workflow_dispatch:  # Allow manual trigger for testing
   pull_request:
     paths:
       - 'charts/**'
