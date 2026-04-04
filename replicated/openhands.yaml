@@ -89,10 +89,12 @@ spec:
         database: bitnami_keycloak
         existingSecret: postgres-password
         existingSecretKey: password
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
       dbchecker:
         enabled: true
         image:
-          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/index.docker.io/library/busybox'
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/index.docker.io/busybox'
           tag: "1.37"
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/keycloak/keycloak'
