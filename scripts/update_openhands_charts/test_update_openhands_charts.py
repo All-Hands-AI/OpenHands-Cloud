@@ -1192,9 +1192,14 @@ name: runtime-api
 class TestMainOutputMessages:
     """Tests for main() output message formatting."""
 
+    # Use a test constant to avoid magic strings scattered throughout tests
+    MOCK_CLOUD_TAG = "cloud-1.20.0"
+
     def test_latest_cloud_tag_message_format(self, capsys, monkeypatch):
         """Test that the latest cloud tag message uses correct format."""
         from update_openhands_charts import main
+
+        mock_tag = self.MOCK_CLOUD_TAG
 
         # Mock GITHUB_TOKEN environment variable
         monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
@@ -1202,7 +1207,7 @@ class TestMainOutputMessages:
         # Mock get_latest_cloud_tag to return a known value
         monkeypatch.setattr(
             "update_openhands_charts.get_latest_cloud_tag",
-            lambda token, repo: "cloud-1.20.0"
+            lambda token, repo: mock_tag
         )
         # Mock cloud_tag_exists
         monkeypatch.setattr(
@@ -1212,25 +1217,27 @@ class TestMainOutputMessages:
         # Mock get_current_app_version to return matching version (early exit)
         monkeypatch.setattr(
             "update_openhands_charts.get_current_app_version",
-            lambda path: "cloud-1.20.0"
+            lambda path: mock_tag
         )
 
         main(dry_run=True)
 
         captured = capsys.readouterr()
-        assert "OpenHands cloud tag: cloud-1.20.0" in captured.out
+        assert f"OpenHands cloud tag: {mock_tag}" in captured.out
 
     def test_current_app_version_message_format(self, capsys, monkeypatch):
         """Test that the current appVersion message uses correct format."""
         from update_openhands_charts import main
 
+        mock_tag = self.MOCK_CLOUD_TAG
+
         # Mock GITHUB_TOKEN environment variable
         monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
 
         # Mock get_latest_cloud_tag to return a known value
         monkeypatch.setattr(
             "update_openhands_charts.get_latest_cloud_tag",
-            lambda token, repo: "cloud-1.20.0"
+            lambda token, repo: mock_tag
         )
         # Mock cloud_tag_exists
         monkeypatch.setattr(
@@ -1240,13 +1247,13 @@ class TestMainOutputMessages:
         # Mock get_current_app_version to return matching version (early exit)
         monkeypatch.setattr(
             "update_openhands_charts.get_current_app_version",
-            lambda path: "cloud-1.20.0"
+            lambda path: mock_tag
         )
 
         main(dry_run=True)
 
         captured = capsys.readouterr()
-        assert "OpenHands-Cloud openhands chart appVersion: cloud-1.20.0" in captured.out
+        assert f"OpenHands-Cloud openhands chart appVersion: {mock_tag}" in captured.out
 
 
 class TestGetLatestCloudTag:
@@ -1297,20 +1304,31 @@ class TestCloudTagExists:
     """Tests for cloud_tag_exists function."""
 
     def test_returns_true_for_existing_tag(self):
-        """Test that function returns True for an existing cloud tag."""
+        """Test that function returns True for an existing cloud tag.
+
+        Uses get_latest_cloud_tag to dynamically fetch a known-good tag,
+        avoiding brittleness from hardcoded tag references.
+        """
         import os
         token = os.environ.get("GITHUB_TOKEN")
         if not token:
             pytest.skip("GITHUB_TOKEN not set")
 
-        from update_openhands_charts import cloud_tag_exists
+        from update_openhands_charts import cloud_tag_exists, get_latest_cloud_tag
 
-        # cloud-1.19.0 is a known existing tag
-        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", "cloud-1.19.0")
+        # Dynamically fetch the latest cloud tag to ensure we test with a tag that exists
+        latest_tag = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
+        if not latest_tag:
+            pytest.skip("No cloud tags found in repository")
+
+        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", latest_tag)
         assert result is True
 
     def test_returns_false_for_nonexistent_tag(self):
-        """Test that function returns False for a non-existent tag."""
+        """Test that function returns False for a non-existent tag.
+
+        Uses an implausibly high version number that will never exist.
+        """
         import os
         token = os.environ.get("GITHUB_TOKEN")
         if not token:
@@ -1318,7 +1336,8 @@ class TestCloudTagExists:
 
         from update_openhands_charts import cloud_tag_exists
 
-        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", "cloud-99.99.99")
+        # Use an implausibly high version that will never exist
+        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", "cloud-99999.99999.99999")
         assert result is False
 
     def test_returns_false_for_invalid_repo(self):
