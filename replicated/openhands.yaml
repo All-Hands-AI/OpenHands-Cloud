@@ -90,8 +90,10 @@ spec:
         existingSecret: postgres-password
         existingSecretKey: password
       dbchecker:
-        enabled: false
-      waitForDbImage: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
+        enabled: true
+        image:
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/index.docker.io/library/busybox'
+          tag: "1.37"
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/keycloak/keycloak'
         tag: "26.5.5"
@@ -403,7 +405,9 @@ spec:
         keycloak:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/keycloak'
-          waitForDbImage: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
+          dbchecker:
+            image:
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/busybox'
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
