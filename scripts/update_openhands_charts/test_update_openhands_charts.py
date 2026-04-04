@@ -394,12 +394,12 @@ class TestGetChartValue:
         """Test that value is returned when key exists."""
         chart_content = """\
 apiVersion: v2
-appVersion: 1.0.0
+appVersion: cloud-1.0.0
 version: 0.3.11
 name: openhands
 """
         temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "appVersion") == "1.0.0"
+        assert get_chart_value(temp_file, "appVersion") == "cloud-1.0.0"
 
     def test_returns_value_for_any_top_level_key(self, make_temp_yaml_file):
         """Test that value is returned for any top-level key."""
@@ -927,7 +927,7 @@ class TestDryRun:
 apiVersion: v2
 description: Test chart
 name: test-chart
-appVersion: 1.0.0
+appVersion: cloud-1.0.0
 version: 0.1.0
 dependencies:
   - name: runtime-api
