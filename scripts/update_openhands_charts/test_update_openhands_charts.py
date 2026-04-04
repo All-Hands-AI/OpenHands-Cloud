@@ -21,6 +21,7 @@ from update_openhands_charts import (
     bump_patch_version,
     extract_version_from_cloud_tag,
     format_sha_tag,
+    get_deploy_config,
     get_short_sha,
     update_openhands_chart,
     update_openhands_values,
@@ -265,6 +266,272 @@ class TestDeployConfig:
             runtime_api_sha="def5678901234",
         )
         assert config.runtime_api_sha == "def5678901234"
+
+
+class TestGetDeployConfig:
+    """Tests for get_deploy_config function.
+
+    Uses parameterized tests for comprehensive error path coverage.
+    All error scenarios should return None and print an error message.
+    """
+
+    import base64
+    from unittest.mock import MagicMock, Mock
+
+    # Valid workflow YAML for success case tests
+    VALID_WORKFLOW_YAML = """\
+env:
+  RUNTIME_API_SHA: abc123def456
+  OTHER_VAR: value
+"""
+
+    @pytest.fixture
+    def mock_successful_response(self):
+        """Create a mock response with valid workflow content."""
+        import base64
+        from unittest.mock import Mock
+
+        encoded_content = base64.b64encode(self.VALID_WORKFLOW_YAML.encode()).decode()
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"content": encoded_content}
+        return mock_response
+
+    def test_returns_deploy_config_on_success(self, monkeypatch, mock_successful_response):
+        """Test that valid response returns DeployConfig with correct values."""
+        from unittest.mock import Mock
+
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=mock_successful_response)
+        )
+
+        result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
+
+        assert result is not None
+        assert isinstance(result, DeployConfig)
+        assert result.runtime_api_sha == "abc123def456"
+
+    def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
+        """Test that URL is constructed correctly without ref parameter."""
+        from unittest.mock import Mock
+
+        mock_get = Mock(return_value=mock_successful_response)
+        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
+
+        get_deploy_config("fake-token", "owner/repo")
+
+        called_url = mock_get.call_args[0][0]
+        assert called_url == "https://api.github.com/repos/owner/repo/contents/.github/workflows/deploy.yaml"
+        assert "?ref=" not in called_url
+
+    def test_constructs_correct_url_with_ref(self, monkeypatch, mock_successful_response):
+        """Test that URL includes ref parameter when provided."""
+        from unittest.mock import Mock
+
+        mock_get = Mock(return_value=mock_successful_response)
+        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
+
+        get_deploy_config("fake-token", "owner/repo", ref="v1.2.3")
+
+        called_url = mock_get.call_args[0][0]
+        assert "?ref=v1.2.3" in called_url
+
+    def test_includes_authorization_header(self, monkeypatch, mock_successful_response):
+        """Test that Authorization header is included with token."""
+        from unittest.mock import Mock
+
+        mock_get = Mock(return_value=mock_successful_response)
+        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
+
+        get_deploy_config("my-secret-token", "owner/repo")
+
+        called_headers = mock_get.call_args[1]["headers"]
+        assert called_headers["Authorization"] == "Bearer my-secret-token"
+
+    def test_returns_empty_string_when_env_key_missing(self, monkeypatch):
+        """Test that missing RUNTIME_API_SHA returns empty string (not None)."""
+        import base64
+        from unittest.mock import Mock
+
+        # Workflow without RUNTIME_API_SHA
+        workflow_yaml = "env:\n  OTHER_VAR: value\n"
+        encoded = base64.b64encode(workflow_yaml.encode()).decode()
+
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"content": encoded}
+
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=mock_response)
+        )
+
+        result = get_deploy_config("token", "owner/repo")
+
+        assert result is not None
+        assert result.runtime_api_sha == ""
+
+    def test_returns_empty_string_when_env_section_missing(self, monkeypatch):
+        """Test that missing env section returns empty string."""
+        import base64
+        from unittest.mock import Mock
+
+        # Workflow without env section
+        workflow_yaml = "name: deploy\njobs: {}\n"
+        encoded = base64.b64encode(workflow_yaml.encode()).decode()
+
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"content": encoded}
+
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=mock_response)
+        )
+
+        result = get_deploy_config("token", "owner/repo")
+
+        assert result is not None
+        assert result.runtime_api_sha == ""
+
+    # =========================================================================
+    # Parameterized error path tests
+    # =========================================================================
+
+    @pytest.mark.parametrize("error_name,setup_mock", [
+        # Network-level errors
+        (
+            "connection_timeout",
+            lambda Mock, _: Mock(side_effect=Exception("Connection timed out")),
+        ),
+        (
+            "connection_refused",
+            lambda Mock, _: Mock(side_effect=Exception("Connection refused")),
+        ),
+        (
+            "dns_resolution_failed",
+            lambda Mock, _: Mock(side_effect=Exception("Name resolution failed")),
+        ),
+        # HTTP error responses
+        (
+            "http_401_unauthorized",
+            lambda Mock, _: _make_http_error_response(Mock, 401, "Unauthorized"),
+        ),
+        (
+            "http_403_forbidden",
+            lambda Mock, _: _make_http_error_response(Mock, 403, "Forbidden"),
+        ),
+        (
+            "http_404_not_found",
+            lambda Mock, _: _make_http_error_response(Mock, 404, "Not Found"),
+        ),
+        (
+            "http_500_server_error",
+            lambda Mock, _: _make_http_error_response(Mock, 500, "Internal Server Error"),
+        ),
+        (
+            "http_502_bad_gateway",
+            lambda Mock, _: _make_http_error_response(Mock, 502, "Bad Gateway"),
+        ),
+        (
+            "http_503_unavailable",
+            lambda Mock, _: _make_http_error_response(Mock, 503, "Service Unavailable"),
+        ),
+        # Response parsing errors
+        (
+            "invalid_json_response",
+            lambda Mock, _: _make_json_error_response(Mock),
+        ),
+        (
+            "missing_content_key",
+            lambda Mock, _: _make_missing_key_response(Mock, {}),
+        ),
+        (
+            "null_content_value",
+            lambda Mock, _: _make_missing_key_response(Mock, {"content": None}),
+        ),
+        # Base64 decoding errors
+        (
+            "invalid_base64_content",
+            lambda Mock, _: _make_invalid_base64_response(Mock, "not-valid-base64!!!"),
+        ),
+        (
+            "corrupted_base64_content",
+            lambda Mock, _: _make_invalid_base64_response(Mock, "YWJj==="),  # Invalid padding
+        ),
+        # YAML parsing errors
+        (
+            "invalid_yaml_syntax",
+            lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "{{invalid: yaml: ::"),
+        ),
+        (
+            "yaml_with_tabs",
+            lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "env:\n\t\tinvalid_indent: true"),
+        ),
+    ])
+    def test_returns_none_and_prints_error(self, error_name, setup_mock, monkeypatch, capsys):
+        """Test that error scenarios return None and print an error message.
+
+        All error paths in get_deploy_config should:
+        1. Return None (not raise an exception)
+        2. Print an error message containing "Error fetching deploy config"
+        """
+        import base64
+        from unittest.mock import Mock
+
+        mock_get = setup_mock(Mock, base64)
+        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
+
+        result = get_deploy_config("fake-token", "owner/repo")
+
+        assert result is None, f"Expected None for {error_name}, got {result}"
+        captured = capsys.readouterr()
+        assert "Error fetching deploy config" in captured.out, (
+            f"Expected error message for {error_name}, got: {captured.out}"
+        )
+
+
+# Helper functions for parameterized test setup
+def _make_http_error_response(Mock, status_code, message):
+    """Create a mock that raises HTTPError on raise_for_status()."""
+    mock_response = Mock()
+    mock_response.status_code = status_code
+    mock_response.raise_for_status.side_effect = Exception(f"HTTP {status_code}: {message}")
+    return Mock(return_value=mock_response)
+
+
+def _make_json_error_response(Mock):
+    """Create a mock that raises error on .json() call."""
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.side_effect = Exception("Invalid JSON")
+    return Mock(return_value=mock_response)
+
+
+def _make_missing_key_response(Mock, json_data):
+    """Create a mock with JSON response missing required keys."""
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.return_value = json_data
+    return Mock(return_value=mock_response)
+
+
+def _make_invalid_base64_response(Mock, invalid_content):
+    """Create a mock with invalid base64 content."""
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.return_value = {"content": invalid_content}
+    return Mock(return_value=mock_response)
+
+
+def _make_invalid_yaml_response(Mock, base64_module, invalid_yaml):
+    """Create a mock with valid base64 but invalid YAML content."""
+    encoded = base64_module.b64encode(invalid_yaml.encode()).decode()
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.return_value = {"content": encoded}
+    return Mock(return_value=mock_response)
 
 
 class TestUpdateValues:
@@ -752,30 +1019,11 @@ class TestGetLatestCloudTag:
     Uses mocked GitHub API responses for fast, deterministic tests.
     """
 
-    def test_returns_first_matching_cloud_tag(self, monkeypatch):
+    def test_returns_first_matching_cloud_tag(self, mock_github_tags):
         """Test that function returns the first cloud-X.Y.Z formatted tag."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import get_latest_cloud_tag
 
-        # Create mock tags - first matching cloud tag should be returned
-        mock_tags = [
-            MagicMock(name="latest"),
-            MagicMock(name="cloud-1.20.0"),
-            MagicMock(name="cloud-1.19.0"),
-        ]
-        # MagicMock uses 'name' for its own purposes, so set it explicitly
-        mock_tags[0].name = "latest"
-        mock_tags[1].name = "cloud-1.20.0"
-        mock_tags[2].name = "cloud-1.19.0"
-
-        mock_repo = MagicMock()
-        mock_repo.get_tags.return_value = mock_tags
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_tags(["latest", "cloud-1.20.0", "cloud-1.19.0"])
 
         result = get_latest_cloud_tag("fake-token", "All-Hands-AI/OpenHands")
 
@@ -783,68 +1031,31 @@ class TestGetLatestCloudTag:
         assert result.startswith("cloud-")
         assert extract_version_from_cloud_tag(result) == "1.20.0"
 
-    def test_skips_non_cloud_tags(self, monkeypatch):
+    def test_skips_non_cloud_tags(self, mock_github_tags):
         """Test that non-cloud tags are skipped."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import get_latest_cloud_tag
 
-        mock_tags = [
-            MagicMock(name="v1.0.0"),
-            MagicMock(name="release-2.0"),
-            MagicMock(name="cloud-1.5.0"),
-        ]
-        mock_tags[0].name = "v1.0.0"
-        mock_tags[1].name = "release-2.0"
-        mock_tags[2].name = "cloud-1.5.0"
-
-        mock_repo = MagicMock()
-        mock_repo.get_tags.return_value = mock_tags
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_tags(["v1.0.0", "release-2.0", "cloud-1.5.0"])
 
         result = get_latest_cloud_tag("fake-token", "owner/repo")
 
         assert result == "cloud-1.5.0"
 
-    def test_returns_none_when_no_cloud_tags(self, monkeypatch):
+    def test_returns_none_when_no_cloud_tags(self, mock_github_tags):
         """Test that None is returned when no cloud tags exist."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import get_latest_cloud_tag
 
-        mock_tags = [
-            MagicMock(name="v1.0.0"),
-            MagicMock(name="latest"),
-        ]
-        mock_tags[0].name = "v1.0.0"
-        mock_tags[1].name = "latest"
-
-        mock_repo = MagicMock()
-        mock_repo.get_tags.return_value = mock_tags
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_tags(["v1.0.0", "latest"])
 
         result = get_latest_cloud_tag("fake-token", "owner/repo")
 
         assert result is None
 
-    def test_returns_none_for_invalid_repo(self, monkeypatch, capsys):
+    def test_returns_none_for_invalid_repo(self, mock_github_tags, capsys):
         """Test that None is returned and error is printed for invalid repository."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import get_latest_cloud_tag
 
-        mock_github = MagicMock()
-        mock_github.get_repo.side_effect = Exception("Repository not found")
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_tags(repo_error=Exception("Repository not found"))
 
         result = get_latest_cloud_tag("fake-token", "nonexistent/repo")
 
@@ -852,22 +1063,11 @@ class TestGetLatestCloudTag:
         captured = capsys.readouterr()
         assert "Error fetching tags" in captured.out
 
-    def test_no_redirect_message_in_output(self, monkeypatch, capsys):
+    def test_no_redirect_message_in_output(self, mock_github_tags, capsys):
         """Test that PyGithub redirect messages are suppressed."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import get_latest_cloud_tag
 
-        mock_tags = [MagicMock(name="cloud-1.0.0")]
-        mock_tags[0].name = "cloud-1.0.0"
-
-        mock_repo = MagicMock()
-        mock_repo.get_tags.return_value = mock_tags
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_tags(["cloud-1.0.0"])
 
         get_latest_cloud_tag("fake-token", "owner/repo")
 
@@ -882,71 +1082,42 @@ class TestCloudTagExists:
     Uses mocked GitHub API responses for fast, deterministic tests.
     """
 
-    def test_returns_true_when_tag_exists(self, monkeypatch):
+    def test_returns_true_when_tag_exists(self, mock_github_ref):
         """Test that function returns True when the tag reference is found."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import cloud_tag_exists
 
-        mock_repo = MagicMock()
-        mock_repo.get_git_ref.return_value = MagicMock()  # Success - tag exists
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        _, mock_repo = mock_github_ref(tag_exists=True)
 
         result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-1.20.0")
 
         assert result is True
         mock_repo.get_git_ref.assert_called_once_with("tags/cloud-1.20.0")
 
-    def test_returns_false_when_tag_not_found(self, monkeypatch):
+    def test_returns_false_when_tag_not_found(self, mock_github_ref):
         """Test that function returns False when get_git_ref raises exception."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import cloud_tag_exists
 
-        mock_repo = MagicMock()
-        mock_repo.get_git_ref.side_effect = Exception("Not found")
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_ref(tag_exists=False)
 
         result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-99999.0.0")
 
         assert result is False
 
-    def test_returns_false_for_invalid_repo(self, monkeypatch):
+    def test_returns_false_for_invalid_repo(self, mock_github_ref):
         """Test that function returns False when repository doesn't exist."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import cloud_tag_exists
 
-        mock_github = MagicMock()
-        mock_github.get_repo.side_effect = Exception("Repository not found")
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        mock_github_ref(repo_error=Exception("Repository not found"))
 
         result = cloud_tag_exists("fake-token", "nonexistent/repo", "cloud-1.0.0")
 
         assert result is False
 
-    def test_handles_various_tag_formats(self, monkeypatch):
+    def test_handles_various_tag_formats(self, mock_github_ref):
         """Test that function correctly queries different tag formats."""
-        from unittest.mock import MagicMock
-
         from update_openhands_charts import cloud_tag_exists
 
-        mock_repo = MagicMock()
-        mock_repo.get_git_ref.return_value = MagicMock()
-
-        mock_github = MagicMock()
-        mock_github.get_repo.return_value = mock_repo
-
-        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+        _, mock_repo = mock_github_ref(tag_exists=True)
 
         # Test various tag formats
         cloud_tag_exists("fake-token", "owner/repo", "cloud-1.0.0")
