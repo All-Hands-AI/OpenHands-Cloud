@@ -460,7 +460,6 @@ class TestGetDeployConfig:
     """
 
     import base64
-    from unittest.mock import MagicMock, Mock
 
     # Valid workflow YAML for success case tests
     VALID_WORKFLOW_YAML = """\
@@ -473,7 +472,6 @@ env:
     def mock_successful_response(self):
         """Create a mock response with valid workflow content."""
         import base64
-        from unittest.mock import Mock
 
         encoded_content = base64.b64encode(self.VALID_WORKFLOW_YAML.encode()).decode()
         mock_response = Mock()
@@ -483,8 +481,6 @@ env:
 
     def test_returns_deploy_config_on_success(self, monkeypatch, mock_successful_response):
         """Test that valid response returns DeployConfig with correct values."""
-        from unittest.mock import Mock
-
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
             Mock(return_value=mock_successful_response)
@@ -498,8 +494,6 @@ env:
 
     def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
         """Test that URL is constructed correctly without ref parameter."""
-        from unittest.mock import Mock
-
         mock_get = Mock(return_value=mock_successful_response)
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
@@ -511,8 +505,6 @@ env:
 
     def test_constructs_correct_url_with_ref(self, monkeypatch, mock_successful_response):
         """Test that URL includes ref parameter when provided."""
-        from unittest.mock import Mock
-
         mock_get = Mock(return_value=mock_successful_response)
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
@@ -523,8 +515,6 @@ env:
 
     def test_includes_authorization_header(self, monkeypatch, mock_successful_response):
         """Test that Authorization header is included with token."""
-        from unittest.mock import Mock
-
         mock_get = Mock(return_value=mock_successful_response)
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
@@ -536,7 +526,6 @@ env:
     def test_returns_empty_string_when_env_key_missing(self, monkeypatch):
         """Test that missing RUNTIME_API_SHA returns empty string (not None)."""
         import base64
-        from unittest.mock import Mock
 
         # Workflow without RUNTIME_API_SHA
         workflow_yaml = "env:\n  OTHER_VAR: value\n"
@@ -559,7 +548,6 @@ env:
     def test_returns_empty_string_when_env_section_missing(self, monkeypatch):
         """Test that missing env section returns empty string."""
         import base64
-        from unittest.mock import Mock
 
         # Workflow without env section
         workflow_yaml = "name: deploy\njobs: {}\n"
@@ -662,7 +650,6 @@ env:
         2. Print an error message containing "Error fetching deploy config"
         """
         import base64
-        from unittest.mock import Mock
 
         mock_get = setup_mock(Mock, base64)
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
