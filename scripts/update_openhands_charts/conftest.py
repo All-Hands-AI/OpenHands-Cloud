@@ -101,6 +101,27 @@ def get_chart_value(file_path: Path, key: str) -> Any:
     return chart_data.get(key)
 
 
+def assert_file_contains(file_path: Path, expected: str) -> None:
+    """Assert that a file contains a specific string.
+
+    Single-pattern variant for concise assertions when checking one value.
+    Reduces the read-assert boilerplate pattern to a single call.
+
+    Args:
+        file_path: Path to the file to check
+        expected: String that must appear in the file
+
+    Raises:
+        AssertionError: If expected string is not found
+
+    Example:
+        >>> assert_file_contains(values_path, "tag: cloud-1.1.0")
+        # Passes silently if found, raises AssertionError if missing
+    """
+    content = file_path.read_text()
+    assert expected in content, f"Expected '{expected}' not found in file"
+
+
 def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> None:
     """Assert that a file contains all expected strings.
 
@@ -121,9 +142,8 @@ def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> No
         # Passes silently if both strings found
         # Raises AssertionError if either missing
     """
-    content = file_path.read_text()
     for expected in expected_strings:
-        assert expected in content, f"Expected '{expected}' not found in file"
+        assert_file_contains(file_path, expected)
 
 
 def assert_version_bumped(file_path: Path, original_version: str) -> None:
