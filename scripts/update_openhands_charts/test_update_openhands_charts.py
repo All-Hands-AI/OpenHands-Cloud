@@ -924,23 +924,9 @@ class TestUpdateOpenhandsChartConditional:
         assert result.has_changes is True
 
     @pytest.fixture
-    def sample_chart_yaml(self):
-        """Create a sample Chart.yaml content for dry-run tests."""
-        return """\
-apiVersion: v2
-description: Test chart
-name: test-chart
-appVersion: cloud-1.0.0
-version: 0.1.0
-dependencies:
-  - name: runtime-api
-    version: 0.1.10
-"""
-
-    @pytest.fixture
-    def temp_chart_file(self, make_temp_yaml_file, sample_chart_yaml):
+    def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
         """Create a temporary Chart.yaml file using shared fixture."""
-        return make_temp_yaml_file(sample_chart_yaml)
+        return make_temp_yaml_file(sample_openhands_chart_with_deps)
 
     @pytest.fixture
     def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_minimal):
