@@ -20,23 +20,22 @@ from ruamel.yaml import YAML
 # =============================================================================
 
 # Shared openhands chart constants (same across all variants)
+OPENHANDS_CHART_VERSION = "0.1.0"  # Chart version (semver)
 OPENHANDS_CHART_APP_VERSION = "cloud-1.0.0"  # OpenHands uses cloud-X.Y.Z tags
 OPENHANDS_CHART_RUNTIME_API_VERSION = "0.1.10"  # runtime-api dependency version
 
-# Variant-specific openhands chart values (differ between variants)
-OPENHANDS_CHART_WITH_DEPS_VERSION = "0.1.0"
+# Variant-specific openhands chart values (only in with_deps variant)
 OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION = "1.0.0"
-OPENHANDS_CHART_MINIMAL_VERSION = "0.3.11"
 
 # Consolidated openhands chart variants for parameterized testing
 OPENHANDS_CHART_VARIANTS = {
     "with_deps": {
-        "version": OPENHANDS_CHART_WITH_DEPS_VERSION,
+        "version": OPENHANDS_CHART_VERSION,
         "app_version": OPENHANDS_CHART_APP_VERSION,
         "runtime_api_version": OPENHANDS_CHART_RUNTIME_API_VERSION,
     },
     "minimal": {
-        "version": OPENHANDS_CHART_MINIMAL_VERSION,
+        "version": OPENHANDS_CHART_VERSION,
         "app_version": OPENHANDS_CHART_APP_VERSION,
         "runtime_api_version": OPENHANDS_CHART_RUNTIME_API_VERSION,
     },
@@ -200,7 +199,7 @@ def sample_openhands_chart_minimal():
     return """\
 apiVersion: v2
 appVersion: cloud-1.0.0
-version: 0.3.11
+version: 0.1.0
 name: openhands
 dependencies:
   - name: runtime-api
