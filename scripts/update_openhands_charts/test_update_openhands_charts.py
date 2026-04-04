@@ -280,6 +280,28 @@ class TestUpdateChartAcrossVariants:
 
         assert result.is_unchanged(unchanged_key)
 
+    def test_raises_error_for_invalid_semver_format(self):
+        """Test that invalid semver strings raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid semver format"):
+            bump_patch_version("1.2")  # Missing patch
+
+        with pytest.raises(ValueError, match="Invalid semver format"):
+            bump_patch_version("1.2.3.4")  # Too many parts
+
+        with pytest.raises(ValueError, match="Invalid semver format"):
+            bump_patch_version("v1.2.3")  # Has prefix
+
+        with pytest.raises(ValueError, match="Invalid semver format"):
+            bump_patch_version("")  # Empty string
+
+    def test_raises_error_for_non_numeric_parts(self):
+        """Test that non-numeric version parts raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid semver format"):
+            bump_patch_version("1.2.abc")  # Non-numeric patch
+
+        with pytest.raises(ValueError, match="Invalid semver format"):
+            bump_patch_version("a.b.c")  # All non-numeric
+
 
 class TestUpdateChart:
     """Tests for update_chart function with specific fixture requirements.
