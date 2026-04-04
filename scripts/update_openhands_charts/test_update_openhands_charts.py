@@ -295,10 +295,11 @@ class TestUpdateResultHelpers:
     """
 
     @pytest.mark.parametrize("key,expected", [
-        # Keys that exist in the unchanged list should return True
+        # Happy path: first key in list should be found
         ("appVersion", True),
+        # Happy path: key with special chars (hyphen, space) should be found
         ("runtime-api version", True),
-        # Keys not in the list should return False
+        # Boundary: key not in list returns False (not None or error)
         ("nonexistent-key", False),
     ])
     def test_is_unchanged_finds_keys_in_unchanged_list(self, key, expected):
@@ -310,14 +311,16 @@ class TestUpdateResultHelpers:
 
     def test_is_unchanged_returns_false_for_empty_list(self):
         """Verify is_unchanged returns False when unchanged list is empty."""
+        # Edge case: empty state after initialization (no updates performed yet)
         result = update_openhands_charts.UpdateResult()
         assert result.is_unchanged("any-key") is False
 
     @pytest.mark.parametrize("key,expected", [
-        # Keys that exist in the changes list should return True
+        # Happy path: first key in changes list should be found
         ("appVersion", True),
+        # Happy path: additional keys in list should also be found
         ("version", True),
-        # Keys not in the list should return False
+        # Boundary: key not in list returns False (not None or error)
         ("nonexistent-key", False),
     ])
     def test_has_change_for_finds_keys_in_changes_list(self, key, expected):
@@ -330,6 +333,7 @@ class TestUpdateResultHelpers:
 
     def test_has_change_for_returns_false_for_empty_list(self):
         """Verify has_change_for returns False when changes list is empty."""
+        # Edge case: no changes made (dry run or values already current)
         result = update_openhands_charts.UpdateResult()
         assert result.has_change_for("any-key") is False
 
@@ -343,6 +347,7 @@ class TestAssertVersionBumped:
 
     def test_passes_when_version_correctly_bumped(self, make_temp_yaml_file):
         """Test helper passes when version is incremented by one patch."""
+        # Boundary: exact +1 increment is the only valid bump
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -350,11 +355,12 @@ version: 1.2.4
 """
         temp_file = make_temp_yaml_file(chart_content)
 
-        # Should not raise - version 1.2.4 is bump of 1.2.3
+        # Should not raise - version 1.2.4 is exactly one patch bump from 1.2.3
         assert_version_bumped(temp_file, original_version="1.2.3")
 
     def test_fails_when_version_not_bumped(self, make_temp_yaml_file):
         """Test helper raises AssertionError when version unchanged."""
+        # Edge case: version unchanged (forgot to bump) should be caught
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -367,6 +373,8 @@ version: 1.2.3
 
     def test_fails_when_version_bumped_incorrectly(self, make_temp_yaml_file):
         """Test helper raises AssertionError when version bumped by wrong amount."""
+        # Edge case: over-bumping (e.g., +2 instead of +1) should be caught
+        # This prevents accidental double-bumps or manual version edits
         chart_content = """\
 apiVersion: v2
 name: test-chart
