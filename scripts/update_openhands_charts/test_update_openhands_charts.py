@@ -38,79 +38,66 @@ class TestExtractVersionFromCloudTag:
     maintainable as it tests behavior, not implementation.
     """
 
-    def test_extracts_version_from_valid_cloud_tags(self):
+    @pytest.mark.parametrize("cloud_tag,expected", [
+        ("cloud-1.1.0", "1.1.0"),        # Standard version
+        ("cloud-2.0.0", "2.0.0"),        # Standard version
+        ("cloud-0.0.0", "0.0.0"),        # Zero version
+        ("cloud-10.20.30", "10.20.30"),  # Multi-digit
+        ("cloud-123.456.789", "123.456.789"),  # Large multi-digit
+    ])
+    def test_extracts_version_from_valid_cloud_tags(self, cloud_tag, expected):
         """Test that version is extracted from valid cloud-X.Y.Z formats."""
-        # Standard versions
-        assert extract_version_from_cloud_tag("cloud-1.1.0") == "1.1.0"
-        assert extract_version_from_cloud_tag("cloud-2.0.0") == "2.0.0"
-        assert extract_version_from_cloud_tag("cloud-0.0.0") == "0.0.0"
+        assert extract_version_from_cloud_tag(cloud_tag) == expected
 
-        # Multi-digit versions
-        assert extract_version_from_cloud_tag("cloud-10.20.30") == "10.20.30"
-        assert extract_version_from_cloud_tag("cloud-123.456.789") == "123.456.789"
-
-    def test_returns_none_for_invalid_cloud_tag_formats(self):
+    @pytest.mark.parametrize("invalid_tag,description", [
+        ("1.1.0", "missing cloud- prefix"),
+        ("v1.1.0", "wrong prefix (v instead of cloud-)"),
+        ("Cloud-1.2.3", "wrong case"),
+        ("cloud1.2.3", "missing hyphen"),
+        ("cloud-1.2", "missing patch"),
+        ("cloud-1.2.3.4", "extra part"),
+        ("cloud-1.2.3-beta", "pre-release suffix"),
+        ("cloud-1.2.3+build", "build metadata suffix"),
+        ("", "empty string"),
+        ("latest", "non-version tag"),
+        ("cloud-", "missing version"),
+    ])
+    def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag, description):
         """Test that None is returned for strings that aren't cloud-X.Y.Z."""
-        # Missing cloud- prefix
-        assert extract_version_from_cloud_tag("1.1.0") is None
-        assert extract_version_from_cloud_tag("v1.1.0") is None
-
-        # Wrong prefix format
-        assert extract_version_from_cloud_tag("Cloud-1.2.3") is None  # Wrong case
-        assert extract_version_from_cloud_tag("cloud1.2.3") is None   # Missing hyphen
-
-        # Invalid version parts
-        assert extract_version_from_cloud_tag("cloud-1.2") is None      # Missing patch
-        assert extract_version_from_cloud_tag("cloud-1.2.3.4") is None  # Extra part
-        assert extract_version_from_cloud_tag("cloud-1.2.3-beta") is None  # Pre-release
-        assert extract_version_from_cloud_tag("cloud-1.2.3+build") is None  # Build metadata
-
-        # Edge cases
-        assert extract_version_from_cloud_tag("") is None
-        assert extract_version_from_cloud_tag("latest") is None
-        assert extract_version_from_cloud_tag("cloud-") is None
+        assert extract_version_from_cloud_tag(invalid_tag) is None
 
 
 class TestGetShortSha:
     """Tests for get_short_sha function."""
 
-    def test_returns_first_seven_chars(self):
-        assert get_short_sha("abcdefghijklmnop") == "abcdefg"
-
-    def test_full_sha_length(self):
-        sha = "6ccd42bb2975866f1abc21e635c01d2afbdd1acf"
-        assert get_short_sha(sha) == "6ccd42b"
-
-    def test_exactly_seven_chars(self):
-        assert get_short_sha("1234567") == "1234567"
+    @pytest.mark.parametrize("sha,expected", [
+        ("abcdefghijklmnop", "abcdefg"),                    # Basic case
+        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),  # Full 40-char SHA
+        ("1234567", "1234567"),                             # Exactly 7 chars
+        ("1234567890abcdef", "1234567"),                    # Numeric SHA
+    ])
+    def test_returns_first_seven_chars(self, sha, expected):
+        """Test that get_short_sha returns the first 7 characters."""
+        assert get_short_sha(sha) == expected
 
     def test_short_sha_length_constant(self):
+        """Test that SHORT_SHA_LENGTH constant is 7."""
         assert SHORT_SHA_LENGTH == 7
-
-    def test_numeric_sha(self):
-        assert get_short_sha("1234567890abcdef") == "1234567"
 
 
 class TestFormatShaTag:
     """Tests for format_sha_tag function."""
 
-    def test_formats_with_sha_prefix(self):
-        assert format_sha_tag("abcdefghijklmnop") == "sha-abcdefg"
-
-    def test_full_sha_to_tag(self):
-        sha = "6ccd42bb2975866f1abc21e635c01d2afbdd1acf"
-        assert format_sha_tag(sha) == "sha-6ccd42b"
-
-    def test_numeric_sha_to_tag(self):
-        assert format_sha_tag("1234567890abcdef") == "sha-1234567"
-
-    def test_exactly_seven_chars(self):
-        assert format_sha_tag("abcdefg") == "sha-abcdefg"
-
-    def test_real_world_sha(self):
-        # Test with actual SHA from deploy workflow
-        sha = "743f6256a690efc388af6e960ad8009f5952e721"
-        assert format_sha_tag(sha) == "sha-743f625"
+    @pytest.mark.parametrize("sha,expected", [
+        ("abcdefghijklmnop", "sha-abcdefg"),                    # Basic case
+        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "sha-6ccd42b"),  # Full 40-char SHA
+        ("1234567890abcdef", "sha-1234567"),                    # Numeric SHA
+        ("abcdefg", "sha-abcdefg"),                             # Exactly 7 chars
+        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),  # Real workflow SHA
+    ])
+    def test_formats_sha_with_prefix(self, sha, expected):
+        """Test that format_sha_tag returns sha-<short_sha> format."""
+        assert format_sha_tag(sha) == expected
 
 
 class TestGetCurrentAppVersion:
@@ -141,39 +128,28 @@ name: openhands
 class TestBumpPatchVersion:
     """Tests for bump_patch_version function."""
 
-    def test_bump_simple_version(self):
-        assert bump_patch_version("1.2.3") == "1.2.4"
+    @pytest.mark.parametrize("version,expected", [
+        ("1.2.3", "1.2.4"),      # Simple version
+        ("1.0.0", "1.0.1"),      # Zero patch
+        ("1.2.99", "1.2.100"),   # High patch (rollover)
+        ("5.10.15", "5.10.16"),  # Preserves major/minor
+    ])
+    def test_bump_patch_version_increments_correctly(self, version, expected):
+        """Test that patch version is incremented correctly."""
+        assert bump_patch_version(version) == expected
 
-    def test_bump_zero_patch(self):
-        assert bump_patch_version("1.0.0") == "1.0.1"
-
-    def test_bump_high_patch(self):
-        assert bump_patch_version("1.2.99") == "1.2.100"
-
-    def test_bump_preserves_major_minor(self):
-        assert bump_patch_version("5.10.15") == "5.10.16"
-
-    def test_raises_error_for_invalid_semver_format(self):
+    @pytest.mark.parametrize("invalid_version,description", [
+        ("1.2", "missing patch"),
+        ("1.2.3.4", "too many parts"),
+        ("v1.2.3", "has prefix"),
+        ("", "empty string"),
+        ("1.2.abc", "non-numeric patch"),
+        ("a.b.c", "all non-numeric"),
+    ])
+    def test_raises_error_for_invalid_semver_format(self, invalid_version, description):
         """Test that invalid semver strings raise ValueError."""
         with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("1.2")  # Missing patch
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("1.2.3.4")  # Too many parts
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("v1.2.3")  # Has prefix
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("")  # Empty string
-
-    def test_raises_error_for_non_numeric_parts(self):
-        """Test that non-numeric version parts raise ValueError."""
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("1.2.abc")  # Non-numeric patch
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("a.b.c")  # All non-numeric
+            bump_patch_version(invalid_version)
 
 
 class TestUpdateChart:
