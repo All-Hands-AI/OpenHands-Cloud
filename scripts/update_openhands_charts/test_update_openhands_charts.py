@@ -99,6 +99,10 @@ class TestExtractVersionFromCloudTag:
 class TestGetShortSha:
     """Tests for get_short_sha function.
 
+    Git short SHAs are conventionally 7 characters for readability while
+    maintaining uniqueness in most repositories.
+    """
+
     @pytest.mark.parametrize("sha,expected", [
         # Happy path: typical input longer than 7 chars
         ("abcdefghijklmnop", "abcdefg"),
@@ -109,8 +113,8 @@ class TestGetShortSha:
         # Boundary: input shorter than 7 chars (returns full input)
         pytest.param("abc", "abc", id="input shorter than 7 chars"),
     ])
-    def test_returns_first_seven_chars(self, sha, expected):
-        """Test that get_short_sha returns the first 7 characters."""
+    def test_short_sha_is_first_seven_characters_of_full_sha(self, sha, expected):
+        """Verify short SHA extraction returns exactly 7 characters or full input if shorter."""
         assert get_short_sha(sha) == expected
 
 
@@ -127,16 +131,20 @@ class TestFormatShaTag:
         # Real-world: actual GitHub Actions workflow SHA (ensures production compatibility)
         ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),
     ])
-    def test_formats_sha_with_prefix(self, sha, expected):
-        """Test that format_sha_tag returns sha-<short_sha> format."""
+    def test_sha_tag_format_is_sha_prefix_followed_by_short_sha(self, sha, expected):
+        """Verify SHA tag format follows the 'sha-<7-char-hash>' convention used in container registries."""
         assert format_sha_tag(sha) == expected
 
 
 class TestGetCurrentAppVersion:
-    """Tests for get_current_app_version function."""
+    """Tests for get_current_app_version function.
 
-    def test_returns_app_version(self, make_temp_yaml_file):
-        """Test that function returns the appVersion from chart."""
+    Reads the appVersion field from Helm Chart.yaml files to determine
+    the currently deployed OpenHands version.
+    """
+
+    def test_reads_app_version_from_chart_yaml(self, make_temp_yaml_file):
+        """Verify appVersion is correctly extracted from a valid Chart.yaml file."""
         chart_content = """\
 apiVersion: v2
 appVersion: cloud-1.1.0
@@ -147,14 +155,18 @@ name: openhands
         result = get_current_app_version(temp_chart_file)
         assert result == "cloud-1.1.0"
 
-    def test_returns_none_for_missing_file(self):
-        """Test that function returns None for missing file."""
+    def test_missing_chart_file_returns_none(self):
+        """Verify graceful handling when Chart.yaml does not exist."""
         result = get_current_app_version(Path("/nonexistent/Chart.yaml"))
         assert result is None
 
 
 class TestBumpPatchVersion:
     """Tests for bump_patch_version function.
+
+    Semantic versioning (semver) uses MAJOR.MINOR.PATCH format where
+    patch bumps indicate backwards-compatible bug fixes.
+    """
 
     @pytest.mark.parametrize("version,expected", [
         # Happy path: typical version increment
@@ -166,8 +178,8 @@ class TestBumpPatchVersion:
         # Verification: major/minor preserved during patch bump
         ("5.10.15", "5.10.16"),
     ])
-    def test_bump_patch_version_increments_correctly(self, version, expected):
-        """Test that patch version is incremented correctly."""
+    def test_patch_version_increments_by_one_preserving_major_minor(self, version, expected):
+        """Verify patch bump increments only the patch component while preserving major.minor."""
         assert bump_patch_version(version) == expected
 
     @pytest.mark.parametrize("invalid_version", [
@@ -181,8 +193,8 @@ class TestBumpPatchVersion:
         pytest.param("1.2.abc", id="non-numeric patch"),
         pytest.param("a.b.c", id="all non-numeric"),
     ])
-    def test_raises_error_for_invalid_semver_format(self, invalid_version):
-        """Test that invalid semver strings raise ValueError."""
+    def test_invalid_semver_format_raises_value_error(self, invalid_version):
+        """Verify non-semver strings are rejected with clear error message."""
         with pytest.raises(ValueError, match="Invalid semver format"):
             bump_patch_version(invalid_version)
 
@@ -199,32 +211,32 @@ class TestUpdateChartAcrossVariants:
         """Create a temporary Chart.yaml from the parameterized variant."""
         return make_temp_yaml_file(openhands_chart_variant["content"])
 
-    def test_update_app_version(self, temp_chart_file):
-        """Test that appVersion is updated correctly across chart variants."""
+    def test_chart_app_version_updates_to_new_cloud_tag(self, temp_chart_file):
+        """Verify appVersion field is updated to the new OpenHands cloud tag."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
 
         assert get_chart_value(temp_chart_file, "appVersion") == NEW_APP_VERSION
 
-    def test_bump_chart_version(self, temp_chart_file):
-        """Test that version is bumped correctly across chart variants."""
+    def test_chart_version_bumps_patch_on_update(self, temp_chart_file):
+        """Verify chart version patch is incremented when changes are made."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
 
         assert_version_bumped(temp_chart_file, OPENHANDS_CHART_VERSION)
 
-    def test_update_runtime_api_version(self, temp_chart_file):
-        """Test that runtime-api dependency version is updated across chart variants."""
+    def test_runtime_api_dependency_version_updates(self, temp_chart_file):
+        """Verify runtime-api dependency version is updated in Chart.yaml."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
 
-    def test_unchanged_when_same_app_version(self, temp_chart_file):
-        """Test that appVersion shows unchanged when value matches across variants."""
+    def test_app_version_unchanged_when_already_current(self, temp_chart_file):
+        """Verify no change is recorded when appVersion already matches target."""
         result = update_openhands_chart(temp_chart_file, OPENHANDS_CHART_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert result.is_unchanged("appVersion")
 
-    def test_unchanged_when_same_runtime_api_version(self, temp_chart_file):
-        """Test that runtime-api shows unchanged when value matches across variants."""
+    def test_runtime_api_version_unchanged_when_already_current(self, temp_chart_file):
+        """Verify no change is recorded when runtime-api version already matches target."""
         result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, OPENHANDS_CHART_RUNTIME_API_VERSION)
 
         assert result.is_unchanged("runtime-api version")
@@ -242,14 +254,14 @@ class TestUpdateChart:
         """Create a temporary Chart.yaml file using shared fixtures."""
         return make_temp_yaml_file(sample_openhands_chart_with_deps)
 
-    def test_other_dependencies_unchanged(self, temp_chart_file):
-        """Test that other dependencies are not affected (requires with_deps fixture)."""
+    def test_non_runtime_api_dependencies_remain_unchanged(self, temp_chart_file):
+        """Verify only runtime-api dependency is modified; other deps are preserved."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
-    def test_preserves_yaml_structure(self, temp_chart_file):
-        """Test that YAML structure is preserved (requires with_deps fixture)."""
+    def test_yaml_structure_and_metadata_preserved_after_update(self, temp_chart_file):
+        """Verify YAML structure, metadata, and non-version fields are preserved."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         # Verify structure is preserved
@@ -263,8 +275,12 @@ class TestUpdateChart:
 class TestDeployConfig:
     """Tests for DeployConfig dataclass.
 
-    def test_deploy_config_creation(self):
-        """Test that DeployConfig can be created with runtime_api_sha field."""
+    DeployConfig holds configuration values extracted from the deploy workflow,
+    used to synchronize chart versions with deployed infrastructure.
+    """
+
+    def test_deploy_config_stores_runtime_api_sha(self):
+        """Verify DeployConfig correctly stores the runtime-api commit SHA."""
         config = DeployConfig(
             runtime_api_sha="def5678901234",
             openhands_runtime_image_tag="cloud-1.21.0-nikolaik",
