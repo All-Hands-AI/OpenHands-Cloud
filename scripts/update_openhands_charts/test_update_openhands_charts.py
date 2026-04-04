@@ -294,45 +294,42 @@ class TestUpdateResultHelpers:
     were changed or unchanged, reducing coupling to internal data structures.
     """
 
-    def test_is_unchanged_returns_true_when_key_exists(self):
-        """Test that is_unchanged returns True when key is in unchanged list."""
+    @pytest.mark.parametrize("key,expected", [
+        # Keys that exist in the unchanged list should return True
+        ("appVersion", True),
+        ("runtime-api version", True),
+        # Keys not in the list should return False
+        ("nonexistent-key", False),
+    ])
+    def test_is_unchanged_finds_keys_in_unchanged_list(self, key, expected):
+        """Verify is_unchanged correctly identifies presence/absence of keys."""
         result = update_openhands_charts.UpdateResult(
             unchanged=[("appVersion", "1.0.0"), ("runtime-api version", "0.2.6")]
         )
-        assert result.is_unchanged("appVersion") is True
-        assert result.is_unchanged("runtime-api version") is True
-
-    def test_is_unchanged_returns_false_when_key_missing(self):
-        """Test that is_unchanged returns False when key is not in unchanged list."""
-        result = update_openhands_charts.UpdateResult(
-            unchanged=[("appVersion", "1.0.0")]
-        )
-        assert result.is_unchanged("nonexistent-key") is False
+        assert result.is_unchanged(key) is expected
 
     def test_is_unchanged_returns_false_for_empty_list(self):
-        """Test that is_unchanged returns False when unchanged list is empty."""
+        """Verify is_unchanged returns False when unchanged list is empty."""
         result = update_openhands_charts.UpdateResult()
         assert result.is_unchanged("any-key") is False
 
-    def test_has_change_for_returns_true_when_key_exists(self):
-        """Test that has_change_for returns True when key is in changes list."""
+    @pytest.mark.parametrize("key,expected", [
+        # Keys that exist in the changes list should return True
+        ("appVersion", True),
+        ("version", True),
+        # Keys not in the list should return False
+        ("nonexistent-key", False),
+    ])
+    def test_has_change_for_finds_keys_in_changes_list(self, key, expected):
+        """Verify has_change_for correctly identifies presence/absence of keys."""
         result = update_openhands_charts.UpdateResult(
             has_changes=True,
             changes=[("appVersion", "1.0.0", "2.0.0"), ("version", "0.1.0", "0.1.1")]
         )
-        assert result.has_change_for("appVersion") is True
-        assert result.has_change_for("version") is True
-
-    def test_has_change_for_returns_false_when_key_missing(self):
-        """Test that has_change_for returns False when key is not in changes list."""
-        result = update_openhands_charts.UpdateResult(
-            has_changes=True,
-            changes=[("appVersion", "1.0.0", "2.0.0")]
-        )
-        assert result.has_change_for("nonexistent-key") is False
+        assert result.has_change_for(key) is expected
 
     def test_has_change_for_returns_false_for_empty_list(self):
-        """Test that has_change_for returns False when changes list is empty."""
+        """Verify has_change_for returns False when changes list is empty."""
         result = update_openhands_charts.UpdateResult()
         assert result.has_change_for("any-key") is False
 
@@ -388,23 +385,20 @@ class TestGetDependencyVersion:
     reducing coupling to internal YAML data structures in tests.
     """
 
-    def test_returns_version_when_dependency_exists(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
-        """Test that version is returned when dependency exists."""
+    @pytest.mark.parametrize("dep_name,expected_version", [
+        # Existing dependencies return their version
+        ("runtime-api", OPENHANDS_CHART_RUNTIME_API_VERSION),
+        ("other-dep", OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION),
+        # Non-existent dependency returns None
+        ("nonexistent-dep", None),
+    ])
+    def test_dependency_version_lookup_by_name(self, make_temp_yaml_file, sample_openhands_chart_with_deps, dep_name, expected_version):
+        """Verify dependency versions are correctly extracted by name, or None if not found."""
         temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, "runtime-api") == OPENHANDS_CHART_RUNTIME_API_VERSION
+        assert get_dependency_version(temp_file, dep_name) == expected_version
 
-    def test_returns_version_for_other_dependencies(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
-        """Test that version is returned for any named dependency."""
-        temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
-
-    def test_returns_none_when_dependency_not_found(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
-        """Test that None is returned when dependency doesn't exist."""
-        temp_file = make_temp_yaml_file(sample_openhands_chart_with_deps)
-        assert get_dependency_version(temp_file, "nonexistent-dep") is None
-
-    def test_returns_none_when_no_dependencies(self, make_temp_yaml_file):
-        """Test that None is returned when chart has no dependencies."""
+    def test_returns_none_when_chart_has_no_dependencies(self, make_temp_yaml_file):
+        """Verify None is returned when chart has no dependencies section."""
         chart_content = """\
 apiVersion: v2
 name: test-chart
