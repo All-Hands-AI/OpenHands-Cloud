@@ -48,6 +48,14 @@ class UpdateResult:
         if self.errors is None:
             self.errors = []
 
+    def is_unchanged(self, key: str) -> bool:
+        """Check if a key exists in the unchanged list."""
+        return any(k == key for k, _ in self.unchanged)
+
+    def has_change_for(self, key: str) -> bool:
+        """Check if a key exists in the changes list."""
+        return any(k == key for k, _, _ in self.changes)
+
     def print_summary(self) -> None:
         """Prints the outcome of the update."""
         for key, old, new in self.changes:

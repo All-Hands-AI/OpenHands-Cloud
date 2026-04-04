@@ -410,6 +410,56 @@ class TestDeployConfig:
         )
         assert config.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
+class TestUpdateResultHelpers:
+    """Tests for UpdateResult helper methods.
+
+    These helpers provide a cleaner API for checking if specific keys
+    were changed or unchanged, reducing coupling to internal data structures.
+    """
+
+    def test_is_unchanged_returns_true_when_key_exists(self):
+        """Test that is_unchanged returns True when key is in unchanged list."""
+        result = update_openhands_charts.UpdateResult(
+            unchanged=[("appVersion", "1.0.0"), ("runtime-api version", "0.2.6")]
+        )
+        assert result.is_unchanged("appVersion") is True
+        assert result.is_unchanged("runtime-api version") is True
+
+    def test_is_unchanged_returns_false_when_key_missing(self):
+        """Test that is_unchanged returns False when key is not in unchanged list."""
+        result = update_openhands_charts.UpdateResult(
+            unchanged=[("appVersion", "1.0.0")]
+        )
+        assert result.is_unchanged("nonexistent-key") is False
+
+    def test_is_unchanged_returns_false_for_empty_list(self):
+        """Test that is_unchanged returns False when unchanged list is empty."""
+        result = update_openhands_charts.UpdateResult()
+        assert result.is_unchanged("any-key") is False
+
+    def test_has_change_for_returns_true_when_key_exists(self):
+        """Test that has_change_for returns True when key is in changes list."""
+        result = update_openhands_charts.UpdateResult(
+            has_changes=True,
+            changes=[("appVersion", "1.0.0", "2.0.0"), ("version", "0.1.0", "0.1.1")]
+        )
+        assert result.has_change_for("appVersion") is True
+        assert result.has_change_for("version") is True
+
+    def test_has_change_for_returns_false_when_key_missing(self):
+        """Test that has_change_for returns False when key is not in changes list."""
+        result = update_openhands_charts.UpdateResult(
+            has_changes=True,
+            changes=[("appVersion", "1.0.0", "2.0.0")]
+        )
+        assert result.has_change_for("nonexistent-key") is False
+
+    def test_has_change_for_returns_false_for_empty_list(self):
+        """Test that has_change_for returns False when changes list is empty."""
+        result = update_openhands_charts.UpdateResult()
+        assert result.has_change_for("any-key") is False
+
+
 class TestGetDeployConfig:
     """Tests for get_deploy_config function.
 
