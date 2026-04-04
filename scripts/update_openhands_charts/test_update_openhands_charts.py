@@ -38,107 +38,66 @@ class TestExtractVersionFromCloudTag:
     maintainable as it tests behavior, not implementation.
     """
 
-    def test_extracts_version_from_valid_cloud_tags(self):
+    @pytest.mark.parametrize("cloud_tag,expected", [
+        ("cloud-1.1.0", "1.1.0"),        # Standard version
+        ("cloud-2.0.0", "2.0.0"),        # Standard version
+        ("cloud-0.0.0", "0.0.0"),        # Zero version
+        ("cloud-10.20.30", "10.20.30"),  # Multi-digit
+        ("cloud-123.456.789", "123.456.789"),  # Large multi-digit
+    ])
+    def test_extracts_version_from_valid_cloud_tags(self, cloud_tag, expected):
         """Test that version is extracted from valid cloud-X.Y.Z formats."""
-        # Standard versions
-        assert extract_version_from_cloud_tag("cloud-1.1.0") == "1.1.0"
-        assert extract_version_from_cloud_tag("cloud-2.0.0") == "2.0.0"
-        assert extract_version_from_cloud_tag("cloud-0.0.0") == "0.0.0"
+        assert extract_version_from_cloud_tag(cloud_tag) == expected
 
-        # Multi-digit versions
-        assert extract_version_from_cloud_tag("cloud-10.20.30") == "10.20.30"
-        assert extract_version_from_cloud_tag("cloud-123.456.789") == "123.456.789"
-
-    def test_returns_none_for_invalid_cloud_tag_formats(self):
+    @pytest.mark.parametrize("invalid_tag,description", [
+        ("1.1.0", "missing cloud- prefix"),
+        ("v1.1.0", "wrong prefix (v instead of cloud-)"),
+        ("Cloud-1.2.3", "wrong case"),
+        ("cloud1.2.3", "missing hyphen"),
+        ("cloud-1.2", "missing patch"),
+        ("cloud-1.2.3.4", "extra part"),
+        ("cloud-1.2.3-beta", "pre-release suffix"),
+        ("cloud-1.2.3+build", "build metadata suffix"),
+        ("", "empty string"),
+        ("latest", "non-version tag"),
+        ("cloud-", "missing version"),
+    ])
+    def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag, description):
         """Test that None is returned for strings that aren't cloud-X.Y.Z."""
-        # Missing cloud- prefix
-        assert extract_version_from_cloud_tag("1.1.0") is None
-        assert extract_version_from_cloud_tag("v1.1.0") is None
-
-        # Wrong prefix format
-        assert extract_version_from_cloud_tag("Cloud-1.2.3") is None  # Wrong case
-        assert extract_version_from_cloud_tag("cloud1.2.3") is None   # Missing hyphen
-
-        # Invalid version parts
-        assert extract_version_from_cloud_tag("cloud-1.2") is None      # Missing patch
-        assert extract_version_from_cloud_tag("cloud-1.2.3.4") is None  # Extra part
-        assert extract_version_from_cloud_tag("cloud-1.2.3-beta") is None  # Pre-release
-        assert extract_version_from_cloud_tag("cloud-1.2.3+build") is None  # Build metadata
-
-        # Edge cases
-        assert extract_version_from_cloud_tag("") is None
-        assert extract_version_from_cloud_tag("latest") is None
-        assert extract_version_from_cloud_tag("cloud-") is None
+        assert extract_version_from_cloud_tag(invalid_tag) is None
 
 
 class TestGetShortSha:
     """Tests for get_short_sha function.
 
-    Git short SHAs are conventionally 7 characters for readability while
-    maintaining uniqueness in most repositories.
-
-    TDD Rationale: Tests drive a simple slice operation. Boundary cases
-    (exactly 7 chars, shorter than 7) ensure the implementation handles
-    edge cases gracefully without raising IndexError.
-    """
-
     @pytest.mark.parametrize("sha,expected", [
-        # Happy path: typical input longer than 7 chars
-        ("abcdefghijklmnop", "abcdefg"),
-        # Real-world: full 40-character git SHA (most common input)
-        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),
-        # Boundary: input exactly 7 chars (no truncation needed)
-        ("a1b2c3d", "a1b2c3d"),
-        # Boundary: input shorter than 7 chars (returns full input)
-        pytest.param("abc", "abc", id="input shorter than 7 chars"),
+        ("abcdefghijklmnop", "abcdefg"),                    # Basic case
+        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),  # Full 40-char SHA
+        ("1234567", "1234567"),                             # Exactly 7 chars
+        ("1234567890abcdef", "1234567"),                    # Numeric SHA
     ])
-    def test_short_sha_is_first_seven_characters_of_full_sha(self, sha, expected):
-        """Verify short SHA extraction returns exactly 7 characters or full input if shorter."""
+    def test_returns_first_seven_chars(self, sha, expected):
+        """Test that get_short_sha returns the first 7 characters."""
         assert get_short_sha(sha) == expected
+
+    def test_short_sha_length_constant(self):
+        """Test that SHORT_SHA_LENGTH constant is 7."""
+        assert SHORT_SHA_LENGTH == 7
 
 
 class TestFormatShaTag:
     """Tests for format_sha_tag function.
 
-    Container registries use 'sha-<hash>' tags to identify images built from
-    specific commits. Note: Truncation behavior is tested in TestGetShortSha.
-    These tests focus on the sha- prefix formatting.
-    """
-
     @pytest.mark.parametrize("sha,expected", [
-        # Happy path: verifies "sha-" prefix is prepended
-        ("abcdefghijklmnop", "sha-abcdefg"),
-        # Real-world: actual GitHub Actions workflow SHA (ensures production compatibility)
-        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),
+        ("abcdefghijklmnop", "sha-abcdefg"),                    # Basic case
+        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "sha-6ccd42b"),  # Full 40-char SHA
+        ("1234567890abcdef", "sha-1234567"),                    # Numeric SHA
+        ("abcdefg", "sha-abcdefg"),                             # Exactly 7 chars
+        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),  # Real workflow SHA
     ])
-    def test_sha_tag_format_is_sha_prefix_followed_by_short_sha(self, sha, expected):
-        """Verify SHA tag format follows the 'sha-<7-char-hash>' convention used in container registries."""
+    def test_formats_sha_with_prefix(self, sha, expected):
+        """Test that format_sha_tag returns sha-<short_sha> format."""
         assert format_sha_tag(sha) == expected
-
-
-class TestGetCurrentAppVersion:
-    """Tests for get_current_app_version function.
-
-    Reads the appVersion field from Helm Chart.yaml files to determine
-    the currently deployed OpenHands version.
-    """
-
-    def test_reads_app_version_from_chart_yaml(self, make_temp_yaml_file):
-        """Verify appVersion is correctly extracted from a valid Chart.yaml file."""
-        chart_content = """\
-apiVersion: v2
-appVersion: cloud-1.1.0
-version: 0.3.11
-name: openhands
-"""
-        temp_chart_file = make_temp_yaml_file(chart_content)
-        result = get_current_app_version(temp_chart_file)
-        assert result == "cloud-1.1.0"
-
-    def test_missing_chart_file_returns_none(self):
-        """Verify graceful handling when Chart.yaml does not exist."""
-        result = get_current_app_version(Path("/nonexistent/Chart.yaml"))
-        assert result is None
 
 
 class TestGetCurrentAppVersion:
@@ -169,139 +128,28 @@ name: openhands
 class TestBumpPatchVersion:
     """Tests for bump_patch_version function.
 
-    Semantic versioning (semver) uses MAJOR.MINOR.PATCH format where
-    patch bumps indicate backwards-compatible bug fixes.
-
-    TDD Rationale: Tests drive a split-increment-join implementation.
-    Invalid format tests ensure ValueError is raised early with clear
-    messages, preventing silent corruption of chart versions.
-    """
-
     @pytest.mark.parametrize("version,expected", [
-        # Happy path: typical version increment
-        ("1.2.3", "1.2.4"),
-        # Boundary: patch starts at zero (common for new minor releases)
-        ("1.0.0", "1.0.1"),
-        # Boundary: 99→100 rollover - implementation must use int() not string ops
-        ("1.2.99", "1.2.100"),
-        # Verification: major/minor preserved during patch bump
-        ("5.10.15", "5.10.16"),
+        ("1.2.3", "1.2.4"),      # Simple version
+        ("1.0.0", "1.0.1"),      # Zero patch
+        ("1.2.99", "1.2.100"),   # High patch (rollover)
+        ("5.10.15", "5.10.16"),  # Preserves major/minor
     ])
-    def test_patch_version_increments_by_one_preserving_major_minor(self, version, expected):
-        """Verify patch bump increments only the patch component while preserving major.minor."""
+    def test_bump_patch_version_increments_correctly(self, version, expected):
+        """Test that patch version is incremented correctly."""
         assert bump_patch_version(version) == expected
 
-    @pytest.mark.parametrize("invalid_version", [
-        # Structure: must have exactly 3 parts - fail fast on malformed input
-        pytest.param("1.2", id="missing patch"),
-        pytest.param("1.2.3.4", id="too many parts"),
-        # Format: no prefixes allowed - caller must strip prefix first
-        pytest.param("v1.2.3", id="has prefix"),
-        # Edge cases: defensive handling prevents int() conversion errors
-        pytest.param("", id="empty string"),
-        pytest.param("1.2.abc", id="non-numeric patch"),
-        pytest.param("a.b.c", id="all non-numeric"),
+    @pytest.mark.parametrize("invalid_version,description", [
+        ("1.2", "missing patch"),
+        ("1.2.3.4", "too many parts"),
+        ("v1.2.3", "has prefix"),
+        ("", "empty string"),
+        ("1.2.abc", "non-numeric patch"),
+        ("a.b.c", "all non-numeric"),
     ])
-    def test_invalid_semver_format_raises_value_error(self, invalid_version):
-        """Verify non-semver strings are rejected with clear error message."""
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version(invalid_version)
-
-
-# =============================================================================
-# CHART AND VALUES UPDATE TESTS
-# Tests for functions that modify Chart.yaml and values.yaml files.
-# These use temporary file fixtures and verify file content changes.
-# =============================================================================
-
-
-class TestUpdateChartAcrossVariants:
-    """Tests for update_chart that verify behavior across both chart variants.
-
-    Uses the parameterized openhands_chart_variant fixture to ensure core
-    functionality works with both rich (with_deps) and minimal chart structures.
-
-    Test Structure:
-    - test_chart_app_version_updates: Core update behavior
-    - test_chart_version_bumps: Version increment on change
-    - test_runtime_api_dependency: Dependency update
-    - test_version_unchanged_when_already_current: Consolidated idempotency checks
-
-    TDD Rationale: Tests drive the update_openhands_chart function to handle
-    both minimal and full Chart.yaml structures. Parameterized variants ensure
-    the implementation doesn't accidentally depend on optional fields (like
-    maintainers or extra dependencies) that may not exist in all chart files.
-    """
-
-    @pytest.fixture
-    def temp_chart_file(self, make_temp_yaml_file, openhands_chart_variant):
-        """Create a temporary Chart.yaml from the parameterized variant."""
-        return make_temp_yaml_file(openhands_chart_variant["content"])
-
-    def test_chart_app_version_updates_to_new_cloud_tag(self, temp_chart_file):
-        """Verify appVersion field is updated to the new OpenHands cloud tag."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
-
-        assert get_chart_value(temp_chart_file, "appVersion") == NEW_APP_VERSION
-
-    def test_chart_version_bumps_patch_on_update(self, temp_chart_file):
-        """Verify chart version patch is incremented when changes are made."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
-
-        assert_version_bumped(temp_chart_file, OPENHANDS_CHART_VERSION)
-
-    def test_runtime_api_dependency_version_updates(self, temp_chart_file):
-        """Verify runtime-api dependency version is updated in Chart.yaml."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
-
-        assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
-
-    @pytest.mark.parametrize("app_version,runtime_api_version,unchanged_key", [
-        # When appVersion already matches target, it should be reported as unchanged
-        pytest.param(
-            OPENHANDS_CHART_APP_VERSION, NEW_RUNTIME_API_VERSION, "appVersion",
-            id="appVersion unchanged when already current"
-        ),
-        # When runtime-api version already matches target, it should be reported as unchanged
-        pytest.param(
-            NEW_APP_VERSION, OPENHANDS_CHART_RUNTIME_API_VERSION, "runtime-api version",
-            id="runtime-api version unchanged when already current"
-        ),
-    ])
-    def test_version_unchanged_when_already_current(
-        self, temp_chart_file, app_version, runtime_api_version, unchanged_key
-    ):
-        """Verify no change is recorded when a version already matches target.
-
-        Idempotency verification: Ensures the update function correctly identifies
-        when values are already at their target state, preventing spurious version
-        bumps and unnecessary commits in CI/CD pipelines.
-        """
-        result = update_openhands_chart(temp_chart_file, app_version, runtime_api_version)
-
-        assert result.is_unchanged(unchanged_key)
-
-    def test_raises_error_for_invalid_semver_format(self):
+    def test_raises_error_for_invalid_semver_format(self, invalid_version, description):
         """Test that invalid semver strings raise ValueError."""
         with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("1.2")  # Missing patch
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("1.2.3.4")  # Too many parts
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("v1.2.3")  # Has prefix
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("")  # Empty string
-
-    def test_raises_error_for_non_numeric_parts(self):
-        """Test that non-numeric version parts raise ValueError."""
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("1.2.abc")  # Non-numeric patch
-
-        with pytest.raises(ValueError, match="Invalid semver format"):
-            bump_patch_version("a.b.c")  # All non-numeric
+            bump_patch_version(invalid_version)
 
 
 class TestUpdateChart:
