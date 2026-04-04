@@ -24,7 +24,6 @@ from conftest import (
     OPENHANDS_CHART_APP_VERSION,
     OPENHANDS_CHART_RUNTIME_API_VERSION,
     OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION,
-    OPENHANDS_CHART_VARIANTS,
     RUNTIME_API_CHART_FULL_VERSION,
     RUNTIME_API_CHART_FULL_APP_VERSION,
     RUNTIME_API_CHART_MINIMAL_VERSION,
@@ -196,36 +195,33 @@ class TestUpdateChartAcrossVariants:
         """Create a temporary Chart.yaml from the parameterized variant."""
         return make_temp_yaml_file(openhands_chart_variant["content"])
 
-    def test_update_app_version(self, temp_chart_file, openhands_chart_variant):
+    def test_update_app_version(self, temp_chart_file):
         """Test that appVersion is updated correctly across chart variants."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
 
         assert get_chart_value(temp_chart_file, "appVersion") == NEW_APP_VERSION
 
-    def test_bump_chart_version(self, temp_chart_file, openhands_chart_variant):
+    def test_bump_chart_version(self, temp_chart_file):
         """Test that version is bumped correctly across chart variants."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, None)
 
-        original_version = openhands_chart_variant["version"]
-        assert_version_bumped(temp_chart_file, original_version)
+        assert_version_bumped(temp_chart_file, OPENHANDS_CHART_VERSION)
 
-    def test_update_runtime_api_version(self, temp_chart_file, openhands_chart_variant):
+    def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated across chart variants."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert get_dependency_version(temp_chart_file, "runtime-api") == NEW_RUNTIME_API_VERSION
 
-    def test_unchanged_when_same_app_version(self, temp_chart_file, openhands_chart_variant):
+    def test_unchanged_when_same_app_version(self, temp_chart_file):
         """Test that appVersion shows unchanged when value matches across variants."""
-        current_app_version = openhands_chart_variant["app_version"]
-        result = update_openhands_chart(temp_chart_file, current_app_version, NEW_RUNTIME_API_VERSION)
+        result = update_openhands_chart(temp_chart_file, OPENHANDS_CHART_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
         assert result.is_unchanged("appVersion")
 
-    def test_unchanged_when_same_runtime_api_version(self, temp_chart_file, openhands_chart_variant):
+    def test_unchanged_when_same_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api shows unchanged when value matches across variants."""
-        current_runtime_api = openhands_chart_variant["runtime_api_version"]
-        result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, current_runtime_api)
+        result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, OPENHANDS_CHART_RUNTIME_API_VERSION)
 
         assert result.is_unchanged("runtime-api version")
 

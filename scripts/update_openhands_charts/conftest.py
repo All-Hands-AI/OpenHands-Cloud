@@ -27,20 +27,6 @@ OPENHANDS_CHART_RUNTIME_API_VERSION = "0.1.10"  # runtime-api dependency version
 # Variant-specific openhands chart values (only in with_deps variant)
 OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION = "1.0.0"
 
-# Consolidated openhands chart variants for parameterized testing
-OPENHANDS_CHART_VARIANTS = {
-    "with_deps": {
-        "version": OPENHANDS_CHART_VERSION,
-        "app_version": OPENHANDS_CHART_APP_VERSION,
-        "runtime_api_version": OPENHANDS_CHART_RUNTIME_API_VERSION,
-    },
-    "minimal": {
-        "version": OPENHANDS_CHART_VERSION,
-        "app_version": OPENHANDS_CHART_APP_VERSION,
-        "runtime_api_version": OPENHANDS_CHART_RUNTIME_API_VERSION,
-    },
-}
-
 # sample_runtime_api_chart_full fixture values
 RUNTIME_API_CHART_FULL_VERSION = "0.1.20"
 RUNTIME_API_CHART_FULL_APP_VERSION = "1.0.0"
@@ -214,24 +200,19 @@ def openhands_chart_variant(request, sample_openhands_chart_with_deps, sample_op
     Use this fixture when a test should verify behavior works across
     different chart structures (rich vs minimal).
 
-    Yields a dict with:
+    Returns a dict with:
         - content: The chart YAML content
         - variant: The variant name ("with_deps" or "minimal")
-        - version: The chart version
-        - app_version: The appVersion
-        - runtime_api_version: The runtime-api dependency version
+
+    Use shared constants directly for values:
+        - OPENHANDS_CHART_VERSION
+        - OPENHANDS_CHART_APP_VERSION
+        - OPENHANDS_CHART_RUNTIME_API_VERSION
     """
     variant_name = request.param
-    if variant_name == "with_deps":
-        content = sample_openhands_chart_with_deps
-    else:
-        content = sample_openhands_chart_minimal
+    content = sample_openhands_chart_with_deps if variant_name == "with_deps" else sample_openhands_chart_minimal
 
-    return {
-        "content": content,
-        "variant": variant_name,
-        **OPENHANDS_CHART_VARIANTS[variant_name],
-    }
+    return {"content": content, "variant": variant_name}
 
 
 @pytest.fixture
