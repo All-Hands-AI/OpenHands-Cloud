@@ -9,13 +9,12 @@ import sys
 from pathlib import Path
 
 import pytest
-from ruamel.yaml import YAML
 
 # Add the script's directory to sys.path so we can import it directly
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
-from conftest import assert_file_contains_all, get_dependency_version
+from conftest import assert_file_contains_all, get_chart_value, get_dependency_version
 from update_openhands_charts import (
     DeployConfig,
     bump_patch_version,
@@ -159,17 +158,13 @@ class TestUpdateChart:
         """Test that appVersion is updated correctly."""
         update_openhands_chart(temp_chart_file, "2.0.0", None)
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["appVersion"] == "2.0.0"
+        assert get_chart_value(temp_chart_file, "appVersion") == "2.0.0"
 
     def test_bump_chart_version(self, temp_chart_file):
         """Test that version is bumped correctly."""
         update_openhands_chart(temp_chart_file, "2.0.0", None)
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["version"] == "0.1.1"
+        assert get_chart_value(temp_chart_file, "version") == "0.1.1"
 
     def test_update_runtime_api_version(self, temp_chart_file):
         """Test that runtime-api dependency version is updated."""
@@ -200,15 +195,12 @@ class TestUpdateChart:
         """Test that YAML structure is preserved."""
         update_openhands_chart(temp_chart_file, "2.0.0", "0.2.0")
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-
         # Verify structure is preserved
-        assert chart_data["apiVersion"] == "v2"
-        assert chart_data["description"] == "Test chart"
-        assert chart_data["name"] == "test-chart"
-        assert len(chart_data["maintainers"]) == 1
-        assert len(chart_data["dependencies"]) == 2
+        assert get_chart_value(temp_chart_file, "apiVersion") == "v2"
+        assert get_chart_value(temp_chart_file, "description") == "Test chart"
+        assert get_chart_value(temp_chart_file, "name") == "test-chart"
+        assert len(get_chart_value(temp_chart_file, "maintainers")) == 1
+        assert len(get_chart_value(temp_chart_file, "dependencies")) == 2
 
 
 class TestDeployConfig:
@@ -314,8 +306,6 @@ class TestGetChartValue:
 
     def test_returns_value_when_key_exists(self, make_temp_yaml_file):
         """Test that value is returned when key exists."""
-        from conftest import get_chart_value
-
         chart_content = """\
 apiVersion: v2
 appVersion: 1.0.0
@@ -327,8 +317,6 @@ name: openhands
 
     def test_returns_value_for_any_top_level_key(self, make_temp_yaml_file):
         """Test that value is returned for any top-level key."""
-        from conftest import get_chart_value
-
         chart_content = """\
 apiVersion: v2
 appVersion: cloud-2.0.0
@@ -343,8 +331,6 @@ description: A test chart
 
     def test_returns_none_when_key_not_found(self, make_temp_yaml_file):
         """Test that None is returned when key doesn't exist."""
-        from conftest import get_chart_value
-
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -822,10 +808,8 @@ class TestUpdateOpenhandsChartConditional:
             has_changes=False,
         )
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["version"] == "0.3.11"  # Unchanged
-        assert chart_data["appVersion"] == "cloud-1.0.0"  # Unchanged
+        assert get_chart_value(temp_chart_file, "version") == "0.3.11"  # Unchanged
+        assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.0.0"  # Unchanged
 
         assert result.is_unchanged("openhands chart version")
 
@@ -840,10 +824,8 @@ class TestUpdateOpenhandsChartConditional:
             has_changes=True,
         )
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_chart_file)
-        assert chart_data["version"] == "0.3.12"  # Bumped
-        assert chart_data["appVersion"] == "cloud-1.1.0"  # Updated
+        assert get_chart_value(temp_chart_file, "version") == "0.3.12"  # Bumped
+        assert get_chart_value(temp_chart_file, "appVersion") == "cloud-1.1.0"  # Updated
 
         assert result.has_change_for("appVersion")
         assert result.has_change_for("version")
@@ -949,21 +931,17 @@ class TestUpdateRuntimeApiChart:
         """Test that runtime-api chart version is bumped correctly."""
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file)
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_runtime_api_chart_file)
-        assert chart_data["version"] == "0.1.21"
+        assert get_chart_value(temp_runtime_api_chart_file, "version") == "0.1.21"
         assert new_version == "0.1.21"
 
     def test_preserves_other_fields(self, temp_runtime_api_chart_file):
         """Test that other fields are preserved."""
         update_runtime_api_chart(temp_runtime_api_chart_file)
 
-        yaml = YAML()
-        chart_data = yaml.load(temp_runtime_api_chart_file)
-        assert chart_data["apiVersion"] == "v2"
-        assert chart_data["name"] == "runtime-api"
-        assert chart_data["appVersion"] == "1.0.0"
-        assert len(chart_data["dependencies"]) == 1
+        assert get_chart_value(temp_runtime_api_chart_file, "apiVersion") == "v2"
+        assert get_chart_value(temp_runtime_api_chart_file, "name") == "runtime-api"
+        assert get_chart_value(temp_runtime_api_chart_file, "appVersion") == "1.0.0"
+        assert len(get_chart_value(temp_runtime_api_chart_file, "dependencies")) == 1
 
     def test_dry_run_no_file_changes(self, temp_runtime_api_chart_file):
         """Test that dry-run doesn't modify the file."""
