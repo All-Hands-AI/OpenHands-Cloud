@@ -182,42 +182,6 @@ def create_yaml_parser() -> YAML:
     return yaml
 
 
-def update_tag_in_content(
-    content: str,
-    pattern: str,
-    new_tag: str,
-    tag_name: str,
-    result: UpdateResult,
-    replacement_suffix: str = "",
-) -> str:
-    """Update a regex-matched tag in content and track the result.
-    
-    Args:
-        content: The file content to update
-        pattern: Regex pattern with group(2) capturing the old tag
-        new_tag: The new tag value to set
-        tag_name: Human-readable name for reporting (e.g., "enterprise-server image tag")
-        result: UpdateResult to record changes/unchanged/errors
-        replacement_suffix: Optional suffix to append after new_tag in replacement
-        
-    Returns:
-        Updated content string
-    """
-    match = re.search(pattern, content)
-    if match:
-        old_tag = match.group(2)
-        if old_tag == new_tag:
-            result.unchanged.append((tag_name, old_tag))
-        else:
-            replacement = rf"\g<1>{new_tag}{replacement_suffix}"
-            content = re.sub(pattern, replacement, content)
-            result.changes.append((tag_name, old_tag, new_tag))
-            result.has_changes = True
-    else:
-        result.errors.append(f"Could not find {tag_name} in values.yaml")
-    return content
-
-
 def update_runtime_api_dependency(
     chart_data: dict,
     new_version: str | None,
@@ -278,12 +242,6 @@ def update_openhands_chart(
 
     Only updates appVersion and bumps version if has_changes is True.
     """
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.indent(mapping=2, sequence=4, offset=2)
-
-    Only updates appVersion and bumps version if has_changes is True.
-    """
     yaml = create_yaml_parser()
     chart_data = yaml.load(chart_path)
     result = UpdateResult()
@@ -293,19 +251,7 @@ def update_openhands_chart(
         old_app_version = chart_data.get("appVersion")
         result.unchanged.append(("openhands chart version", f"{old_version} (no value changes)"))
         result.unchanged.append(("appVersion", f"{old_app_version} (no value changes)"))
-        
-        # Still update runtime-api dependency if needed
-        if new_runtime_api_version:
-            for dep in chart_data.get("dependencies", []):
-                if dep.get("name") == "runtime-api":
-                    old_runtime_version = dep.get("version")
-                    if old_runtime_version == new_runtime_api_version:
-                        result.unchanged.append(("runtime-api version", old_runtime_version))
-                    else:
-                        dep["version"] = new_runtime_api_version
-                        result.changes.append(("runtime-api version", old_runtime_version, new_runtime_api_version))
-                        result.has_changes = True
-                    break
+        update_runtime_api_dependency(chart_data, new_runtime_api_version, result)
         if not dry_run and result.has_changes:
             yaml.dump(chart_data, chart_path)
         return result
@@ -324,17 +270,7 @@ def update_openhands_chart(
     result.changes.append(("version", old_version, new_version))
     result.has_changes = True
 
-    if new_runtime_api_version:
-        for dep in chart_data.get("dependencies", []):
-            if dep.get("name") == "runtime-api":
-                old_runtime_version = dep.get("version")
-                if old_runtime_version == new_runtime_api_version:
-                    result.unchanged.append(("runtime-api version", old_runtime_version))
-                else:
-                    dep["version"] = new_runtime_api_version
-                    result.changes.append(("runtime-api version", old_runtime_version, new_runtime_api_version))
-                    result.has_changes = True
-                break
+    update_runtime_api_dependency(chart_data, new_runtime_api_version, result)
 
     if not dry_run and result.has_changes:
         yaml.dump(chart_data, chart_path)
@@ -413,12 +349,6 @@ def update_runtime_api_chart(
     dry_run: bool = False,
 ) -> tuple[str, UpdateResult]:
     """Bump the patch version of the runtime-api chart and return the new/current version.
-
-    Only bumps the version if has_changes is True.
-    """
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.indent(mapping=2, sequence=4, offset=2)
 
     Only bumps the version if has_changes is True.
     """
