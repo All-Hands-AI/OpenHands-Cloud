@@ -7,6 +7,7 @@ maintainability.
 
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -191,3 +192,90 @@ warmRuntimes:
       working_dir: "/openhands/code/"
       environment: {}
 """
+
+
+# =============================================================================
+# GitHub API mock fixtures
+# =============================================================================
+
+def _make_mock_tag(name: str) -> MagicMock:
+    """Create a mock tag with the given name.
+
+    MagicMock uses 'name' for its own purposes, so we must set it explicitly
+    after creation.
+    """
+    tag = MagicMock()
+    tag.name = name
+    return tag
+
+
+@pytest.fixture
+def mock_github_tags(monkeypatch):
+    """Factory fixture for mocking GitHub API with tags.
+
+    Returns a function that sets up the GitHub mock and returns the mock objects
+    for additional assertions.
+
+    Usage:
+        def test_something(mock_github_tags):
+            mock_github, mock_repo = mock_github_tags(["cloud-1.0.0", "latest"])
+            # ... test code ...
+            mock_repo.get_tags.assert_called_once()
+    """
+    def _mock_github(tag_names: list[str] | None = None, repo_error: Exception | None = None):
+        mock_github = MagicMock()
+
+        if repo_error:
+            mock_github.get_repo.side_effect = repo_error
+        else:
+            mock_tags = [_make_mock_tag(name) for name in (tag_names or [])]
+            mock_repo = MagicMock()
+            mock_repo.get_tags.return_value = mock_tags
+            mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        # Return mock objects for assertions
+        if repo_error:
+            return mock_github, None
+        return mock_github, mock_github.get_repo.return_value
+
+    return _mock_github
+
+
+@pytest.fixture
+def mock_github_ref(monkeypatch):
+    """Factory fixture for mocking GitHub API git ref lookups.
+
+    Returns a function that sets up the GitHub mock for tag existence checks.
+
+    Usage:
+        def test_tag_exists(mock_github_ref):
+            mock_github, mock_repo = mock_github_ref(tag_exists=True)
+            # ... test code ...
+            mock_repo.get_git_ref.assert_called_once_with("tags/cloud-1.0.0")
+    """
+    def _mock_github(
+        tag_exists: bool = True,
+        repo_error: Exception | None = None,
+        ref_error: Exception | None = None,
+    ):
+        mock_github = MagicMock()
+
+        if repo_error:
+            mock_github.get_repo.side_effect = repo_error
+        else:
+            mock_repo = MagicMock()
+            if ref_error or not tag_exists:
+                mock_repo.get_git_ref.side_effect = ref_error or Exception("Not found")
+            else:
+                mock_repo.get_git_ref.return_value = MagicMock()
+            mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        if repo_error:
+            return mock_github, None
+        return mock_github, mock_github.get_repo.return_value
+
+    return _mock_github
