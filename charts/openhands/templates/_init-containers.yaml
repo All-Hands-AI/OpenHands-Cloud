@@ -51,10 +51,13 @@
   command: ['sh', '-c']
   args:
     - |
-      until mc alias set rustfs http://{{ printf "%s-rustfs-svc:9000" $.Release.Name }} {{ .Values.rustfs.secret.rustfs.access_key }} {{ .Values.rustfs.secret.rustfs.secret_key }} 2>/dev/null; do
+      until mc alias set rustfs http://{{ printf "%s-rustfs-svc:9000" $.Release.Name }} {{ .Values.rustfs.secret.rustfs.access_key }} {{ .Values.rustfs.secret.rustfs.secret_key }}; do
         echo "Waiting for RustFS to be ready..."
         sleep 2
       done
       mc mb --ignore-existing rustfs/{{ .Values.filestore.bucket }}
+  env:
+    - name: HOME
+      value: /tmp
 {{- end }}
 {{- end }}
