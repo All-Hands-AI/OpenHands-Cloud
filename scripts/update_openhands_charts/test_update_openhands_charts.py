@@ -444,6 +444,32 @@ class TestUpdateResultHelpers:
         result = update_openhands_charts.UpdateResult(errors=errors)
         assert result.error_count == expected_count
 
+    @pytest.mark.parametrize("changes,expected_count", [
+        # Happy path: multiple changes
+        ([("k1", "old1", "new1"), ("k2", "old2", "new2")], 2),
+        # Boundary: single change
+        ([("key", "old", "new")], 1),
+        # Boundary: empty list
+        ([], 0),
+    ])
+    def test_change_count_returns_number_of_changes(self, changes, expected_count):
+        """Verify change_count property returns correct count of changes."""
+        result = update_openhands_charts.UpdateResult(changes=changes)
+        assert result.change_count == expected_count
+
+    @pytest.mark.parametrize("unchanged,expected_count", [
+        # Happy path: multiple unchanged
+        ([("k1", "v1"), ("k2", "v2"), ("k3", "v3")], 3),
+        # Boundary: single unchanged
+        ([("key", "value")], 1),
+        # Boundary: empty list
+        ([], 0),
+    ])
+    def test_unchanged_count_returns_number_of_unchanged(self, unchanged, expected_count):
+        """Verify unchanged_count property returns correct count of unchanged items."""
+        result = update_openhands_charts.UpdateResult(unchanged=unchanged)
+        assert result.unchanged_count == expected_count
+
 
 class TestAssertVersionBumped:
     """Tests for assert_version_bumped helper function.
