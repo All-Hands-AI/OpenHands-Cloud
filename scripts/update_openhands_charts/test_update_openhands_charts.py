@@ -57,25 +57,33 @@ class TestExtractVersionFromCloudTag:
     """
 
     @pytest.mark.parametrize("cloud_tag,expected", [
-        ("cloud-1.1.0", "1.1.0"),        # Standard version
-        ("cloud-2.0.0", "2.0.0"),        # Standard version
-        ("cloud-0.0.0", "0.0.0"),        # Zero version
-        ("cloud-10.20.30", "10.20.30"),  # Multi-digit
-        ("cloud-123.456.789", "123.456.789"),  # Large multi-digit
+        # Happy path: typical production versions
+        ("cloud-1.1.0", "1.1.0"),
+        ("cloud-2.0.0", "2.0.0"),
+        # Boundary: minimum valid version (all zeros)
+        ("cloud-0.0.0", "0.0.0"),
+        # Boundary: multi-digit components (regex must not limit to single digits)
+        ("cloud-10.20.30", "10.20.30"),
+        # Stress test: very large version numbers (ensures no arbitrary limits)
+        ("cloud-123.456.789", "123.456.789"),
     ])
     def test_extracts_version_from_valid_cloud_tags(self, cloud_tag, expected):
         """Test that version is extracted from valid cloud-X.Y.Z formats."""
         assert extract_version_from_cloud_tag(cloud_tag) == expected
 
     @pytest.mark.parametrize("invalid_tag", [
+        # Prefix validation: must be exactly "cloud-"
         pytest.param("1.1.0", id="missing cloud- prefix"),
         pytest.param("v1.1.0", id="wrong prefix (v instead of cloud-)"),
         pytest.param("Cloud-1.2.3", id="wrong case"),
         pytest.param("cloud1.2.3", id="missing hyphen"),
+        # Semver structure: must be exactly X.Y.Z (three parts)
         pytest.param("cloud-1.2", id="missing patch"),
         pytest.param("cloud-1.2.3.4", id="extra part"),
+        # Semver extensions: pre-release and build metadata not supported
         pytest.param("cloud-1.2.3-beta", id="pre-release suffix"),
         pytest.param("cloud-1.2.3+build", id="build metadata suffix"),
+        # Edge cases: empty/malformed input
         pytest.param("", id="empty string"),
         pytest.param("latest", id="non-version tag"),
         pytest.param("cloud-", id="missing version"),
@@ -89,9 +97,12 @@ class TestGetShortSha:
     """Tests for get_short_sha function.
 
     @pytest.mark.parametrize("sha,expected", [
-        ("abcdefghijklmnop", "abcdefg"),                    # Basic case
-        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),  # Full 40-char SHA
-        ("a1b2c3d", "a1b2c3d"),                             # Exactly 7 alphanumeric chars
+        # Happy path: typical input longer than 7 chars
+        ("abcdefghijklmnop", "abcdefg"),
+        # Real-world: full 40-character git SHA (most common input)
+        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),
+        # Boundary: input exactly 7 chars (no truncation needed)
+        ("a1b2c3d", "a1b2c3d"),
     ])
     def test_returns_first_seven_chars(self, sha, expected):
         """Test that get_short_sha returns the first 7 characters."""
@@ -106,8 +117,10 @@ class TestFormatShaTag:
     """
 
     @pytest.mark.parametrize("sha,expected", [
-        ("abcdefghijklmnop", "sha-abcdefg"),  # Verifies sha- prefix is added
-        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),  # Real workflow SHA example
+        # Happy path: verifies "sha-" prefix is prepended
+        ("abcdefghijklmnop", "sha-abcdefg"),
+        # Real-world: actual GitHub Actions workflow SHA (ensures production compatibility)
+        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),
     ])
     def test_formats_sha_with_prefix(self, sha, expected):
         """Test that format_sha_tag returns sha-<short_sha> format."""
@@ -143,19 +156,26 @@ class TestBumpPatchVersion:
     """Tests for bump_patch_version function.
 
     @pytest.mark.parametrize("version,expected", [
-        ("1.2.3", "1.2.4"),      # Simple version
-        ("1.0.0", "1.0.1"),      # Zero patch
-        ("1.2.99", "1.2.100"),   # High patch (rollover)
-        ("5.10.15", "5.10.16"),  # Preserves major/minor
+        # Happy path: typical version increment
+        ("1.2.3", "1.2.4"),
+        # Boundary: patch starts at zero (common for new minor releases)
+        ("1.0.0", "1.0.1"),
+        # Boundary: 99→100 rollover (ensures no single/double digit assumptions)
+        ("1.2.99", "1.2.100"),
+        # Verification: major/minor preserved during patch bump
+        ("5.10.15", "5.10.16"),
     ])
     def test_bump_patch_version_increments_correctly(self, version, expected):
         """Test that patch version is incremented correctly."""
         assert bump_patch_version(version) == expected
 
     @pytest.mark.parametrize("invalid_version", [
+        # Structure: must have exactly 3 parts (major.minor.patch)
         pytest.param("1.2", id="missing patch"),
         pytest.param("1.2.3.4", id="too many parts"),
+        # Format: no prefixes allowed (unlike git tags)
         pytest.param("v1.2.3", id="has prefix"),
+        # Edge cases: empty and non-numeric inputs
         pytest.param("", id="empty string"),
         pytest.param("1.2.abc", id="non-numeric patch"),
         pytest.param("a.b.c", id="all non-numeric"),
