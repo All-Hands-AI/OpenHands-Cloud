@@ -49,20 +49,20 @@ class TestExtractVersionFromCloudTag:
         """Test that version is extracted from valid cloud-X.Y.Z formats."""
         assert extract_version_from_cloud_tag(cloud_tag) == expected
 
-    @pytest.mark.parametrize("invalid_tag,description", [
-        ("1.1.0", "missing cloud- prefix"),
-        ("v1.1.0", "wrong prefix (v instead of cloud-)"),
-        ("Cloud-1.2.3", "wrong case"),
-        ("cloud1.2.3", "missing hyphen"),
-        ("cloud-1.2", "missing patch"),
-        ("cloud-1.2.3.4", "extra part"),
-        ("cloud-1.2.3-beta", "pre-release suffix"),
-        ("cloud-1.2.3+build", "build metadata suffix"),
-        ("", "empty string"),
-        ("latest", "non-version tag"),
-        ("cloud-", "missing version"),
+    @pytest.mark.parametrize("invalid_tag", [
+        pytest.param("1.1.0", id="missing cloud- prefix"),
+        pytest.param("v1.1.0", id="wrong prefix (v instead of cloud-)"),
+        pytest.param("Cloud-1.2.3", id="wrong case"),
+        pytest.param("cloud1.2.3", id="missing hyphen"),
+        pytest.param("cloud-1.2", id="missing patch"),
+        pytest.param("cloud-1.2.3.4", id="extra part"),
+        pytest.param("cloud-1.2.3-beta", id="pre-release suffix"),
+        pytest.param("cloud-1.2.3+build", id="build metadata suffix"),
+        pytest.param("", id="empty string"),
+        pytest.param("latest", id="non-version tag"),
+        pytest.param("cloud-", id="missing version"),
     ])
-    def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag, description):
+    def test_returns_none_for_invalid_cloud_tag_formats(self, invalid_tag):
         """Test that None is returned for strings that aren't cloud-X.Y.Z."""
         assert extract_version_from_cloud_tag(invalid_tag) is None
 
@@ -133,15 +133,15 @@ class TestBumpPatchVersion:
         """Test that patch version is incremented correctly."""
         assert bump_patch_version(version) == expected
 
-    @pytest.mark.parametrize("invalid_version,description", [
-        ("1.2", "missing patch"),
-        ("1.2.3.4", "too many parts"),
-        ("v1.2.3", "has prefix"),
-        ("", "empty string"),
-        ("1.2.abc", "non-numeric patch"),
-        ("a.b.c", "all non-numeric"),
+    @pytest.mark.parametrize("invalid_version", [
+        pytest.param("1.2", id="missing patch"),
+        pytest.param("1.2.3.4", id="too many parts"),
+        pytest.param("v1.2.3", id="has prefix"),
+        pytest.param("", id="empty string"),
+        pytest.param("1.2.abc", id="non-numeric patch"),
+        pytest.param("a.b.c", id="all non-numeric"),
     ])
-    def test_raises_error_for_invalid_semver_format(self, invalid_version, description):
+    def test_raises_error_for_invalid_semver_format(self, invalid_version):
         """Test that invalid semver strings raise ValueError."""
         with pytest.raises(ValueError, match="Invalid semver format"):
             bump_patch_version(invalid_version)
