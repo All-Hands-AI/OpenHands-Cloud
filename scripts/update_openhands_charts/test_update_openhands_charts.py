@@ -15,6 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 import update_openhands_charts
+from conftest import assert_file_contains_all
 from update_openhands_charts import (
     DeployConfig,
     SHORT_SHA_LENGTH,
