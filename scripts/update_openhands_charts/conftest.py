@@ -3,6 +3,35 @@
 This module provides reusable fixtures for creating temporary YAML files
 used across multiple test classes, reducing duplication and improving
 maintainability.
+
+Module Organization
+-------------------
+1. **Fixture Baseline Constants**: Values matching the sample fixture content.
+   Import these in tests to make assertions self-documenting (e.g.,
+   `assert version == OPENHANDS_CHART_VERSION` instead of `== "0.1.0"`).
+
+2. **Test Input Constants**: Values used as inputs when testing update
+   operations (e.g., NEW_APP_VERSION for testing chart updates).
+
+3. **Assertion Helpers**: Functions like `assert_file_contains()` and
+   `get_chart_value()` that abstract YAML parsing, making tests more
+   maintainable when file formats change.
+
+4. **Temporary File Fixtures**: `make_temp_yaml_file` factory for creating
+   test files with automatic cleanup.
+
+5. **Sample Content Fixtures**: Pre-defined YAML content for Chart.yaml and
+   values.yaml files in various configurations (minimal, full, with_deps).
+
+6. **GitHub API Mock Fixtures**: `mock_github_tags`, `mock_github_ref`, etc.
+   for fast, deterministic tests without network calls.
+
+Usage Example
+-------------
+    def test_chart_update(make_temp_yaml_file, sample_openhands_chart_minimal):
+        temp_file = make_temp_yaml_file(sample_openhands_chart_minimal)
+        update_openhands_chart(temp_file, NEW_APP_VERSION, None)
+        assert get_chart_value(temp_file, "appVersion") == NEW_APP_VERSION
 """
 
 import tempfile
