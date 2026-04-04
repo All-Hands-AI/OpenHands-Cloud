@@ -94,14 +94,15 @@ class TestGetShortSha:
 
 
 class TestFormatShaTag:
-    """Tests for format_sha_tag function."""
+    """Tests for format_sha_tag function.
+
+    Note: Truncation behavior is tested in TestGetShortSha.
+    These tests focus on the sha- prefix formatting.
+    """
 
     @pytest.mark.parametrize("sha,expected", [
-        ("abcdefghijklmnop", "sha-abcdefg"),                    # Basic case
-        ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "sha-6ccd42b"),  # Full 40-char SHA
-        ("1234567890abcdef", "sha-1234567"),                    # Numeric SHA
-        ("abcdefg", "sha-abcdefg"),                             # Exactly 7 chars
-        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),  # Real workflow SHA
+        ("abcdefghijklmnop", "sha-abcdefg"),  # Verifies sha- prefix is added
+        ("743f6256a690efc388af6e960ad8009f5952e721", "sha-743f625"),  # Real workflow SHA example
     ])
     def test_formats_sha_with_prefix(self, sha, expected):
         """Test that format_sha_tag returns sha-<short_sha> format."""
