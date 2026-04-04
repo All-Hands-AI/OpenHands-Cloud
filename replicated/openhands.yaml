@@ -90,10 +90,7 @@ spec:
         existingSecret: postgres-password
         existingSecretKey: password
       dbchecker:
-        enabled: true
-        image:
-          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/busybox'
-          tag: "1.37"
+        enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/keycloak/keycloak'
         tag: "26.5.5"
@@ -406,8 +403,7 @@ spec:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/keycloak'
           dbchecker:
-            image:
-              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/busybox'
+            enabled: false
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
