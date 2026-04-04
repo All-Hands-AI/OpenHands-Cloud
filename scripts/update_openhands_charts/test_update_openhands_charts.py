@@ -555,21 +555,17 @@ env:
         called_headers = mock_get.call_args[1]["headers"]
         assert called_headers["Authorization"] == "Bearer my-secret-token"
 
-    def test_returns_empty_string_when_env_key_missing(self, monkeypatch):
-        """Test that missing RUNTIME_API_SHA returns empty string (not None)."""
-        import base64
+    def test_returns_empty_string_when_env_key_missing(self, monkeypatch, make_workflow_response):
+        """Test that missing RUNTIME_API_SHA returns empty string (not None).
 
-        # Workflow without RUNTIME_API_SHA
-        workflow_yaml = "env:\n  OTHER_VAR: value\n"
-        encoded = base64.b64encode(workflow_yaml.encode()).decode()
-
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"content": encoded}
-
+        Edge case: Workflow has env section but lacks RUNTIME_API_SHA key.
+        This tests graceful handling via dict.get() default behavior.
+        """
+        # Workflow without RUNTIME_API_SHA - simulates incomplete workflow config
+        response = make_workflow_response("env:\n  OTHER_VAR: value\n")
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
-            Mock(return_value=mock_response)
+            Mock(return_value=response)
         )
 
         result = get_deploy_config("token", "owner/repo")
@@ -577,21 +573,17 @@ env:
         assert result is not None
         assert result.runtime_api_sha == ""
 
-    def test_returns_empty_string_when_env_section_missing(self, monkeypatch):
-        """Test that missing env section returns empty string."""
-        import base64
+    def test_returns_empty_string_when_env_section_missing(self, monkeypatch, make_workflow_response):
+        """Test that missing env section returns empty string.
 
-        # Workflow without env section
-        workflow_yaml = "name: deploy\njobs: {}\n"
-        encoded = base64.b64encode(workflow_yaml.encode()).decode()
-
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"content": encoded}
-
+        Edge case: Valid workflow YAML but no env section at all.
+        This tests defensive handling when expected structure is absent.
+        """
+        # Workflow without env section - simulates minimal workflow file
+        response = make_workflow_response("name: deploy\njobs: {}\n")
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
-            Mock(return_value=mock_response)
+            Mock(return_value=response)
         )
 
         result = get_deploy_config("token", "owner/repo")
