@@ -439,6 +439,19 @@ class TestUpdateResultHelpers:
         result = update_openhands_charts.UpdateResult()
         assert result.has_error_containing("any-error") is False
 
+    @pytest.mark.parametrize("errors,expected_count", [
+        # Happy path: multiple errors
+        (["error1", "error2", "error3"], 3),
+        # Boundary: single error
+        (["only one error"], 1),
+        # Boundary: empty list
+        ([], 0),
+    ])
+    def test_error_count_returns_number_of_errors(self, errors, expected_count):
+        """Verify error_count property returns correct count of errors."""
+        result = update_openhands_charts.UpdateResult(errors=errors)
+        assert result.error_count == expected_count
+
 
 class TestAssertVersionBumped:
     """Tests for assert_version_bumped helper function.
@@ -1041,7 +1054,7 @@ serviceAccount:
 
         result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
 
-        assert len(result.errors) == 3
+        assert result.error_count == 3
         assert result.has_error_containing("enterprise-server")
         assert result.has_error_containing("runtime image tag")
         assert result.has_error_containing("warmRuntimes")

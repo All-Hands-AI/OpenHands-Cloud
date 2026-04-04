@@ -60,6 +60,11 @@ class UpdateResult:
         """Check if any error message contains the given substring."""
         return any(substring in err for err in self.errors)
 
+    @property
+    def error_count(self) -> int:
+        """Return the number of errors recorded."""
+        return len(self.errors)
+
     def print_summary(self) -> None:
         """Prints the outcome of the update."""
         for key, old, new in self.changes:
