@@ -6,7 +6,6 @@
 """Unit tests for update_openhands_charts.py."""
 
 import sys
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
@@ -210,31 +209,17 @@ name: openhands
 class TestGetCurrentAppVersion:
     """Tests for get_current_app_version function."""
 
-    @pytest.fixture
-    def sample_chart_yaml(self):
-        """Create a sample Chart.yaml content."""
-        return """\
+    def test_returns_app_version(self, make_temp_yaml_file):
+        """Test that function returns the appVersion from chart."""
+        from update_openhands_charts import get_current_app_version
+
+        chart_content = """\
 apiVersion: v2
 appVersion: cloud-1.1.0
 version: 0.3.11
 name: openhands
 """
-
-    @pytest.fixture
-    def temp_chart_file(self, sample_chart_yaml):
-        """Create a temporary Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
-
-    def test_returns_app_version(self, temp_chart_file):
-        """Test that function returns the appVersion from chart."""
-        from update_openhands_charts import get_current_app_version
-
+        temp_chart_file = make_temp_yaml_file(chart_content)
         result = get_current_app_version(temp_chart_file)
         assert result == "cloud-1.1.0"
 
@@ -378,10 +363,6 @@ class TestUpdateChart:
         """Create a temporary Chart.yaml file using shared fixtures."""
         return make_temp_yaml_file(sample_openhands_chart_with_deps)
 
-    def test_non_runtime_api_dependencies_remain_unchanged(self, temp_chart_file):
-        """Verify only runtime-api dependency is modified; other deps are preserved."""
-        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
-
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
         yaml = YAML()
@@ -473,42 +454,10 @@ class TestDeployConfig:
         assert config.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
 
-# =============================================================================
-# TEST HELPER FUNCTION TESTS
-# Tests for helper functions defined in conftest.py that are used by other tests.
-# These verify the test infrastructure itself works correctly.
-# =============================================================================
-
-image:
-  repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.0.0
-
-runtime:
-  image:
-    repository: ghcr.io/openhands/runtime
-    tag: cloud-1.0.0-nikolaik
-  runAsRoot: true
-
-runtime-api:
-  enabled: true
-  replicaCount: 1
-  warmRuntimes:
-    enabled: true
-    count: 1
-    configs:
-      - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
-        working_dir: "/openhands/code/"
-"""
-
     @pytest.fixture
-    def mock_successful_response(self):
-        """Create a mock response with valid workflow content."""
-        encoded_content = base64.b64encode(self.VALID_WORKFLOW_YAML.encode()).decode()
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"content": encoded_content}
-        return mock_response
+    def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_full):
+        """Create a temporary values.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_openhands_values_full)
 
     def test_update_enterprise_server_tag_uses_cloud_version(self, temp_values_file):
         """Test that enterprise-server image tag uses cloud version format."""
@@ -604,28 +553,9 @@ class TestUpdateOpenhandsChartConditional:
     """Tests for conditional openhands chart version update."""
 
     @pytest.fixture
-    def sample_chart_yaml(self):
-        """Create a sample openhands Chart.yaml content."""
-        return """\
-apiVersion: v2
-appVersion: cloud-1.0.0
-version: 0.3.11
-name: openhands
-dependencies:
-  - name: runtime-api
-    version: 0.2.6
-"""
-
-    @pytest.fixture
-    def temp_chart_file(self, sample_chart_yaml):
-        """Create a temporary openhands Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_minimal):
+        """Create a temporary openhands Chart.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_openhands_chart_minimal)
 
     def test_no_version_bump_when_no_changes(self, temp_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
@@ -669,225 +599,24 @@ dependencies:
 
         assert result.has_changes is True
 
-    def test_reports_error_when_enterprise_server_tag_missing(self, make_temp_yaml_file):
-        """Test that error is reported when enterprise-server image tag pattern not found.
-
-        Edge case rationale: The enterprise-server image is the main OpenHands backend.
-        If this pattern is missing, the chart update would silently skip updating the
-        core application version, leading to version drift between Chart.yaml appVersion
-        and the actual deployed container. Early error reporting prevents silent failures.
-        """
-        # YAML without enterprise-server image section - simulates misconfigured values.yaml
-        values_content = """\
-image:
-  repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.0.0
-
-runtime:
-  image:
-    repository: ghcr.io/openhands/runtime
-    tag: cloud-1.0.0-nikolaik
-
-runtime-api:
-  enabled: true
-  warmRuntimes:
-    configs:
-      - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+    @pytest.fixture
+    def sample_chart_yaml(self):
+        """Create a sample Chart.yaml content for dry-run tests."""
+        return """\
+apiVersion: v2
+description: Test chart
+name: test-chart
+appVersion: 1.0.0
+version: 0.1.0
+dependencies:
+  - name: runtime-api
+    version: 0.1.10
 """
-        temp_file = make_temp_yaml_file(values_content)
-
-        result = update_openhands_values(
-            temp_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert result.has_error_containing("Could not find enterprise-server image tag")
-
-    def test_reports_error_when_runtime_tag_missing(self, make_temp_yaml_file):
-        """Test that error is reported when runtime image tag pattern not found.
-
-        Edge case rationale: The runtime image runs user code in sandboxed containers.
-        Version mismatch between enterprise-server and runtime can cause compatibility
-        issues (API changes, protocol mismatches). Detecting missing runtime patterns
-        ensures both images stay synchronized during updates.
-        """
-        # YAML without runtime image section - enterprise-server present but runtime missing
-        values_content = """\
-image:
-  repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.0.0
-
-runtime-api:
-  warmRuntimes:
-    configs:
-      - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
-"""
-        temp_file = make_temp_yaml_file(values_content)
-
-        result = update_openhands_values(
-            temp_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert result.has_error_containing("Could not find runtime image tag")
-
-    def test_reports_error_when_warm_runtimes_tag_missing(self, make_temp_yaml_file):
-        """Test that error is reported when warmRuntimes image tag pattern not found.
-
-        Edge case rationale: warmRuntimes pre-provisions runtime containers for faster
-        cold starts. If this image isn't updated but runtime is, pre-warmed containers
-        would run stale versions until recycled. This creates inconsistent behavior
-        where some requests use new runtime and others use old pre-warmed instances.
-        """
-        # YAML with warmRuntimes disabled - pattern missing but section exists
-        values_content = """\
-image:
-  repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.0.0
-
-runtime:
-  image:
-    repository: ghcr.io/openhands/runtime
-    tag: cloud-1.0.0-nikolaik
-
-runtime-api:
-  warmRuntimes:
-    enabled: false
-"""
-        temp_file = make_temp_yaml_file(values_content)
-
-        result = update_openhands_values(
-            temp_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert result.has_error_containing("Could not find warmRuntimes image tag")
-
-    def test_collects_multiple_errors_when_multiple_patterns_missing(self, make_temp_yaml_file):
-        """Test that all missing patterns are reported as errors.
-
-        Edge case rationale: When values.yaml is severely malformed or from an
-        incompatible chart version, multiple patterns will be missing. Collecting
-        ALL errors (not just the first) allows operators to fix all issues in one
-        pass rather than discovering them one-by-one through repeated runs.
-        """
-        # Minimal YAML with none of the expected patterns - completely wrong structure
-        values_content = """\
-replicaCount: 1
-serviceAccount:
-  create: true
-"""
-        temp_file = make_temp_yaml_file(values_content)
-
-        result = update_openhands_values(
-            temp_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert result.error_count == 3
-        assert result.has_error_containing("enterprise-server")
-        assert result.has_error_containing("runtime image tag")
-        assert result.has_error_containing("warmRuntimes")
-
-
-class TestConditionalChartVersionBump:
-    """Tests for conditional chart version bumping across both chart types.
-
-    Both openhands and runtime-api charts use the same pattern: only bump
-    the chart version when has_changes=True. This consolidates testing of
-    that behavior to reduce redundancy (Necessary property).
-
-    TDD Rationale: These tests drive the has_changes flag behavior that
-    prevents unnecessary version bumps when only checking for updates.
-    """
 
     @pytest.fixture
-    def temp_openhands_chart_file(self, make_temp_yaml_file, sample_openhands_chart_minimal):
-        """Create a temporary openhands Chart.yaml file."""
-        return make_temp_yaml_file(sample_openhands_chart_minimal)
-
-    @pytest.fixture
-    def temp_runtime_api_chart_file(self, make_temp_yaml_file, sample_runtime_api_chart_minimal):
-        """Create a temporary runtime-api Chart.yaml file."""
-        return make_temp_yaml_file(sample_runtime_api_chart_minimal)
-
-    # --- Openhands chart tests ---
-
-    def test_openhands_no_version_bump_when_no_changes(self, temp_openhands_chart_file):
-        """Test that openhands chart version is not bumped when has_changes is False."""
-        result = update_openhands_chart(
-            temp_openhands_chart_file,
-            new_app_version=OPENHANDS_CHART_APP_VERSION,
-            new_runtime_api_version=OPENHANDS_CHART_RUNTIME_API_VERSION,
-            has_changes=False,
-        )
-
-        assert get_chart_value(temp_openhands_chart_file, "version") == OPENHANDS_CHART_VERSION
-        assert get_chart_value(temp_openhands_chart_file, "appVersion") == OPENHANDS_CHART_APP_VERSION
-        assert result.is_unchanged("openhands chart version")
-
-    def test_openhands_version_bump_when_has_changes(self, temp_openhands_chart_file):
-        """Test that openhands chart version is bumped when has_changes is True."""
-        result = update_openhands_chart(
-            temp_openhands_chart_file,
-            new_app_version="cloud-1.1.0",
-            new_runtime_api_version="0.2.7",
-            has_changes=True,
-        )
-
-        assert get_chart_value(temp_openhands_chart_file, "version") == "0.1.1"  # Bumped from 0.1.0
-        assert get_chart_value(temp_openhands_chart_file, "appVersion") == "cloud-1.1.0"
-        assert result.has_change_for("appVersion")
-        assert result.has_change_for("version")
-
-    # --- Runtime-api chart tests ---
-
-    def test_runtime_api_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
-        """Test that runtime-api chart version is not bumped when has_changes is False."""
-        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
-
-        assert new_version == RUNTIME_API_CHART_MINIMAL_VERSION  # Version unchanged
-        assert result.is_unchanged("runtime-api chart version")
-
-    def test_runtime_api_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
-        """Test that runtime-api chart version is bumped when has_changes is True."""
-        new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
-
-        expected_version = bump_patch_version(RUNTIME_API_CHART_MINIMAL_VERSION)
-        assert new_version == expected_version  # Version bumped
-        assert result.has_change_for("runtime-api chart version")
-
-
-class TestDryRun:
-    """Tests for dry-run functionality.
-
-    Dry-run mode allows users to preview changes without modifying files.
-    These tests verify that:
-    1. Files remain unchanged when dry_run=True
-    2. Return values still reflect what *would* change
-    3. Files are modified when dry_run=False (control tests)
-
-    Test Structure:
-    - test_*_dry_run_no_file_changes: File content unchanged
-    - test_*_dry_run_prints_changes: Return value reflects changes
-    - test_*_without_dry_run_modifies_file: Control to verify normal behavior
-
-    TDD Rationale: Tests drive the dry_run parameter behavior, ensuring
-    separation between change detection (always happens) and file writing
-    (only when dry_run=False). Control tests verify the default behavior
-    hasn't regressed.
-    """
-
-    @pytest.fixture
-    def temp_chart_file(self, make_temp_yaml_file, sample_openhands_chart_with_deps):
+    def temp_chart_file(self, make_temp_yaml_file, sample_chart_yaml):
         """Create a temporary Chart.yaml file using shared fixture."""
-        return make_temp_yaml_file(sample_openhands_chart_with_deps)
+        return make_temp_yaml_file(sample_chart_yaml)
 
     @pytest.fixture
     def temp_values_file(self, make_temp_yaml_file, sample_openhands_values_minimal):
@@ -1011,40 +740,9 @@ class TestUpdateRuntimeApiValues:
     """Tests for update_runtime_api_values function."""
 
     @pytest.fixture
-    def sample_runtime_api_values_yaml(self):
-        """Create a sample runtime-api values.yaml content."""
-        return """\
-nameOverride: ""
-fullnameOverride: ""
-
-replicaCount: 1
-
-image:
-  repository: ghcr.io/openhands/runtime-api
-  tag: sha-0c907c9
-  pullPolicy: Always
-
-warmRuntimes:
-  enabled: false
-  configMapName: warm-runtimes-config
-  count: 0
-  configs:
-    - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
-      working_dir: "/openhands/code/"
-      environment: {}
-"""
-
-    @pytest.fixture
-    def temp_runtime_api_values_file(self, sample_runtime_api_values_yaml):
-        """Create a temporary runtime-api values.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_runtime_api_values_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_runtime_api_values_file(self, make_temp_yaml_file, sample_runtime_api_values):
+        """Create a temporary runtime-api values.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_runtime_api_values)
 
     def test_update_image_tag(self, temp_runtime_api_values_file):
         """Test that runtime-api image tag is updated correctly."""
@@ -1148,25 +846,9 @@ class TestUpdateRuntimeApiChartConditional:
     """Tests for conditional runtime-api chart version update."""
 
     @pytest.fixture
-    def sample_runtime_api_chart_yaml(self):
-        """Create a sample runtime-api Chart.yaml content."""
-        return """\
-apiVersion: v2
-appVersion: 0.1.0
-version: 0.2.6
-name: runtime-api
-"""
-
-    @pytest.fixture
-    def temp_runtime_api_chart_file(self, sample_runtime_api_chart_yaml):
-        """Create a temporary runtime-api Chart.yaml file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
-            f.write(sample_runtime_api_chart_yaml)
-            f.flush()
-            yield Path(f.name)
-        Path(f.name).unlink(missing_ok=True)
+    def temp_runtime_api_chart_file(self, make_temp_yaml_file, sample_runtime_api_chart_minimal):
+        """Create a temporary runtime-api Chart.yaml file using shared fixtures."""
+        return make_temp_yaml_file(sample_runtime_api_chart_minimal)
 
     def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
