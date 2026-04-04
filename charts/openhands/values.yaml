@@ -83,6 +83,7 @@ githubProxy:
 
 gitlab:
   enabled: false
+  host: ""
 
 bitbucket:
   enabled: false

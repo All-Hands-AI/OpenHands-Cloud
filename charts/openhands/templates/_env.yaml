@@ -171,6 +171,10 @@
       name: gitlab-app
       key: client-secret
 {{- end }}
+{{- if and .Values.gitlab.enabled .Values.gitlab.host }}
+- name: GITLAB_HOST
+  value: {{ .Values.gitlab.host }}
+{{- end }}
 {{- if .Values.bitbucket.enabled }}
 - name: BITBUCKET_APP_CLIENT_ID
   valueFrom:

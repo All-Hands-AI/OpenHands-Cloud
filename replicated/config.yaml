@@ -388,6 +388,11 @@ spec:
           help_text: Enable GitLab OAuth for user authentication
           type: bool
           default: "0"
+        - name: gitlab_domain
+          title: GitLab Domain
+          help_text: Domain of your GitLab instance (leave empty for gitlab.com)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
         - name: gitlab_oauth_client_id
           title: GitLab OAuth Client ID
           help_text: Client ID from your GitLab OAuth App
