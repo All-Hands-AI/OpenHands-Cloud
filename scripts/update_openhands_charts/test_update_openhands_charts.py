@@ -35,10 +35,15 @@ from conftest import (
 from update_openhands_charts import (
     DeployConfig,
     bump_patch_version,
+    cloud_tag_exists,
     extract_version_from_cloud_tag,
     format_sha_tag,
+    get_current_app_version,
     get_deploy_config,
+    get_latest_cloud_tag,
     get_short_sha,
+    main,
+    parse_args,
     update_openhands_chart,
     update_openhands_values,
     update_runtime_api_chart,
@@ -130,8 +135,6 @@ class TestGetCurrentAppVersion:
 
     def test_returns_app_version(self, make_temp_yaml_file):
         """Test that function returns the appVersion from chart."""
-        from update_openhands_charts import get_current_app_version
-
         chart_content = """\
 apiVersion: v2
 appVersion: cloud-1.1.0
@@ -144,8 +147,6 @@ name: openhands
 
     def test_returns_none_for_missing_file(self):
         """Test that function returns None for missing file."""
-        from update_openhands_charts import get_current_app_version
-
         result = get_current_app_version(Path("/nonexistent/Chart.yaml"))
         assert result is None
 
@@ -335,8 +336,6 @@ class TestAssertVersionBumped:
 
     def test_passes_when_version_correctly_bumped(self, make_temp_yaml_file):
         """Test helper passes when version is incremented by one patch."""
-        from conftest import assert_version_bumped
-
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -349,8 +348,6 @@ version: 1.2.4
 
     def test_fails_when_version_not_bumped(self, make_temp_yaml_file):
         """Test helper raises AssertionError when version unchanged."""
-        from conftest import assert_version_bumped
-
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -363,8 +360,6 @@ version: 1.2.3
 
     def test_fails_when_version_bumped_incorrectly(self, make_temp_yaml_file):
         """Test helper raises AssertionError when version bumped by wrong amount."""
-        from conftest import assert_version_bumped
-
         chart_content = """\
 apiVersion: v2
 name: test-chart
@@ -898,8 +893,6 @@ class TestUpdateOpenhandsChartConditional:
 
     def test_no_version_bump_when_no_changes(self, temp_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
-        from update_openhands_charts import update_openhands_chart
-
         result = update_openhands_chart(
             temp_chart_file,
             new_app_version=OPENHANDS_CHART_APP_VERSION,
@@ -914,8 +907,6 @@ class TestUpdateOpenhandsChartConditional:
 
     def test_version_bump_when_has_changes(self, temp_chart_file):
         """Test that chart version is bumped when has_changes is True."""
-        from update_openhands_charts import update_openhands_chart
-
         result = update_openhands_chart(
             temp_chart_file,
             new_app_version="cloud-1.1.0",
@@ -1180,8 +1171,6 @@ class TestUpdateRuntimeApiChartConditional:
 
     def test_no_version_bump_when_no_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is not bumped when has_changes is False."""
-        from update_openhands_charts import update_runtime_api_chart
-
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=False)
 
         assert new_version == RUNTIME_API_CHART_MINIMAL_VERSION  # Version unchanged
@@ -1189,8 +1178,6 @@ class TestUpdateRuntimeApiChartConditional:
 
     def test_version_bump_when_has_changes(self, temp_runtime_api_chart_file):
         """Test that chart version is bumped when has_changes is True."""
-        from update_openhands_charts import update_runtime_api_chart
-
         new_version, result = update_runtime_api_chart(temp_runtime_api_chart_file, has_changes=True)
 
         expected_version = bump_patch_version(RUNTIME_API_CHART_MINIMAL_VERSION)
@@ -1206,8 +1193,6 @@ class TestMainOutputMessages:
 
     def test_latest_cloud_tag_message_format(self, capsys, mock_main_early_exit):
         """Test that the latest cloud tag message uses correct format."""
-        from update_openhands_charts import main
-
         mock_tag = self.MOCK_CLOUD_TAG
         mock_main_early_exit(mock_tag)
 
@@ -1218,8 +1203,6 @@ class TestMainOutputMessages:
 
     def test_current_app_version_message_format(self, capsys, mock_main_early_exit):
         """Test that the current appVersion message uses correct format."""
-        from update_openhands_charts import main
-
         mock_tag = self.MOCK_CLOUD_TAG
         mock_main_early_exit(mock_tag)
 
@@ -1237,8 +1220,6 @@ class TestGetLatestCloudTag:
 
     def test_returns_first_matching_cloud_tag(self, mock_github_tags):
         """Test that function returns the first cloud-X.Y.Z formatted tag."""
-        from update_openhands_charts import get_latest_cloud_tag
-
         mock_github_tags(["latest", "cloud-1.20.0", "cloud-1.19.0"])
 
         result = get_latest_cloud_tag("fake-token", "All-Hands-AI/OpenHands")
@@ -1249,8 +1230,6 @@ class TestGetLatestCloudTag:
 
     def test_skips_non_cloud_tags(self, mock_github_tags):
         """Test that non-cloud tags are skipped."""
-        from update_openhands_charts import get_latest_cloud_tag
-
         mock_github_tags(["v1.0.0", "release-2.0", "cloud-1.5.0"])
 
         result = get_latest_cloud_tag("fake-token", "owner/repo")
@@ -1259,8 +1238,6 @@ class TestGetLatestCloudTag:
 
     def test_returns_none_when_no_cloud_tags(self, mock_github_tags):
         """Test that None is returned when no cloud tags exist."""
-        from update_openhands_charts import get_latest_cloud_tag
-
         mock_github_tags(["v1.0.0", "latest"])
 
         result = get_latest_cloud_tag("fake-token", "owner/repo")
@@ -1269,8 +1246,6 @@ class TestGetLatestCloudTag:
 
     def test_returns_none_for_invalid_repo(self, mock_github_tags, capsys):
         """Test that None is returned and error is printed for invalid repository."""
-        from update_openhands_charts import get_latest_cloud_tag
-
         mock_github_tags(repo_error=Exception("Repository not found"))
 
         result = get_latest_cloud_tag("fake-token", "nonexistent/repo")
@@ -1281,8 +1256,6 @@ class TestGetLatestCloudTag:
 
     def test_no_redirect_message_in_output(self, mock_github_tags, capsys):
         """Test that PyGithub redirect messages are suppressed."""
-        from update_openhands_charts import get_latest_cloud_tag
-
         mock_github_tags(["cloud-1.0.0"])
 
         get_latest_cloud_tag("fake-token", "owner/repo")
@@ -1300,8 +1273,6 @@ class TestCloudTagExists:
 
     def test_returns_true_when_tag_exists(self, mock_github_ref):
         """Test that function returns True when the tag reference is found."""
-        from update_openhands_charts import cloud_tag_exists
-
         _, mock_repo = mock_github_ref(tag_exists=True)
 
         result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-1.20.0")
@@ -1311,8 +1282,6 @@ class TestCloudTagExists:
 
     def test_returns_false_when_tag_not_found(self, mock_github_ref):
         """Test that function returns False when get_git_ref raises exception."""
-        from update_openhands_charts import cloud_tag_exists
-
         mock_github_ref(tag_exists=False)
 
         result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-99999.0.0")
@@ -1321,8 +1290,6 @@ class TestCloudTagExists:
 
     def test_returns_false_for_invalid_repo(self, mock_github_ref):
         """Test that function returns False when repository doesn't exist."""
-        from update_openhands_charts import cloud_tag_exists
-
         mock_github_ref(repo_error=Exception("Repository not found"))
 
         result = cloud_tag_exists("fake-token", "nonexistent/repo", "cloud-1.0.0")
@@ -1331,8 +1298,6 @@ class TestCloudTagExists:
 
     def test_handles_various_tag_formats(self, mock_github_ref):
         """Test that function correctly queries different tag formats."""
-        from update_openhands_charts import cloud_tag_exists
-
         _, mock_repo = mock_github_ref(tag_exists=True)
 
         # Test various tag formats
@@ -1350,24 +1315,18 @@ class TestParseArgs:
 
     def test_cloud_tag_argument_exists(self, monkeypatch):
         """Test that --cloud-tag argument is accepted."""
-        from update_openhands_charts import parse_args
-
         monkeypatch.setattr(sys, "argv", ["script", "--cloud-tag", "cloud-1.2.0"])
         args = parse_args()
         assert args.cloud_tag == "cloud-1.2.0"
 
     def test_cloud_tag_default_is_none(self, monkeypatch):
         """Test that --cloud-tag defaults to None."""
-        from update_openhands_charts import parse_args
-
         monkeypatch.setattr(sys, "argv", ["script"])
         args = parse_args()
         assert args.cloud_tag is None
 
     def test_dry_run_argument(self, monkeypatch):
         """Test that --dry-run argument works."""
-        from update_openhands_charts import parse_args
-
         monkeypatch.setattr(sys, "argv", ["script", "--dry-run"])
         args = parse_args()
         assert args.dry_run is True
