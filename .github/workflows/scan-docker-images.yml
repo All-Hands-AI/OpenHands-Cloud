@@ -62,8 +62,15 @@ jobs:
           output: 'trivy-results.sarif'
           timeout: '10m'
           scanners: 'vuln'  # Only scan vulnerabilities, not secrets/config
+      - name: Extract image name for category
+        id: image-name
+        run: |
+          # Extract just the image name (e.g., "runtime-api" from "openhands/runtime-api:v1.0.0")
+          IMAGE_NAME=$(echo "${{ matrix.IMAGE }}" | sed 's|.*/||' | sed 's|:.*||')
+          echo "name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
-          category: trivy-${{ matrix.IMAGE }}
+          category: trivy-${{ steps.image-name.outputs.name }}
