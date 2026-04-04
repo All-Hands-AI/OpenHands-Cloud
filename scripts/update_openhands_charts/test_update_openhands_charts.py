@@ -895,49 +895,129 @@ class TestMainOutputMessages:
 
 
 class TestGetLatestCloudTag:
-    """Tests for get_latest_cloud_tag function."""
+    """Tests for get_latest_cloud_tag function.
 
-    def test_returns_cloud_tag_format(self):
-        """Test that function returns a cloud-X.Y.Z formatted tag.
+    Uses mocked GitHub API responses for fast, deterministic tests.
+    """
 
-        Validates the result through extract_version_from_cloud_tag rather
-        than directly testing with internal regex patterns.
-        """
-        # This is an integration test that requires GITHUB_TOKEN
-        import os
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            pytest.skip("GITHUB_TOKEN not set")
+    def test_returns_first_matching_cloud_tag(self, monkeypatch):
+        """Test that function returns the first cloud-X.Y.Z formatted tag."""
+        from unittest.mock import MagicMock
 
         from update_openhands_charts import get_latest_cloud_tag
-        result = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
 
-        assert result is not None
-        # Validate through public interface instead of internal pattern
+        # Create mock tags - first matching cloud tag should be returned
+        mock_tags = [
+            MagicMock(name="latest"),
+            MagicMock(name="cloud-1.20.0"),
+            MagicMock(name="cloud-1.19.0"),
+        ]
+        # MagicMock uses 'name' for its own purposes, so set it explicitly
+        mock_tags[0].name = "latest"
+        mock_tags[1].name = "cloud-1.20.0"
+        mock_tags[2].name = "cloud-1.19.0"
+
+        mock_repo = MagicMock()
+        mock_repo.get_tags.return_value = mock_tags
+
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = get_latest_cloud_tag("fake-token", "All-Hands-AI/OpenHands")
+
+        assert result == "cloud-1.20.0"
         assert result.startswith("cloud-")
-        assert extract_version_from_cloud_tag(result) is not None
+        assert extract_version_from_cloud_tag(result) == "1.20.0"
 
-    def test_returns_none_for_invalid_repo(self):
-        """Test that function returns None for invalid repository."""
-        import os
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            pytest.skip("GITHUB_TOKEN not set")
+    def test_skips_non_cloud_tags(self, monkeypatch):
+        """Test that non-cloud tags are skipped."""
+        from unittest.mock import MagicMock
 
         from update_openhands_charts import get_latest_cloud_tag
-        result = get_latest_cloud_tag(token, "nonexistent/repo-that-does-not-exist")
+
+        mock_tags = [
+            MagicMock(name="v1.0.0"),
+            MagicMock(name="release-2.0"),
+            MagicMock(name="cloud-1.5.0"),
+        ]
+        mock_tags[0].name = "v1.0.0"
+        mock_tags[1].name = "release-2.0"
+        mock_tags[2].name = "cloud-1.5.0"
+
+        mock_repo = MagicMock()
+        mock_repo.get_tags.return_value = mock_tags
+
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = get_latest_cloud_tag("fake-token", "owner/repo")
+
+        assert result == "cloud-1.5.0"
+
+    def test_returns_none_when_no_cloud_tags(self, monkeypatch):
+        """Test that None is returned when no cloud tags exist."""
+        from unittest.mock import MagicMock
+
+        from update_openhands_charts import get_latest_cloud_tag
+
+        mock_tags = [
+            MagicMock(name="v1.0.0"),
+            MagicMock(name="latest"),
+        ]
+        mock_tags[0].name = "v1.0.0"
+        mock_tags[1].name = "latest"
+
+        mock_repo = MagicMock()
+        mock_repo.get_tags.return_value = mock_tags
+
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = get_latest_cloud_tag("fake-token", "owner/repo")
 
         assert result is None
 
-    def test_no_redirect_message_in_output(self, capsys):
-        """Test that PyGithub redirect messages are suppressed."""
-        import os
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            pytest.skip("GITHUB_TOKEN not set")
+    def test_returns_none_for_invalid_repo(self, monkeypatch, capsys):
+        """Test that None is returned and error is printed for invalid repository."""
+        from unittest.mock import MagicMock
 
         from update_openhands_charts import get_latest_cloud_tag
-        get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
+
+        mock_github = MagicMock()
+        mock_github.get_repo.side_effect = Exception("Repository not found")
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = get_latest_cloud_tag("fake-token", "nonexistent/repo")
+
+        assert result is None
+        captured = capsys.readouterr()
+        assert "Error fetching tags" in captured.out
+
+    def test_no_redirect_message_in_output(self, monkeypatch, capsys):
+        """Test that PyGithub redirect messages are suppressed."""
+        from unittest.mock import MagicMock
+
+        from update_openhands_charts import get_latest_cloud_tag
+
+        mock_tags = [MagicMock(name="cloud-1.0.0")]
+        mock_tags[0].name = "cloud-1.0.0"
+
+        mock_repo = MagicMock()
+        mock_repo.get_tags.return_value = mock_tags
+
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        get_latest_cloud_tag("fake-token", "owner/repo")
 
         captured = capsys.readouterr()
         assert "redirect" not in captured.out.lower()
@@ -945,99 +1025,113 @@ class TestGetLatestCloudTag:
 
 
 class TestCloudTagExists:
-    """Tests for cloud_tag_exists function."""
+    """Tests for cloud_tag_exists function.
 
-    def test_returns_true_for_existing_tag(self):
-        """Test that function returns True for an existing cloud tag.
+    Uses mocked GitHub API responses for fast, deterministic tests.
+    """
 
-        Uses get_latest_cloud_tag to dynamically fetch a known-good tag,
-        avoiding brittleness from hardcoded tag references.
-        """
-        import os
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            pytest.skip("GITHUB_TOKEN not set")
+    def test_returns_true_when_tag_exists(self, monkeypatch):
+        """Test that function returns True when the tag reference is found."""
+        from unittest.mock import MagicMock
 
-        from update_openhands_charts import cloud_tag_exists, get_latest_cloud_tag
+        from update_openhands_charts import cloud_tag_exists
 
-        # Dynamically fetch the latest cloud tag to ensure we test with a tag that exists
-        latest_tag = get_latest_cloud_tag(token, "All-Hands-AI/OpenHands")
-        if not latest_tag:
-            pytest.skip("No cloud tags found in repository")
+        mock_repo = MagicMock()
+        mock_repo.get_git_ref.return_value = MagicMock()  # Success - tag exists
 
-        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", latest_tag)
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-1.20.0")
+
         assert result is True
+        mock_repo.get_git_ref.assert_called_once_with("tags/cloud-1.20.0")
 
-    def test_returns_false_for_nonexistent_tag(self):
-        """Test that function returns False for a non-existent tag.
-
-        Uses an implausibly high version number that will never exist.
-        """
-        import os
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            pytest.skip("GITHUB_TOKEN not set")
+    def test_returns_false_when_tag_not_found(self, monkeypatch):
+        """Test that function returns False when get_git_ref raises exception."""
+        from unittest.mock import MagicMock
 
         from update_openhands_charts import cloud_tag_exists
 
-        # Use an implausibly high version that will never exist
-        result = cloud_tag_exists(token, "All-Hands-AI/OpenHands", "cloud-99999.99999.99999")
+        mock_repo = MagicMock()
+        mock_repo.get_git_ref.side_effect = Exception("Not found")
+
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = cloud_tag_exists("fake-token", "All-Hands-AI/OpenHands", "cloud-99999.0.0")
+
         assert result is False
 
-    def test_returns_false_for_invalid_repo(self):
-        """Test that function returns False for an invalid repository."""
-        import os
-        token = os.environ.get("GITHUB_TOKEN")
-        if not token:
-            pytest.skip("GITHUB_TOKEN not set")
+    def test_returns_false_for_invalid_repo(self, monkeypatch):
+        """Test that function returns False when repository doesn't exist."""
+        from unittest.mock import MagicMock
 
         from update_openhands_charts import cloud_tag_exists
 
-        result = cloud_tag_exists(token, "nonexistent/repo", "cloud-1.0.0")
+        mock_github = MagicMock()
+        mock_github.get_repo.side_effect = Exception("Repository not found")
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        result = cloud_tag_exists("fake-token", "nonexistent/repo", "cloud-1.0.0")
+
         assert result is False
+
+    def test_handles_various_tag_formats(self, monkeypatch):
+        """Test that function correctly queries different tag formats."""
+        from unittest.mock import MagicMock
+
+        from update_openhands_charts import cloud_tag_exists
+
+        mock_repo = MagicMock()
+        mock_repo.get_git_ref.return_value = MagicMock()
+
+        mock_github = MagicMock()
+        mock_github.get_repo.return_value = mock_repo
+
+        monkeypatch.setattr("update_openhands_charts.Github", lambda auth: mock_github)
+
+        # Test various tag formats
+        cloud_tag_exists("fake-token", "owner/repo", "cloud-1.0.0")
+        cloud_tag_exists("fake-token", "owner/repo", "cloud-10.20.30")
+
+        # Verify correct ref format is used
+        calls = mock_repo.get_git_ref.call_args_list
+        assert calls[0][0][0] == "tags/cloud-1.0.0"
+        assert calls[1][0][0] == "tags/cloud-10.20.30"
 
 
 class TestParseArgs:
     """Tests for parse_args function."""
 
-    def test_cloud_tag_argument_exists(self):
+    def test_cloud_tag_argument_exists(self, monkeypatch):
         """Test that --cloud-tag argument is accepted."""
         from update_openhands_charts import parse_args
-        import sys
 
-        original_argv = sys.argv
-        try:
-            sys.argv = ["script", "--cloud-tag", "cloud-1.2.0"]
-            args = parse_args()
-            assert args.cloud_tag == "cloud-1.2.0"
-        finally:
-            sys.argv = original_argv
+        monkeypatch.setattr(sys, "argv", ["script", "--cloud-tag", "cloud-1.2.0"])
+        args = parse_args()
+        assert args.cloud_tag == "cloud-1.2.0"
 
-    def test_cloud_tag_default_is_none(self):
+    def test_cloud_tag_default_is_none(self, monkeypatch):
         """Test that --cloud-tag defaults to None."""
         from update_openhands_charts import parse_args
-        import sys
 
-        original_argv = sys.argv
-        try:
-            sys.argv = ["script"]
-            args = parse_args()
-            assert args.cloud_tag is None
-        finally:
-            sys.argv = original_argv
+        monkeypatch.setattr(sys, "argv", ["script"])
+        args = parse_args()
+        assert args.cloud_tag is None
 
-    def test_dry_run_argument(self):
+    def test_dry_run_argument(self, monkeypatch):
         """Test that --dry-run argument works."""
         from update_openhands_charts import parse_args
-        import sys
 
-        original_argv = sys.argv
-        try:
-            sys.argv = ["script", "--dry-run"]
-            args = parse_args()
-            assert args.dry_run is True
-        finally:
-            sys.argv = original_argv
+        monkeypatch.setattr(sys, "argv", ["script", "--dry-run"])
+        args = parse_args()
+        assert args.dry_run is True
 
 
 if __name__ == "__main__":
