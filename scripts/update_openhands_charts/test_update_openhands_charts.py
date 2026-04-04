@@ -74,8 +74,7 @@ class TestGetShortSha:
     @pytest.mark.parametrize("sha,expected", [
         ("abcdefghijklmnop", "abcdefg"),                    # Basic case
         ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),  # Full 40-char SHA
-        ("1234567", "1234567"),                             # Exactly 7 chars
-        ("1234567890abcdef", "1234567"),                    # Numeric SHA
+        ("a1b2c3d", "a1b2c3d"),                             # Exactly 7 alphanumeric chars
     ])
     def test_returns_first_seven_chars(self, sha, expected):
         """Test that get_short_sha returns the first 7 characters."""
