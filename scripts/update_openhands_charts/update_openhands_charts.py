@@ -56,6 +56,10 @@ class UpdateResult:
         """Check if a key exists in the changes list."""
         return any(k == key for k, _, _ in self.changes)
 
+    def has_error_containing(self, substring: str) -> bool:
+        """Check if any error message contains the given substring."""
+        return any(substring in err for err in self.errors)
+
     def print_summary(self) -> None:
         """Prints the outcome of the update."""
         for key, old, new in self.changes:

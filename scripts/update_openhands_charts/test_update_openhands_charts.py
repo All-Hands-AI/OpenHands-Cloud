@@ -415,6 +415,30 @@ class TestUpdateResultHelpers:
         result = update_openhands_charts.UpdateResult()
         assert result.has_change_for("any-key") is False
 
+    @pytest.mark.parametrize("substring,expected", [
+        # Happy path: exact substring match
+        ("enterprise-server", True),
+        # Happy path: partial match within longer message
+        ("image tag", True),
+        # Boundary: substring not in any error returns False
+        ("nonexistent-error", False),
+    ])
+    def test_has_error_containing_finds_substrings_in_errors(self, substring, expected):
+        """Verify has_error_containing correctly identifies substrings in error messages."""
+        result = update_openhands_charts.UpdateResult(
+            errors=[
+                "Could not find enterprise-server image tag",
+                "Could not find runtime image tag",
+            ]
+        )
+        assert result.has_error_containing(substring) is expected
+
+    def test_has_error_containing_returns_false_for_empty_list(self):
+        """Verify has_error_containing returns False when errors list is empty."""
+        # Edge case: no errors occurred during update
+        result = update_openhands_charts.UpdateResult()
+        assert result.has_error_containing("any-error") is False
+
 
 class TestAssertVersionBumped:
     """Tests for assert_version_bumped helper function.
@@ -942,7 +966,7 @@ runtime-api:
 
         result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
 
-        assert "Could not find enterprise-server image tag" in result.errors[0]
+        assert result.has_error_containing("Could not find enterprise-server image tag")
 
     def test_reports_error_when_runtime_tag_missing(self, make_temp_yaml_file):
         """Test that error is reported when runtime image tag pattern not found.
@@ -968,7 +992,7 @@ runtime-api:
 
         result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
 
-        assert "Could not find runtime image tag" in result.errors[0]
+        assert result.has_error_containing("Could not find runtime image tag")
 
     def test_reports_error_when_warm_runtimes_tag_missing(self, make_temp_yaml_file):
         """Test that error is reported when warmRuntimes image tag pattern not found.
@@ -997,7 +1021,7 @@ runtime-api:
 
         result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
 
-        assert "Could not find warmRuntimes image tag" in result.errors[0]
+        assert result.has_error_containing("Could not find warmRuntimes image tag")
 
     def test_collects_multiple_errors_when_multiple_patterns_missing(self, make_temp_yaml_file):
         """Test that all missing patterns are reported as errors.
@@ -1018,10 +1042,9 @@ serviceAccount:
         result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
 
         assert len(result.errors) == 3
-        error_messages = " ".join(result.errors)
-        assert "enterprise-server" in error_messages
-        assert "runtime image tag" in error_messages
-        assert "warmRuntimes" in error_messages
+        assert result.has_error_containing("enterprise-server")
+        assert result.has_error_containing("runtime image tag")
+        assert result.has_error_containing("warmRuntimes")
 
 
 class TestConditionalChartVersionBump:
@@ -1127,6 +1150,7 @@ class TestDryRun:
         # Arrange: capture original state
         original_content = temp_chart_file.read_text()
 
+        # Act: run update with dry_run=True
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION, dry_run=True)
 
         # Assert: file unchanged
@@ -1134,8 +1158,10 @@ class TestDryRun:
 
     def test_update_chart_dry_run_prints_changes(self, temp_chart_file):
         """Test that dry-run still records what would be changed."""
+        # Act
         result = update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION, dry_run=True)
 
+        # Assert: changes are tracked even though file wasn't modified
         assert result.has_change_for("appVersion")
         assert result.has_change_for("version")
         assert result.has_change_for("runtime-api version")
@@ -1157,12 +1183,14 @@ class TestDryRun:
 
     def test_update_values_dry_run_prints_changes(self, temp_values_file):
         """Test that dry-run still records what would be changed."""
+        # Act
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
             dry_run=True,
         )
 
+        # Assert: changes are tracked even though file wasn't modified
         assert result.has_change_for("enterprise-server image tag")
         assert result.has_change_for("runtime image tag")
         assert result.has_change_for("warmRuntimes image tag")
@@ -1172,6 +1200,7 @@ class TestDryRun:
         # Arrange: capture original state
         original_content = temp_chart_file.read_text()
 
+        # Act: run update with dry_run=False (default behavior)
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION, dry_run=False)
 
         # Assert: file was modified
