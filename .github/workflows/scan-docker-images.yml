@@ -71,8 +71,8 @@ jobs:
           echo "name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
 
       - name: Upload Trivy results to GitHub Security tab
-        # Only upload to code scanning on push to main to avoid PRs interfering with alert lifecycle
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # Only upload to code scanning on push/dispatch to main to avoid PRs interfering with alert lifecycle
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
