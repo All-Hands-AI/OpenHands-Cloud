@@ -307,7 +307,7 @@ keycloak:
   dbchecker:
     enabled: true
     image:
-      repository: docker.io/busybox
+      repository: docker.io/library/busybox
       tag: "1.37"
 
   proxy:
