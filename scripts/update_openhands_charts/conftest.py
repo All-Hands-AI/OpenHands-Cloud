@@ -32,6 +32,21 @@ def get_dependency_version(file_path: Path, dep_name: str) -> str | None:
     return None
 
 
+def get_chart_value(file_path: Path, key: str) -> Any:
+    """Get a top-level value from a Chart.yaml file.
+
+    Args:
+        file_path: Path to the Chart.yaml file
+        key: The top-level key to retrieve
+
+    Returns:
+        The value if found, None otherwise
+    """
+    yaml = YAML()
+    chart_data = yaml.load(file_path)
+    return chart_data.get(key)
+
+
 def assert_file_contains_all(file_path: Path, expected_strings: list[str]) -> None:
     """Assert that a file contains all expected strings.
 
