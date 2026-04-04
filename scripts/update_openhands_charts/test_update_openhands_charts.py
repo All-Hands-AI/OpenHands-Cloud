@@ -106,6 +106,8 @@ class TestGetShortSha:
         ("6ccd42bb2975866f1abc21e635c01d2afbdd1acf", "6ccd42b"),
         # Boundary: input exactly 7 chars (no truncation needed)
         ("a1b2c3d", "a1b2c3d"),
+        # Boundary: input shorter than 7 chars (returns full input)
+        pytest.param("abc", "abc", id="input shorter than 7 chars"),
     ])
     def test_returns_first_seven_chars(self, sha, expected):
         """Test that get_short_sha returns the first 7 characters."""
