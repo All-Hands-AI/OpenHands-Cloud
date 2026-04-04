@@ -26,6 +26,7 @@ SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
 DEPLOY_REPO = "OpenHands/deploy"
 SEPARATOR = "=" * 60
+RUNTIME_IMAGE_VARIANT = "nikolaik"
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
@@ -338,7 +339,7 @@ def update_openhands_values(
     """
     content = values_path.read_text()
     result = UpdateResult()
-    runtime_tag = f"{openhands_version}-nikolaik"
+    runtime_tag = f"{openhands_version}-{RUNTIME_IMAGE_VARIANT}"
 
     content = update_tag_in_content(
         content,
@@ -421,7 +422,7 @@ def update_runtime_api_values(
     content = update_tag_in_content(
         content,
         WARM_RUNTIMES_TAG_PATTERN,
-        f"{openhands_version}-nikolaik",
+        f"{openhands_version}-{RUNTIME_IMAGE_VARIANT}",
         "runtime-api warmRuntimes image tag",
         result,
         replacement_suffix='"',
