@@ -842,8 +842,14 @@ class TestUpdateValues:
         assert result.has_changes is False
 
     def test_reports_error_when_enterprise_server_tag_missing(self, make_temp_yaml_file):
-        """Test that error is reported when enterprise-server image tag pattern not found."""
-        # YAML without enterprise-server image section
+        """Test that error is reported when enterprise-server image tag pattern not found.
+
+        Edge case rationale: The enterprise-server image is the main OpenHands backend.
+        If this pattern is missing, the chart update would silently skip updating the
+        core application version, leading to version drift between Chart.yaml appVersion
+        and the actual deployed container. Early error reporting prevents silent failures.
+        """
+        # YAML without enterprise-server image section - simulates misconfigured values.yaml
         values_content = """\
 image:
   repository: ghcr.io/other/image
@@ -867,8 +873,14 @@ runtime-api:
         assert "Could not find enterprise-server image tag" in result.errors[0]
 
     def test_reports_error_when_runtime_tag_missing(self, make_temp_yaml_file):
-        """Test that error is reported when runtime image tag pattern not found."""
-        # YAML without runtime image section
+        """Test that error is reported when runtime image tag pattern not found.
+
+        Edge case rationale: The runtime image runs user code in sandboxed containers.
+        Version mismatch between enterprise-server and runtime can cause compatibility
+        issues (API changes, protocol mismatches). Detecting missing runtime patterns
+        ensures both images stay synchronized during updates.
+        """
+        # YAML without runtime image section - enterprise-server present but runtime missing
         values_content = """\
 image:
   repository: ghcr.io/openhands/enterprise-server
@@ -887,8 +899,14 @@ runtime-api:
         assert "Could not find runtime image tag" in result.errors[0]
 
     def test_reports_error_when_warm_runtimes_tag_missing(self, make_temp_yaml_file):
-        """Test that error is reported when warmRuntimes image tag pattern not found."""
-        # YAML without warmRuntimes image
+        """Test that error is reported when warmRuntimes image tag pattern not found.
+
+        Edge case rationale: warmRuntimes pre-provisions runtime containers for faster
+        cold starts. If this image isn't updated but runtime is, pre-warmed containers
+        would run stale versions until recycled. This creates inconsistent behavior
+        where some requests use new runtime and others use old pre-warmed instances.
+        """
+        # YAML with warmRuntimes disabled - pattern missing but section exists
         values_content = """\
 image:
   repository: ghcr.io/openhands/enterprise-server
@@ -910,8 +928,14 @@ runtime-api:
         assert "Could not find warmRuntimes image tag" in result.errors[0]
 
     def test_collects_multiple_errors_when_multiple_patterns_missing(self, make_temp_yaml_file):
-        """Test that all missing patterns are reported as errors."""
-        # Minimal YAML with none of the expected patterns
+        """Test that all missing patterns are reported as errors.
+
+        Edge case rationale: When values.yaml is severely malformed or from an
+        incompatible chart version, multiple patterns will be missing. Collecting
+        ALL errors (not just the first) allows operators to fix all issues in one
+        pass rather than discovering them one-by-one through repeated runs.
+        """
+        # Minimal YAML with none of the expected patterns - completely wrong structure
         values_content = """\
 replicaCount: 1
 serviceAccount:
