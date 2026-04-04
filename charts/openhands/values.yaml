@@ -291,6 +291,11 @@ keycloak:
   fullnameOverride: keycloak
   replicas: 1
 
+  command:
+    - "/opt/keycloak/bin/kc.sh"
+  args:
+    - "start"
+
   image:
     repository: quay.io/keycloak/keycloak
     tag: "26.5.5"
@@ -305,21 +310,10 @@ keycloak:
     existingSecretKey: password
 
   dbchecker:
-    enabled: false
-
-  waitForDbImage: "bitnamilegacy/postgresql:latest"
-  extraInitContainers: |
-    - name: wait-for-db
-      image: "{{ .Values.waitForDbImage }}"
-      command: ['sh', '-c']
-      args:
-        - |
-          echo "Waiting for PostgreSQL at {{ .Values.database.hostname }}:{{ .Values.database.port }}..."
-          until pg_isready -h "{{ .Values.database.hostname }}" -p "{{ .Values.database.port }}" > /dev/null 2>&1; do
-            echo "PostgreSQL is unavailable - sleeping 2s"
-            sleep 2
-          done
-          echo "PostgreSQL is ready!"
+    enabled: true
+    image:
+      repository: docker.io/library/busybox
+      tag: "1.37"
 
   proxy:
     enabled: true
