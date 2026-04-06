@@ -80,6 +80,14 @@
       name: {{ .Values.serviceKeyFromSecret.name }}
       key: {{ .Values.serviceKeyFromSecret.key }}
 {{- end }}
+# GitHub App webhook secret for verifying webhook signatures
+{{- if .Values.githubAppWebhookSecretFromSecret }}
+- name: AUTOMATION_GITHUB_APP_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.githubAppWebhookSecretFromSecret.name }}
+      key: {{ .Values.githubAppWebhookSecretFromSecret.key }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
