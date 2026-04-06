@@ -47,17 +47,27 @@
 {{- end }}
 {{- if .Values.filestore.ephemeral }}
 - name: create-bucket
-  image: "minio/mc:latest"
+  image: "{{ .Values.rustfs.image.rustfs.repository | default "rustfs/rustfs" }}:{{ .Values.rustfs.image.rustfs.tag | default "latest" }}"
   command: ['sh', '-c']
   args:
     - |
-      until mc alias set rustfs http://{{ printf "%s-rustfs-svc:9000" $.Release.Name }} {{ .Values.rustfs.secret.rustfs.access_key }} {{ .Values.rustfs.secret.rustfs.secret_key }}; do
+      ENDPOINT="http://{{ printf "%s-rustfs-svc:9000" $.Release.Name }}"
+      BUCKET="{{ .Values.filestore.bucket }}"
+      until curl -sf "$ENDPOINT/minio/health/live" > /dev/null 2>&1; do
         echo "Waiting for RustFS to be ready..."
         sleep 2
       done
-      mc mb --ignore-existing rustfs/{{ .Values.filestore.bucket }}
-  env:
-    - name: HOME
-      value: /tmp
+      STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+        --aws-sigv4 "aws:amz:us-east-1:s3" \
+        --user "{{ .Values.rustfs.secret.rustfs.access_key }}:{{ .Values.rustfs.secret.rustfs.secret_key }}" \
+        -X PUT "$ENDPOINT/$BUCKET")
+      if [ "$STATUS" = "200" ]; then
+        echo "Bucket '$BUCKET' created"
+      elif [ "$STATUS" = "409" ]; then
+        echo "Bucket '$BUCKET' already exists"
+      else
+        echo "Failed to create bucket '$BUCKET' (HTTP $STATUS)"
+        exit 1
+      fi
 {{- end }}
 {{- end }}
