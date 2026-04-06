@@ -27,10 +27,6 @@ datadog:
 debuggingRoutes:
   enabled: false
 
-databaseMigrations:
-  createDatabases: false
-  migrate: true
-
 deployment:
   replicas: 1
   resources:
@@ -493,18 +489,32 @@ minio:
       memory: 512Mi
       cpu: 100m
 
+# PostgreSQL database configuration
+database:
+  # Full hostname of the PostgreSQL server
+  # Examples:
+  #   - In-cluster CNPG: "oh-main-postgresql-rw"
+  #   - Cloud SQL: "my-project:us-central1:my-instance"
+  #   - External: "postgres.example.com"
+  host: "oh-main-postgresql-rw"
+  port: "5432"
+  user: "postgres"
+  name: "openhands"
+  # Secret containing the database password
+  secretName: "postgres-password"
+  secretKey: "password"
+  # Create databases for openhands and its dependencies (keycloak, litellm, langfuse)
+  createDatabases: false
+  # Run alembic migrations on startup
+  migrate: true
+
+# CloudNative-PG embedded PostgreSQL cluster
 cnpg:
   enabled: true
   instances: 1
-  username: postgres
-  superuserSecret: postgres-password
   storage:
     size: 10Gi
     storageClass: ""
-
-externalDatabase:
-  enabled: false
-  existingSecret: postgres-password
 
 redis:
   enabled: true
@@ -590,7 +600,7 @@ runtime-api:
           - root
           - --user-id
           - "0"
-  databaseMigrations:
+  database:
     createDatabases: false
     migrate: true
   ingress:

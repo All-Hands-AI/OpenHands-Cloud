@@ -57,14 +57,6 @@ database:
   # Secret containing the automation database password
   secretName: "automation-db-secret"
   secretKey: "db-password"
-  # Create database and user in an existing PostgreSQL instance
-  # When true, runs an init container to create the database and user
-  # Useful when sharing a PostgreSQL instance with other services
-  createDatabaseUser: false
-  # Secret containing the postgres superuser password (for creating the automation user)
-  # Only used when createDatabaseUser=true
-  superuserSecretName: "postgres-password"
-  superuserSecretKey: "password"
 
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:

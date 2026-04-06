@@ -54,33 +54,33 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 PostgreSQL host
 */}}
 {{- define "runtime-api.postgresql.host" -}}
-{{- .Values.env.DB_HOST | default "oh-main-postgresql-rw" -}}
+{{- .Values.database.host -}}
 {{- end -}}
 
 {{/*
 PostgreSQL username
 */}}
 {{- define "runtime-api.postgresql.username" -}}
-{{- .Values.env.DB_USER | default "postgres" -}}
+{{- .Values.database.user -}}
 {{- end -}}
 
 {{/*
 PostgreSQL database
 */}}
 {{- define "runtime-api.postgresql.database" -}}
-{{- .Values.env.DB_NAME | default "runtime_api_db" -}}
+{{- .Values.database.name -}}
 {{- end -}}
 
 {{/*
 PostgreSQL secret name
 */}}
 {{- define "runtime-api.postgresql.secretName" -}}
-{{- .Values.database.existingSecret | default "postgres-password" -}}
+{{- .Values.database.secretName -}}
 {{- end -}}
 
 {{/*
 PostgreSQL secret key
 */}}
 {{- define "runtime-api.postgresql.secretKey" -}}
-{{- printf "password" -}}
+{{- .Values.database.secretKey -}}
 {{- end -}}

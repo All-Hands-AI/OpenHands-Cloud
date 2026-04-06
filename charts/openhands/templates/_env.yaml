@@ -305,21 +305,14 @@
   value: "1"
 {{- end }}
 
-{{- if .Values.cnpg.enabled }}
 - name: DB_HOST
-  value: "oh-main-postgresql-rw"
+  value: {{ .Values.database.host | quote }}
+- name: DB_PORT
+  value: {{ .Values.database.port | quote }}
 - name: DB_USER
-  value: "{{ .Values.cnpg.username | default "postgres" }}"
+  value: {{ .Values.database.user | quote }}
 - name: DB_NAME
-  value: "{{ .Values.externalDatabase.database | default "openhands" }}"
-{{- else }}
-- name: DB_HOST
-  value: "{{ .Values.externalDatabase.host }}"
-- name: DB_USER
-  value: "{{ .Values.externalDatabase.username }}"
-- name: DB_NAME
-  value: "{{ .Values.externalDatabase.database }}"
-{{- end }}
+  value: {{ .Values.database.name | quote }}
 {{- if .Values.datadog.enabled }}
 # Datadog configuration
 - name: DD_AGENT_HOST
@@ -342,8 +335,8 @@
 - name: DB_PASS
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.cnpg.superuserSecret | default "postgres-password" }}
-      key: password
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
 {{- if .Values.jira.enabled }}
 - name: ENABLE_JIRA
   value: "true"

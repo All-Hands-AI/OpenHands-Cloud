@@ -1,18 +1,16 @@
 {{- define "troubleshoot.collectors.shared" -}}
 - clusterInfo: {}
 - clusterResources: {}
-{{- if .Values.externalDatabase.enabled }}
-{{- with .Values.externalDatabase }}
-{{- if .host }}
+{{- if not .Values.cnpg.enabled }}
+{{- with .Values.database }}
 - postgresql:
     collectorName: external-postgresql
-    uri: postgresql://{{ .username | default "postgres" }}:@{{ .host }}:{{ .port | default 5432 }}/{{ .database | default "openhands" }}?sslmode=disable
+    uri: postgresql://{{ .user }}:@{{ .host }}:{{ .port }}/{{ .name }}?sslmode=disable
     tls:
       disabled: true
     password:
-      secretName: {{ .existingSecret | default "postgres-password" }}
-      secretKey: {{ .existingSecretPasswordKey | default "password" }}
-{{- end }}
+      secretName: {{ .secretName }}
+      secretKey: {{ .secretKey }}
 {{- end }}
 {{- end }}
 {{- end -}}
@@ -54,7 +52,7 @@
           message: "No default storage class found - required for PostgreSQL, Redis, and file storage"
       - pass:
           message: "Default storage class is available"
-{{- if .Values.externalDatabase.enabled }}
+{{- if not .Values.cnpg.enabled }}
 - postgresql:
     checkName: "External PostgreSQL Database Health"
     collectorName: external-postgresql

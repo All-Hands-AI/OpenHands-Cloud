@@ -3,6 +3,14 @@
 - name: {{ $key }}
   value: {{ $value | quote }}
 {{- end }}
+- name: DB_HOST
+  value: {{ .Values.database.host | quote }}
+- name: DB_PORT
+  value: {{ .Values.database.port | quote }}
+- name: DB_USER
+  value: {{ .Values.database.user | quote }}
+- name: DB_NAME
+  value: {{ .Values.database.name | quote }}
 - name: RUNTIME_DEAD_SECONDS
   value: {{ printf "%.0f" .Values.cleanup.dead_seconds | quote }}
 {{- if .Values.runtimeInSameCluster }}
@@ -39,6 +47,6 @@
 - name: DB_PASS
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.database.existingSecret | default "postgres-password" }}
-      key: password
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
 {{- end }}

@@ -1,4 +1,4 @@
-{{- if and .Values.dbCleanup.enabled .Values.database.existingSecret }}
+{{- if .Values.dbCleanup.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

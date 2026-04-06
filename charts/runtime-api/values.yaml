@@ -3,10 +3,6 @@ fullnameOverride: ""
 
 replicaCount: 1
 
-databaseMigrations:
-  createDatabases: false
-  migrate: true
-
 image:
   repository: ghcr.io/openhands/runtime-api
   tag: sha-7857be8
@@ -72,16 +68,30 @@ tolerations: []
 
 affinity: {}
 
+# PostgreSQL database configuration
 database:
-  existingSecret: postgres-password
-  create: false # Will only be true for AWS as it can't create the DB in terraform
-  secretName: runtime-api-db-credentials # Secret containing external database credentials
+  # Full hostname of the PostgreSQL server
+  host: "oh-main-postgresql-rw"
+  port: "5432"
+  user: "postgres"
+  name: "runtime_api_db"
+  # Secret containing the database password
+  secretName: "postgres-password"
+  secretKey: "password"
+  # Create database on startup via init container
+  createDatabases: false
+  # Run alembic migrations on startup
+  migrate: true
+  # Create database and user via a Job (used for AWS where terraform doesn't create it)
+  create: false
+  # Secret containing external database credentials (for create-db-user-job)
+  createJobSecretName: "runtime-api-db-credentials"
   poolSize:
-    api: 5 # Pool size for API deployment (default)
-    cronjobs: 2 # Pool size for cronjobs (default)
+    api: 5
+    cronjobs: 2
   maxOverflow:
-    api: 10 # Max overflow for API deployment (default)
-    cronjobs: 5 # Max overflow for cronjobs (default)
+    api: 10
+    cronjobs: 5
 
 helm-release-pruner:
   enabled: false

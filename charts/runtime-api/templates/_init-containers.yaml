@@ -14,7 +14,7 @@
       echo "PostgreSQL is up and running!"
   env:
     {{- include "runtime-api.env" . | nindent 4 }}
-{{- if .Values.databaseMigrations.createDatabases }}
+{{- if .Values.database.createDatabases }}
 - name: create-db
   image: "postgres:16"
   command: ['sh', '-c']
@@ -29,7 +29,7 @@
   env:
     {{- include "runtime-api.env" . | nindent 4 }}
 {{- end }}
-{{- if .Values.databaseMigrations.migrate }}
+{{- if .Values.database.migrate }}
 - name: migrate-db
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
   command: ["alembic", "upgrade", "head"]

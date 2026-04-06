@@ -128,12 +128,12 @@ spec:
     {{- if .Values.cnpg.enabled }}
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://postgres:@oh-main-postgresql-rw:5432/openhands?sslmode=disable
+        uri: postgresql://{{ .Values.database.user }}:@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}?sslmode=disable
         tls:
           disabled: true
         password:
-          secretName: {{ .Values.cnpg.superuserSecret | default "postgres-password" }}
-          secretKey: password
+          secretName: {{ .Values.database.secretName }}
+          secretKey: {{ .Values.database.secretKey }}
     {{- end }}
     {{- if .Values.redis.enabled }}
     - redis:

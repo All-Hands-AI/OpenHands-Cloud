@@ -9,12 +9,12 @@ spec:
 
   enableSuperuserAccess: true
   superuserSecret:
-    name: {{ .Values.cnpg.superuserSecret | default "postgres-password" }}
+    name: {{ .Values.database.secretName }}
 
   bootstrap:
     initdb:
       database: postgres
-      owner: {{ .Values.cnpg.username | default "postgres" }}
+      owner: {{ .Values.database.user }}
 
   storage:
     size: {{ .Values.cnpg.storage.size | default "10Gi" }}
