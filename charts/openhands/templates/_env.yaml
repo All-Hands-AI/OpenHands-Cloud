@@ -402,6 +402,15 @@
       key: {{ .Values.automationServiceKey.secretKey }}
 {{- end }}
 
+{{- if .Values.automationService.url }}
+- name: AUTOMATION_SERVICE_URL
+  value: {{ .Values.automationService.url | quote }}
+{{- end }}
+{{- if .Values.automationService.eventForwardingEnabled }}
+- name: AUTOMATION_EVENT_FORWARDING_ENABLED
+  value: "true"
+{{- end }}
+
 {{- $providers := list }}
 {{- if .Values.github.enabled }}
 {{- $providers = append $providers "github" }}
