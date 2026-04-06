@@ -346,8 +346,17 @@ class TestDeployConfig:
         """Verify DeployConfig correctly stores the runtime-api commit SHA."""
         config = DeployConfig(
             runtime_api_sha="def5678901234",
+            openhands_runtime_image_tag="cloud-1.21.0-nikolaik",
         )
         assert config.runtime_api_sha == "def5678901234"
+
+    def test_deploy_config_stores_openhands_runtime_image_tag(self):
+        """Verify DeployConfig correctly stores the runtime image tag from deploy config."""
+        config = DeployConfig(
+            runtime_api_sha="def5678901234",
+            openhands_runtime_image_tag="cloud-1.21.0-nikolaik",
+        )
+        assert config.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
 
 # =============================================================================
@@ -595,6 +604,7 @@ class TestGetDeployConfig:
     VALID_WORKFLOW_YAML = """\
 env:
   RUNTIME_API_SHA: abc123def456
+  OPENHANDS_RUNTIME_IMAGE_TAG: "cloud-1.21.0-nikolaik"
   OTHER_VAR: value
 """
 
@@ -619,6 +629,7 @@ env:
         assert result is not None
         assert isinstance(result, DeployConfig)
         assert result.runtime_api_sha == "abc123def456"
+        assert result.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
     def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
         """Test that URL is constructed correctly without ref parameter."""
@@ -652,12 +663,12 @@ env:
         assert called_headers["Authorization"] == "Bearer my-secret-token"
 
     def test_returns_empty_string_when_env_key_missing(self, monkeypatch, make_workflow_response):
-        """Test that missing RUNTIME_API_SHA returns empty string (not None).
+        """Test that missing env keys return empty string (not None).
 
-        Edge case: Workflow has env section but lacks RUNTIME_API_SHA key.
+        Edge case: Workflow has env section but lacks expected keys.
         This tests graceful handling via dict.get() default behavior.
         """
-        # Workflow without RUNTIME_API_SHA - simulates incomplete workflow config
+        # Workflow without expected keys - simulates incomplete workflow config
         response = make_workflow_response("env:\n  OTHER_VAR: value\n")
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
@@ -668,6 +679,7 @@ env:
 
         assert result is not None
         assert result.runtime_api_sha == ""
+        assert result.openhands_runtime_image_tag == ""
 
     def test_returns_empty_string_when_env_section_missing(self, monkeypatch, make_workflow_response):
         """Test that missing env section returns empty string.
@@ -686,6 +698,7 @@ env:
 
         assert result is not None
         assert result.runtime_api_sha == ""
+        assert result.openhands_runtime_image_tag == ""
 
     # =========================================================================
     # Parameterized error path tests
@@ -877,24 +890,27 @@ class TestUpdateValues:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert_file_contains(temp_values_file, "tag: cloud-1.1.0")
 
-    def test_update_runtime_tag_uses_cloud_version(self, temp_values_file):
-        """Test that runtime image tag uses cloud version format."""
+    def test_update_runtime_tag_uses_runtime_image_tag(self, temp_values_file):
+        """Test that runtime image tag uses value from deploy config."""
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert_file_contains(temp_values_file, "tag: cloud-1.1.0-nikolaik")
 
-    def test_update_warm_runtimes_tag_uses_cloud_version(self, temp_values_file):
-        """Test that warmRuntimes image tag uses cloud version format."""
+    def test_update_warm_runtimes_tag_uses_runtime_image_tag(self, temp_values_file):
+        """Test that warmRuntimes image tag uses value from deploy config."""
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert_file_contains(temp_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
@@ -914,12 +930,14 @@ class TestUpdateValues:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
+            runtime_image_tag="cloud-1.0.0-nikolaik",
         )
 
         # Step 2: Reapply same values (tests idempotency)
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
+            runtime_image_tag="cloud-1.0.0-nikolaik",
         )
 
         # Verify: Boolean flag correctly indicates no changes
@@ -935,6 +953,7 @@ class TestUpdateValues:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert_file_contains_all(temp_values_file, [
@@ -949,6 +968,7 @@ class TestUpdateValues:
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert result.has_changes is True
@@ -980,7 +1000,11 @@ runtime-api:
 """
         temp_file = make_temp_yaml_file(values_content)
 
-        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+        result = update_openhands_values(
+            temp_file,
+            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
+        )
 
         assert result.has_error_containing("Could not find enterprise-server image tag")
 
@@ -1006,7 +1030,11 @@ runtime-api:
 """
         temp_file = make_temp_yaml_file(values_content)
 
-        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+        result = update_openhands_values(
+            temp_file,
+            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
+        )
 
         assert result.has_error_containing("Could not find runtime image tag")
 
@@ -1035,7 +1063,11 @@ runtime-api:
 """
         temp_file = make_temp_yaml_file(values_content)
 
-        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+        result = update_openhands_values(
+            temp_file,
+            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
+        )
 
         assert result.has_error_containing("Could not find warmRuntimes image tag")
 
@@ -1055,7 +1087,11 @@ serviceAccount:
 """
         temp_file = make_temp_yaml_file(values_content)
 
-        result = update_openhands_values(temp_file, openhands_version="cloud-1.1.0")
+        result = update_openhands_values(
+            temp_file,
+            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
+        )
 
         assert result.error_count == 3
         assert result.has_error_containing("enterprise-server")
@@ -1191,6 +1227,7 @@ class TestDryRun:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
             dry_run=True,
         )
 
@@ -1203,6 +1240,7 @@ class TestDryRun:
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
             dry_run=True,
         )
 
@@ -1231,6 +1269,7 @@ class TestDryRun:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
             dry_run=False,
         )
 
@@ -1289,20 +1328,20 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert_file_contains(temp_runtime_api_values_file, "tag: sha-abc1234")
 
-    def test_update_warm_runtimes_image_uses_cloud_version(self, temp_runtime_api_values_file):
-        """Test that warmRuntimes image tag uses cloud version format, not full SHA."""
+    def test_update_warm_runtimes_image_uses_runtime_image_tag(self, temp_runtime_api_values_file):
+        """Test that warmRuntimes image tag uses value from deploy config."""
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
-        # Should use cloud version format for warmRuntimes
+        # Should use runtime_image_tag from deploy config
         assert_file_contains(temp_runtime_api_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
 
     def test_idempotent_when_reapplying_same_values(self, temp_runtime_api_values_file):
@@ -1315,14 +1354,14 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         # Step 2: Reapply same values
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         # Verify: Boolean flag correctly indicates no changes
@@ -1337,7 +1376,7 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert_file_contains_all(temp_runtime_api_values_file, [
@@ -1352,7 +1391,7 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
             dry_run=True,
         )
 
@@ -1363,7 +1402,7 @@ class TestUpdateRuntimeApiValues:
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            openhands_version="cloud-1.1.0",
+            runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
         assert result.has_changes is True
