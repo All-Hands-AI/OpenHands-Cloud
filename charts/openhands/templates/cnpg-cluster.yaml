@@ -1,0 +1,33 @@
+{{- if .Values.cnpg.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: oh-main-postgresql
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: {{ .Values.cnpg.instances | default 1 }}
+
+  enableSuperuserAccess: true
+  superuserSecret:
+    name: {{ .Values.cnpg.superuserSecret | default "postgres-password" }}
+
+  bootstrap:
+    initdb:
+      database: postgres
+      owner: {{ .Values.cnpg.username | default "postgres" }}
+
+  storage:
+    size: {{ .Values.cnpg.storage.size | default "10Gi" }}
+    {{- if .Values.cnpg.storage.storageClass }}
+    storageClass: {{ .Values.cnpg.storage.storageClass }}
+    {{- end }}
+
+  {{- if .Values.cnpg.imageName }}
+  imageName: {{ .Values.cnpg.imageName }}
+  {{- end }}
+
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
