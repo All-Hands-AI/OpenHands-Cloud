@@ -142,9 +142,6 @@ spec:
               model: "anthropic/claude-sonnet-4-5-20250929"
               api_key: os.environ/ANTHROPIC_API_KEY
 
-    langfuse:
-      enabled: repl{{ ConfigOptionEquals "langfuse_enabled" "1" }}
-
     runtime-api:
       enabled: true
       replicaCount: 1
@@ -244,9 +241,6 @@ spec:
     gitlab:
       enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
 
-    clickhouse:
-      enabled: repl{{ ConfigOptionEquals "clickhouse_enabled" "1" }}
-
     automation:
       image:
         tag: "sha-36b5df4"
@@ -324,33 +318,6 @@ spec:
           postgresql:
             image:
               repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
-    - when: '{{repl ConfigOptionEquals "langfuse_enabled" "1" }}'
-      recursiveMerge: true
-      values:
-        langfuse:
-          langfuse:
-            image:
-              pullSecrets:
-                - '{{repl ImagePullSecretName }}'
-            web:
-              image:
-                repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/langfuse/langfuse'
-            worker:
-              image:
-                repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/langfuse/langfuse-worker'
-    - when: '{{repl ConfigOptionEquals "clickhouse_enabled" "1" }}'
-      recursiveMerge: true
-      values:
-        clickhouse:
-          image:
-            repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/clickhouse'
-          keeper:
-            image:
-              repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/clickhouse-keeper'
-          defaultInitContainers:
-            volumePermissions:
-              image:
-                repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/os-shell'
     - when: '{{repl HasLocalRegistry }}'
       recursiveMerge: true
       values:
@@ -403,24 +370,6 @@ spec:
         minio:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/minio'
-        clickhouse:
-          image:
-            repository: '{{repl LocalRegistryNamespace }}/clickhouse'
-          keeper:
-            image:
-              repository: '{{repl LocalRegistryNamespace }}/clickhouse-keeper'
-          defaultInitContainers:
-            volumePermissions:
-              image:
-                repository: '{{repl LocalRegistryNamespace }}/os-shell'
-        langfuse:
-          langfuse:
-            web:
-              image:
-                repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/langfuse'
-            worker:
-              image:
-                repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/langfuse-worker'
         litellm-helm:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/litellm-database'
@@ -441,7 +390,7 @@ spec:
         {{repl $llmDomain := $derive | ternary (printf "llm-proxy.%s" $bd) (ConfigOption "llm_proxy_hostname") }}
         {{repl $runtimeApiDomain := $derive | ternary (printf "runtime-api.%s" $bd) (ConfigOption "runtime_api_hostname") }}
         {{repl $runtimeBaseDomain := $derive | ternary (printf "runtime.%s" $bd) (ConfigOption "runtime_base_hostname") }}
-        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak,keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
+        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak,keycloak-headless,kubernetes,localhost,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
         {{repl if ne $bd "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $bd }}{{repl end }}
         {{repl if ne $appDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $appDomain }}{{repl end }}
         {{repl if ne $authDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $authDomain }}{{repl end }}
@@ -516,11 +465,7 @@ spec:
             location: '{{repl ConfigOption "google_vertex_location"}}'
 
   builder:
-    clickhouse:
-      enabled: true
     keycloak:
-      enabled: true
-    langfuse:
       enabled: true
     litellm:
       enabled: true

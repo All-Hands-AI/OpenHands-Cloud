@@ -30,7 +30,7 @@
       done
   env:
     - name: DATABASES
-      value: "{{ .Values.keycloak.externalDatabase.database }}{{- if (index .Values "litellm-helm").enabled }} {{ (index .Values "litellm-helm").db.database }}{{- end }}{{- if .Values.langfuse.enabled }} {{ .Values.langfuse.postgresql.auth.database }}{{- end }}"
+      value: "{{ .Values.keycloak.externalDatabase.database }}{{- if (index .Values "litellm-helm").enabled }} {{ (index .Values "litellm-helm").db.database }}{{- end }}"
     {{- include "openhands.env" . | nindent 4 }}
 {{- end }}
 {{- if .Values.databaseMigrations.migrate }}

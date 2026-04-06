@@ -100,15 +100,6 @@ kubectl create secret generic redis -n openhands \
 kubectl create secret generic lite-llm-api-key -n openhands \
   --from-literal=lite-llm-api-key=$GLOBAL_SECRET
 
-kubectl create secret generic langfuse-salt -n openhands \
-  --from-literal=salt=$GLOBAL_SECRET
-
-kubectl create secret generic langfuse-nextauth -n openhands \
-  --from-literal=nextauth-secret=$GLOBAL_SECRET
-
-kubectl create secret generic clickhouse-password -n openhands \
-  --from-literal=password=$GLOBAL_SECRET
-
 kubectl create secret generic admin-password -n openhands \
   --from-literal=admin-password=$GLOBAL_SECRET
 
@@ -126,11 +117,8 @@ You should now have these secrets in the openhands namespace:
 kubectl get secret -n openhands
 
 NAME                  TYPE     DATA   AGE
-clickhouse-password   Opaque   1      13s
 default-api-key       Opaque   1      7s
 jwt-secret            Opaque   1      44s
-langfuse-nextauth     Opaque   1      18s
-langfuse-salt         Opaque   1      23s
 lite-llm-api-key      Opaque   1      28s
 litellm-env-secrets   Opaque   1      2m8s
 postgres-password     Opaque   3      39s

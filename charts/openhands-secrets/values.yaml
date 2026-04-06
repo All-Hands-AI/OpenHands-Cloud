@@ -14,9 +14,6 @@ config:
   keycloak_admin_password: ""
   keycloak_client_secret: ""
   litellm_api_key: ""
-  langfuse_salt: ""
-  langfuse_nextauth_secret: ""
-  clickhouse_password: ""
   default_api_key: ""
   sandbox_api_key: ""
   

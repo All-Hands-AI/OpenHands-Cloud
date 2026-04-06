@@ -264,24 +264,6 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
-        - name: langfuse_salt
-          title: Langfuse Salt
-          help_text: Salt for Langfuse password hashing
-          type: password
-          hidden: true
-          value: '{{repl RandomString 32}}'
-        - name: langfuse_nextauth_secret
-          title: Langfuse NextAuth Secret
-          help_text: NextAuth secret for Langfuse
-          type: password
-          hidden: true
-          value: '{{repl RandomString 32}}'
-        - name: clickhouse_password
-          title: ClickHouse Password
-          help_text: Password for ClickHouse database
-          type: password
-          hidden: true
-          value: '{{repl RandomString 32}}'
         - name: default_api_key
           title: Default API Key
           help_text: Default API key for OpenHands
@@ -591,15 +573,3 @@ spec:
       description: Optional components and advanced configuration settings
       when: false
       items:
-        - name: langfuse_enabled
-          title: Enable Langfuse
-          help_text: Enable Langfuse for LLM observability, tracing, and analytics
-          type: bool
-          default: "0"
-          hidden: true
-        - name: clickhouse_enabled
-          title: Enable ClickHouse
-          help_text: Enable ClickHouse for analytics and time-series data storage
-          type: bool
-          default: "0"
-          hidden: true

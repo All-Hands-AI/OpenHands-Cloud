@@ -49,26 +49,6 @@ spec:
     app.kubernetes.io/name: postgresql
     app.kubernetes.io/component: primary
 {{- end }}
-{{- if and .Values.redis.enabled .Values.langfuse.enabled }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: oh-main-redis
-spec:
-  type: ClusterIP
-  internalTrafficPolicy: Cluster
-  sessionAffinity: None
-  ports:
-    - name: tcp-redis
-      port: 6379
-      targetPort: redis
-      nodePort: null
-  selector:
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/name: redis
-    app.kubernetes.io/component: master
-{{- end }}
 {{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
 ---
 apiVersion: v1
@@ -86,56 +66,4 @@ spec:
   selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/name: litellm
-{{- end }}
-{{- if .Values.clickhouse.enabled }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: oh-main-clickhouse
-  namespace: openhands
-  labels:
-    app: clickhouse
-spec:
-  type: ClusterIP
-  ports:
-    - name: http
-      port: 8123
-      protocol: TCP
-      targetPort: 8123
-    - name: tcp
-      port: 9000
-      protocol: TCP
-      targetPort: 9000
-    - name: tcp-mysql
-      port: 9004
-      protocol: TCP
-      targetPort: 9004
-    - name: tcp-postgresql
-      port: 9005
-      protocol: TCP
-      targetPort: 9005
-    - name: http-intersrv
-      port: 9009
-      protocol: TCP
-      targetPort: 9009
-  selector:
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/name: clickhouse
-{{- end }}
-{{- if .Values.langfuse.enabled }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: oh-main-langfuse
-spec:
-  type: ClusterIP
-  ports:
-    - name: http
-      port: 3000
-      targetPort: http
-      nodePort: null
-  selector:
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/name: langfuse
 {{- end }}
