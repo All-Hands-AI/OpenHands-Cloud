@@ -53,21 +53,18 @@
     - |
       ENDPOINT="http://{{ printf "%s-rustfs-svc:9000" $.Release.Name }}"
       BUCKET="{{ .Values.filestore.bucket }}"
-      until curl -sf "$ENDPOINT/minio/health/live" > /dev/null 2>&1; do
-        echo "Waiting for RustFS to be ready..."
-        sleep 2
+      CREDS="{{ .Values.rustfs.secret.rustfs.access_key }}:{{ .Values.rustfs.secret.rustfs.secret_key }}"
+      while true; do
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          --aws-sigv4 "aws:amz:us-east-1:s3" \
+          --user "$CREDS" \
+          -X PUT "$ENDPOINT/$BUCKET" 2>/dev/null)
+        case "$STATUS" in
+          200) echo "Bucket '$BUCKET' created"; exit 0 ;;
+          409) echo "Bucket '$BUCKET' already exists"; exit 0 ;;
+          000) echo "Waiting for RustFS to be reachable..."; sleep 2 ;;
+          *)   echo "Bucket creation returned HTTP $STATUS, retrying..."; sleep 2 ;;
+        esac
       done
-      STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-        --aws-sigv4 "aws:amz:us-east-1:s3" \
-        --user "{{ .Values.rustfs.secret.rustfs.access_key }}:{{ .Values.rustfs.secret.rustfs.secret_key }}" \
-        -X PUT "$ENDPOINT/$BUCKET")
-      if [ "$STATUS" = "200" ]; then
-        echo "Bucket '$BUCKET' created"
-      elif [ "$STATUS" = "409" ]; then
-        echo "Bucket '$BUCKET' already exists"
-      else
-        echo "Failed to create bucket '$BUCKET' (HTTP $STATUS)"
-        exit 1
-      fi
 {{- end }}
 {{- end }}
