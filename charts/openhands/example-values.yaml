@@ -34,10 +34,18 @@ keycloak:
   enabled: true
   ingress:
     enabled: false
-    hostname: "auth.app.example.com"
     annotations: {}
     # Value should match your Issuer/ClusterIssuer and uncomment if you're using cert-manager for certificates
     # cert-manager.io/cluster-issuer: letsencrypt
+    rules: []
+    #  - host: auth.app.example.com
+    #    paths:
+    #      - path: /
+    #        pathType: Prefix
+    tls: []
+    #  - secretName: keycloak-tls
+    #    hosts:
+    #      - auth.app.example.com
 
 postgresql:
   enabled: true

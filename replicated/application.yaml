@@ -27,7 +27,7 @@ spec:
 
     # keycloak
     - openhands/statefulset/keycloak
-    - openhands/service/keycloak
+    - openhands/service/keycloak-http
 
     # postgres
     - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/statefulset/openhands-postgresql{{repl end}}'
