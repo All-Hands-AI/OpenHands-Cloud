@@ -45,18 +45,22 @@ automationBaseUrl: ""
 
 # PostgreSQL database configuration
 database:
-  # Full hostname of the PostgreSQL server
-  # Examples:
-  #   - Cloud SQL: "my-project:us-central1:my-instance"
-  #   - In-cluster: "openhands-main-postgresql"
-  #   - Feature env: "openhands-feature-branch-postgresql"
+  # Hostname of the PostgreSQL server
   host: ""
+  # Port of the PostgreSQL server
   port: "5432"
+  # Database user
   user: "automation_user"
+  # Database name
   name: "automations"
-  # Secret containing the automation database password
+  # Name of the Kubernetes secret containing the database password
   secretName: "automation-db-secret"
+  # Key within the secret that holds the password
   secretKey: "db-password"
+  # Create the database if it does not exist
+  createDatabases: false
+  # Run database migrations on startup
+  migrate: true
 
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:

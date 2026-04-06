@@ -69,22 +69,27 @@ tolerations: []
 affinity: {}
 
 # PostgreSQL database configuration
+# PostgreSQL database configuration
 database:
-  # Full hostname of the PostgreSQL server
+  # Hostname of the PostgreSQL server
   host: "oh-main-postgresql-rw"
+  # Port of the PostgreSQL server
   port: "5432"
+  # Database user
   user: "postgres"
+  # Database name
   name: "runtime_api_db"
-  # Secret containing the database password
+  # Name of the Kubernetes secret containing the database password
   secretName: "postgres-password"
+  # Key within the secret that holds the password
   secretKey: "password"
-  # Create database on startup via init container
+  # Create the database if it does not exist
   createDatabases: false
-  # Run alembic migrations on startup
+  # Run database migrations on startup
   migrate: true
-  # Create database and user via a Job (used for AWS where terraform doesn't create it)
+  # Create database user if it does not exist
   create: false
-  # Secret containing external database credentials (for create-db-user-job)
+  # Name of the secret containing credentials for user creation
   createJobSecretName: "runtime-api-db-credentials"
   poolSize:
     api: 5

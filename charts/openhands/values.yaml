@@ -491,21 +491,21 @@ minio:
 
 # PostgreSQL database configuration
 database:
-  # Full hostname of the PostgreSQL server
-  # Examples:
-  #   - In-cluster CNPG: "oh-main-postgresql-rw"
-  #   - Cloud SQL: "my-project:us-central1:my-instance"
-  #   - External: "postgres.example.com"
+  # Hostname of the PostgreSQL server
   host: "oh-main-postgresql-rw"
+  # Port of the PostgreSQL server
   port: "5432"
+  # Database user
   user: "postgres"
+  # Database name
   name: "openhands"
-  # Secret containing the database password
+  # Name of the Kubernetes secret containing the database password
   secretName: "postgres-password"
+  # Key within the secret that holds the password
   secretKey: "password"
-  # Create databases for openhands and its dependencies (keycloak, litellm, langfuse)
+  # Create the database if it does not exist
   createDatabases: false
-  # Run alembic migrations on startup
+  # Run database migrations on startup
   migrate: true
 
 # CloudNative-PG embedded PostgreSQL cluster

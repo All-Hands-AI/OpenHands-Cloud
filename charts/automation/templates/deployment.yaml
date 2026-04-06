@@ -37,6 +37,7 @@ spec:
             echo "PostgreSQL is up and running!"
         env:
         {{- include "automation.env" . | nindent 8 }}
+      {{- if .Values.database.createDatabases }}
       - name: create-db
         image: postgres:16
         command: ['sh', '-c']
@@ -49,11 +50,14 @@ spec:
             $PSQL -d postgres -c "CREATE DATABASE $AUTOMATION_DB_NAME;"
         env:
         {{- include "automation.env" . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.database.migrate }}
       - name: migrate
         image: '{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}'
         command: ["alembic", "upgrade", "head"]
         env:
         {{- include "automation.env" . | nindent 8 }}
+      {{- end }}
       containers:
       - name: automation
         imagePullPolicy: Always
