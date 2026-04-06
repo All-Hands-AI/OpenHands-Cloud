@@ -14,6 +14,18 @@ deployment:
       memory: 512Mi
       cpu: 500m
 
+# Temporal worker deployment configuration
+# Workers process automation workflows by polling the Temporal task queue
+worker:
+  replicas: 1
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
 securityContext:
   runAsUser: 42420
   runAsGroup: 42420
@@ -155,6 +167,112 @@ postgresql:
       postgresql: 5432
   image:
     repository: bitnamilegacy/postgresql
+
+# Temporal workflow engine configuration
+# Temporal provides durable workflow execution for automation runs
+#
+# Two deployment modes:
+# 1. Standalone: Set temporal.enabled=true to deploy Temporal as a subchart
+# 2. External: Set temporal.enabled=false and configure temporal.external
+#    to use an existing Temporal cluster
+#
+# When deployed as subchart of openhands:
+#   - Temporal reuses the parent's PostgreSQL instance
+#   - Set temporal.enabled=true with temporal.server.config.persistence pointing to parent DB
+temporal:
+  # Deploy Temporal as a subchart
+  enabled: false
+
+  # Temporal namespace for automation workflows
+  # This namespace is auto-created when temporal.enabled=true
+  namespace: "default"
+
+  # External Temporal configuration (used when enabled=false)
+  # Configure this to point to an existing Temporal cluster
+  external:
+    host: "temporal-frontend"
+    port: 7233
+    namespace: "default"
+
+  # Task queue for automation workflows
+  taskQueue: "automations"
+
+  # Temporal subchart configuration (used when enabled=true)
+  # See: https://github.com/temporalio/helm-charts
+  server:
+    replicaCount: 1
+    config:
+      # Persistence configuration
+      # Temporal requires two datastores: default and visibility
+      persistence:
+        defaultStore: default
+        visibilityStore: visibility
+        numHistoryShards: 128
+        datastores:
+          default:
+            sql:
+              pluginName: postgres12
+              driverName: postgres12
+              databaseName: temporal
+              # connectAddr should be "host:port" format
+              # Set this to your PostgreSQL instance (e.g., "my-postgresql:5432")
+              connectAddr: ""
+              connectProtocol: "tcp"
+              user: temporal_user
+              # Use existing secret for password
+              existingSecret: temporal-db-secret
+              secretKey: password
+              # Database is created by temporal-db-init job, only manage schema here
+              createDatabase: false
+              manageSchema: true
+              maxConns: 20
+              maxIdleConns: 20
+          visibility:
+            sql:
+              pluginName: postgres12
+              driverName: postgres12
+              databaseName: temporal_visibility
+              # Same connectAddr as default store
+              connectAddr: ""
+              connectProtocol: "tcp"
+              user: temporal_user
+              existingSecret: temporal-db-secret
+              secretKey: password
+              # Database is created by temporal-db-init job, only manage schema here
+              createDatabase: false
+              manageSchema: true
+              maxConns: 10
+              maxIdleConns: 10
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # Temporal Admin Tools (includes temporal CLI)
+  admintools:
+    enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+  # Temporal Web UI
+  web:
+    enabled: true
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
 
 global:
   security:

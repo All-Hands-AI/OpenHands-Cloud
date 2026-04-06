@@ -23,6 +23,29 @@
     secretKeyRef:
       name: {{ .Values.database.secretName }}
       key: {{ .Values.database.secretKey }}
+# Temporal workflow engine configuration
+{{- if .Values.temporal.enabled }}
+# Temporal deployed as subchart - use internal service name
+# The Temporal subchart creates a service named {release-name}-frontend
+- name: AUTOMATION_TEMPORAL_HOST
+  value: "{{ .Release.Name }}-frontend"
+- name: AUTOMATION_TEMPORAL_PORT
+  value: "7233"
+# Skip in-process worker since we have a separate worker deployment.
+# This avoids conflicts between ddtrace and Temporal's workflow sandbox.
+- name: AUTOMATION_SKIP_WORKER
+  value: "true"
+{{- else }}
+# Using external Temporal cluster
+- name: AUTOMATION_TEMPORAL_HOST
+  value: {{ .Values.temporal.external.host | quote }}
+- name: AUTOMATION_TEMPORAL_PORT
+  value: {{ .Values.temporal.external.port | quote }}
+{{- end }}
+- name: AUTOMATION_TEMPORAL_NAMESPACE
+  value: {{ .Values.temporal.external.namespace | default "default" | quote }}
+- name: AUTOMATION_TEMPORAL_TASK_QUEUE
+  value: {{ .Values.temporal.taskQueue | default "automations" | quote }}
 {{- if .Values.gcp.dbInstance }}
 - name: AUTOMATION_GCP_DB_INSTANCE
   value: {{ .Values.gcp.dbInstance | quote }}
