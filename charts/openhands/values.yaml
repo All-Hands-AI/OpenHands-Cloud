@@ -287,8 +287,7 @@ clickhouse:
 
 keycloak:
   enabled: false
-  url: "http://keycloak-http"
-  fullnameOverride: keycloak
+  url: "http://openhands-keycloak-http"
   replicas: 1
 
   command:

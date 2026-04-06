@@ -243,7 +243,7 @@ spec:
     {{- end }}
     {{- if .Values.keycloak.enabled }}
     - statefulsetStatus:
-        name: keycloak
+        name: {{ .Release.Name }}-keycloak
         namespace: {{ .Release.Namespace }}
         outcomes:
           - fail:

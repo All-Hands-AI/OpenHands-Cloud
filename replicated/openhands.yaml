@@ -57,7 +57,7 @@ spec:
 
     keycloak:
       enabled: true
-      url: 'http://keycloak-http'
+      url: 'http://openhands-keycloak-http'
       resources:
         requests:
           cpu: 500m
@@ -459,7 +459,7 @@ spec:
         {{repl $llmDomain := $derive | ternary (printf "llm-proxy.%s" $bd) (ConfigOption "llm_proxy_hostname") }}
         {{repl $runtimeApiDomain := $derive | ternary (printf "runtime-api.%s" $bd) (ConfigOption "runtime_api_hostname") }}
         {{repl $runtimeBaseDomain := $derive | ternary (printf "runtime.%s" $bd) (ConfigOption "runtime_base_hostname") }}
-        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak-http,keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
+        {{repl $computedNoProxy := "127.0.0.1,cluster.local,openhands-keycloak-http,openhands-keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
         {{repl if ne $bd "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $bd }}{{repl end }}
         {{repl if ne $appDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $appDomain }}{{repl end }}
         {{repl if ne $authDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $authDomain }}{{repl end }}
