@@ -26,7 +26,6 @@ SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
 DEPLOY_REPO = "OpenHands/deploy"
 SEPARATOR = "=" * 60
-RUNTIME_IMAGE_VARIANT = "nikolaik"
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
@@ -331,15 +330,21 @@ def update_openhands_chart(
 def update_openhands_values(
     values_path: Path,
     openhands_version: str,
+    runtime_image_tag: str,
     dry_run: bool = False,
 ) -> UpdateResult:
     """Update image tags in values.yaml using cloud version format.
+
+    Args:
+        values_path: Path to the values.yaml file
+        openhands_version: The cloud version tag (e.g., 'cloud-1.21.0')
+        runtime_image_tag: The runtime image tag from deploy config (e.g., 'cloud-1.21.0-nikolaik')
+        dry_run: If True, don't write changes to file
 
     Returns UpdateResult containing changes made.
     """
     content = values_path.read_text()
     result = UpdateResult()
-    runtime_tag = f"{openhands_version}-{RUNTIME_IMAGE_VARIANT}"
 
     content = update_tag_in_content(
         content,
@@ -351,14 +356,14 @@ def update_openhands_values(
     content = update_tag_in_content(
         content,
         RUNTIME_TAG_PATTERN,
-        runtime_tag,
+        runtime_image_tag,
         "runtime image tag",
         result,
     )
     content = update_tag_in_content(
         content,
         WARM_RUNTIMES_TAG_PATTERN,
-        runtime_tag,
+        runtime_image_tag,
         "warmRuntimes image tag",
         result,
         replacement_suffix='"',
@@ -402,10 +407,16 @@ def update_runtime_api_chart(
 def update_runtime_api_values(
     values_path: Path,
     runtime_api_sha: str,
-    openhands_version: str,
+    runtime_image_tag: str,
     dry_run: bool = False,
 ) -> UpdateResult:
     """Update image tag and warmRuntimes default config image in runtime-api values.yaml.
+
+    Args:
+        values_path: Path to the values.yaml file
+        runtime_api_sha: The runtime-api commit SHA
+        runtime_image_tag: The runtime image tag from deploy config (e.g., 'cloud-1.21.0-nikolaik')
+        dry_run: If True, don't write changes to file
 
     Returns UpdateResult containing changes made.
     """
@@ -422,7 +433,7 @@ def update_runtime_api_values(
     content = update_tag_in_content(
         content,
         WARM_RUNTIMES_TAG_PATTERN,
-        f"{openhands_version}-{RUNTIME_IMAGE_VARIANT}",
+        runtime_image_tag,
         "runtime-api warmRuntimes image tag",
         result,
         replacement_suffix='"',
@@ -482,7 +493,6 @@ def resolve_openhands_version(token: str, cloud_tag: str | None) -> str | None:
 
 def update_runtime_api_workflow(
     deploy_config: DeployConfig,
-    openhands_version: str,
     dry_run: bool,
 ) -> str:
     """Update runtime-api chart and values. Returns the new chart version."""
@@ -492,7 +502,7 @@ def update_runtime_api_workflow(
     values_result = update_runtime_api_values(
         RUNTIME_API_VALUES_PATH,
         deploy_config.runtime_api_sha,
-        openhands_version,
+        deploy_config.openhands_runtime_image_tag,
         dry_run=dry_run,
     )
     values_result.print_summary()
@@ -510,6 +520,7 @@ def update_runtime_api_workflow(
 
 
 def update_openhands_workflow(
+    deploy_config: DeployConfig,
     openhands_version: str,
     runtime_api_version: str,
     dry_run: bool,
@@ -521,6 +532,7 @@ def update_openhands_workflow(
     values_result = update_openhands_values(
         VALUES_PATH,
         openhands_version,
+        deploy_config.openhands_runtime_image_tag,
         dry_run=dry_run,
     )
     values_result.print_summary()
@@ -566,14 +578,13 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     print(f"Deploy config (from {version_number}):")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
+    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
 
     print()
-    runtime_api_version = update_runtime_api_workflow(
-        deploy_config, openhands_version, dry_run
-    )
+    runtime_api_version = update_runtime_api_workflow(deploy_config, dry_run)
 
     print()
-    update_openhands_workflow(openhands_version, runtime_api_version, dry_run)
+    update_openhands_workflow(deploy_config, openhands_version, runtime_api_version, dry_run)
 
 
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
