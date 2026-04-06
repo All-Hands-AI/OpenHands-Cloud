@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: langfuse-nextauth
-  namespace: {{ .Release.Namespace }}
-type: Opaque
-data:
-  nextauth-secret: {{ .Values.config.langfuse_nextauth_secret | b64enc | quote }}
