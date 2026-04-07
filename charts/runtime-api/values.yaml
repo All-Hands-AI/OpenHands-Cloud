@@ -69,7 +69,6 @@ tolerations: []
 affinity: {}
 
 # PostgreSQL database configuration
-# PostgreSQL database configuration
 database:
   # Hostname of the PostgreSQL server
   host: "oh-main-postgresql-rw"
@@ -83,6 +82,8 @@ database:
   secretName: "postgres-password"
   # Key within the secret that holds the password
   secretKey: "password"
+  # Wait for the database to be ready before starting the application
+  waitForDatabase: true
   # Create the database if it does not exist
   createDatabases: false
   # Run database migrations on startup

@@ -24,6 +24,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
+      {{- if .Values.database.waitForDatabase }}
       - name: wait-for-db
         image: postgres:16
         command: ['sh', '-c']
@@ -37,6 +38,7 @@ spec:
             echo "PostgreSQL is up and running!"
         env:
         {{- include "automation.env" . | nindent 8 }}
+      {{- end }}
       {{- if .Values.database.createDatabases }}
       - name: create-db
         image: postgres:16

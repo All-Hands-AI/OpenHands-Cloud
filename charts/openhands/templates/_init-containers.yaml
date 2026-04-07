@@ -1,4 +1,5 @@
 {{- define "openhands.dbInitContainers" }}
+{{- if .Values.database.waitForDatabase }}
 - name: wait-for-db
   image: "postgres:16"
   command: ['sh', '-c']
@@ -14,6 +15,7 @@
       echo "PostgreSQL is up and running!"
   env:
     {{- include "openhands.env" . | nindent 4 }}
+{{- end }}
 {{- if .Values.database.createDatabases }}
 - name: create-db
   image: "postgres:16"

@@ -503,6 +503,8 @@ database:
   secretName: "postgres-password"
   # Key within the secret that holds the password
   secretKey: "password"
+  # Wait for the database to be ready before starting the application
+  waitForDatabase: true
   # Create the database if it does not exist
   createDatabases: false
   # Run database migrations on startup
@@ -601,6 +603,7 @@ runtime-api:
           - --user-id
           - "0"
   database:
+    waitForDatabase: true
     createDatabases: false
     migrate: true
   ingress:
@@ -705,6 +708,8 @@ automation:
     # Secret containing the automation database password
     secretName: "automation-db-secret"
     secretKey: "db-password"
+    # Wait for the database to be ready before starting the application
+    waitForDatabase: true
     # Create database and user in an existing PostgreSQL instance
     # When true, runs an init container to create the database and user
     # Useful when sharing a PostgreSQL instance with other services

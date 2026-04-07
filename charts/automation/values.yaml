@@ -57,6 +57,8 @@ database:
   secretName: "automation-db-secret"
   # Key within the secret that holds the password
   secretKey: "db-password"
+  # Wait for the database to be ready before starting the application
+  waitForDatabase: true
   # Create the database if it does not exist
   createDatabases: false
   # Run database migrations on startup
