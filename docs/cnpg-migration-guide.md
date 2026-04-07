@@ -13,8 +13,6 @@ This guide covers migrating the embedded PostgreSQL from the Bitnami subchart to
 
 ## Step 1: Dump All Databases
 
-The dump runs as a Kubernetes Job that writes directly to a PVC inside the cluster. This avoids streaming data through `kubectl` (which can timeout via API server or load balancer idle limits).
-
 ### 1a. Set variables
 
 ```bash
@@ -112,7 +110,7 @@ kubectl wait --for=condition=Available deployment/cnpg-operator-cloudnative-pg \
 
 ## Step 3: Scale Down All Workloads
 
-Scale everything to zero and suspend all CronJobs so nothing writes to the database during the migration.
+Scale everything to zero so nothing writes to the database during the migration.
 
 ```bash
 kubectl scale deployment -n $NAMESPACE --all --replicas=0
@@ -173,7 +171,7 @@ cnpg:
     # storageClass: ""  # set if you need a specific storage class
 ```
 
-**Update `runtime-api`**: Remove the old `databaseMigrations`, `postgresql`, and `externalDatabase` keys. Also remove `DB_HOST` from `runtime-api.env` if present — the chart now derives it from `database.host` automatically. Add:
+**Update `runtime-api`**: Remove the old `databaseMigrations`, `postgresql`, and `externalDatabase` keys. Also remove `DB_HOST` from `runtime-api.env` if present. Add:
 
 ```yaml
 runtime-api:
@@ -202,8 +200,6 @@ langfuse:
 
 ### 4b. Run the helm upgrade with replicas held at zero
 
-This creates the CNPG cluster without starting any application pods:
-
 ```bash
 helm upgrade openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands --version <VERSION> \
   -n $NAMESPACE \
@@ -228,8 +224,6 @@ kubectl scale statefulset -n $NAMESPACE --all --replicas=0
 kubectl wait --for=condition=Ready cluster/oh-main-postgresql \
   -n $NAMESPACE --timeout=300s
 ```
-
-At this point only `oh-main-postgresql-1` should be running.
 
 ## Step 5: Restore the Database Dump
 
@@ -275,9 +269,9 @@ kubectl wait --for=condition=Complete job/pg-migration-restore -n $NAMESPACE --t
 kubectl logs job/pg-migration-restore -n $NAMESPACE
 ```
 
-You will see some harmless errors like `role "postgres" already exists`. Review the output to confirm there are no unexpected errors.
+You will see some harmless errors like `role "postgres" already exists`. This is expected.
 
-Clean up the migration resources:
+Clean up:
 
 ```bash
 kubectl delete job pg-migration-restore -n $NAMESPACE
@@ -295,7 +289,7 @@ helm upgrade openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands --versio
   --wait --timeout 600s
 ```
 
-Application pods start up with init containers that run `alembic upgrade head` against the restored data, applying any new migrations before the application starts.
+Database migrations run automatically on startup.
 
 ## Verification
 
@@ -314,9 +308,9 @@ Application pods start up with init containers that run `alembic upgrade head` a
 
 ## Rollback
 
-The old Bitnami PostgreSQL PVC is preserved during migration. If you need to roll back:
+The old Bitnami PostgreSQL PVC is preserved during migration.
 
-1. `helm rollback openhands` to the previous revision — the Bitnami StatefulSet reattaches the original PVC with all data intact
+1. `helm rollback openhands` to the previous revision
 2. Uninstall the CNPG operator
 
 ## Cleanup
