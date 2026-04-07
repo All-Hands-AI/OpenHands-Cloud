@@ -33,6 +33,7 @@ spec:
       paths:
       {{- if .Values.automation.events.enabled }}
       # Route webhook events to dedicated events pods
+      # IMPORTANT: This more specific path must come before the general /api/automation path
       - path: /api/automation/v1/events
         pathType: Prefix
         backend:
