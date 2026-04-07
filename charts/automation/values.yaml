@@ -45,26 +45,24 @@ automationBaseUrl: ""
 
 # PostgreSQL database configuration
 database:
-  # Full hostname of the PostgreSQL server
-  # Examples:
-  #   - Cloud SQL: "my-project:us-central1:my-instance"
-  #   - In-cluster: "openhands-main-postgresql"
-  #   - Feature env: "openhands-feature-branch-postgresql"
+  # Hostname of the PostgreSQL server
   host: ""
+  # Port of the PostgreSQL server
   port: "5432"
+  # Database user
   user: "automation_user"
+  # Database name
   name: "automations"
-  # Secret containing the automation database password
+  # Name of the Kubernetes secret containing the database password
   secretName: "automation-db-secret"
+  # Key within the secret that holds the password
   secretKey: "db-password"
-  # Create database and user in an existing PostgreSQL instance
-  # When true, runs an init container to create the database and user
-  # Useful when sharing a PostgreSQL instance with other services
-  createDatabaseUser: false
-  # Secret containing the postgres superuser password (for creating the automation user)
-  # Only used when createDatabaseUser=true
-  superuserSecretName: "postgres-password"
-  superuserSecretKey: "password"
+  # Wait for the database to be ready before starting the application
+  waitForDatabase: true
+  # Create the database if it does not exist
+  createDatabases: false
+  # Run database migrations on startup
+  migrate: true
 
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:
@@ -136,25 +134,6 @@ datadog:
 
 # Env vars passed directly to the container
 env: {}
-
-# PostgreSQL subchart configuration (for ephemeral/feature environments)
-# When enabled, deploys an in-cluster PostgreSQL instance
-# Service name will be "{release-name}-postgresql", secret name also "{release-name}-postgresql"
-postgresql:
-  enabled: false
-  auth:
-    username: postgres
-    database: automations
-  primary:
-    persistence:
-      enabled: false
-    initdb:
-      scriptsConfigMap: ""
-  service:
-    ports:
-      postgresql: 5432
-  image:
-    repository: bitnamilegacy/postgresql
 
 global:
   security:

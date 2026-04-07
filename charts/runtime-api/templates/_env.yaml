@@ -3,6 +3,14 @@
 - name: {{ $key }}
   value: {{ $value | quote }}
 {{- end }}
+- name: DB_HOST
+  value: {{ .Values.database.host | quote }}
+- name: DB_PORT
+  value: {{ .Values.database.port | quote }}
+- name: DB_USER
+  value: {{ .Values.database.user | quote }}
+- name: DB_NAME
+  value: {{ .Values.database.name | quote }}
 - name: RUNTIME_DEAD_SECONDS
   value: {{ printf "%.0f" .Values.cleanup.dead_seconds | quote }}
 {{- if .Values.runtimeInSameCluster }}
@@ -36,26 +44,9 @@
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"resource": "GET /health", "sample_rate": 0.0}, {"resource": "GET /internal/metrics", "sample_rate": 0.0}]'
 {{- end }}
-{{- if .Values.postgresql.enabled }}
-- name: DB_HOST
-  value: "{{ .Release.Name }}-postgresql"
-- name: DB_USER
-  value: "{{ .Values.postgresql.auth.username }}"
-- name: DB_NAME
-  value: "{{ .Values.postgresql.auth.database }}"
-{{- else if .Values.database.create }} # should only be true for AWS deploys
-- name: DB_HOST
-  value: "{{.Values.database.host}}"
-- name: DB_PORT
-  value: "{{.Values.database.port}}"
-- name: DB_USER
-  value: "{{.Values.database.new_user}}"
-- name: DB_NAME
-  value: "{{.Values.database.name}}"
-{{- end }}
 - name: DB_PASS
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.postgresql.auth.existingSecret }}
-      key: password
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
 {{- end }}

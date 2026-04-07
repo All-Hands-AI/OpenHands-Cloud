@@ -27,11 +27,6 @@ datadog:
 debuggingRoutes:
   enabled: false
 
-databaseMigrations:
-  waitForDatabase: true
-  createDatabases: false
-  migrate: true
-
 deployment:
   replicas: 1
   resources:
@@ -314,7 +309,7 @@ keycloak:
   postgresql:
     enabled: false
   externalDatabase:
-    host: oh-main-postgresql
+    host: oh-main-postgresql-rw
     database: bitnami_keycloak
     existingSecret: postgres-password
     existingSecretUserKey: username
@@ -331,7 +326,7 @@ keycloak:
   image:
     repository: bitnamilegacy/keycloak
   waitForDb:
-    image: "bitnamilegacy/postgresql:latest"
+    image: "postgres:16"
   initContainers:
     - name: wait-for-db
       # The Bitnami Keycloak subchart renders initContainers through common.tplvalues.render,
@@ -393,7 +388,7 @@ langfuse:
       existingSecretKey: password
   postgresql:
     deploy: false
-    host: oh-main-postgresql
+    host: oh-main-postgresql-rw
     auth:
       username: postgres
       database: postgres_langfuse
@@ -425,7 +420,7 @@ litellm-helm:
     deployStandalone: false
     useExisting: true
     database: litellm
-    endpoint: "oh-main-postgresql"
+    endpoint: "oh-main-postgresql-rw"
     secret:
       name: postgres-password
       usernameKey: username
@@ -494,28 +489,34 @@ minio:
       memory: 512Mi
       cpu: 100m
 
-postgresql:
-  enabled: true
-  auth:
-    username: postgres
-    existingSecret: postgres-password
-  primary:
-    initdb:
-      scriptsConfigMap: ""
-    persistence:
-      enabled: false
-    # Add the following if using Karpenter with persistence
-    # podAnnotations:
-    #   karpenter.sh/do-not-evict: "true"
-  service:
-    ports:
-      postgresql: 5432
-  image:
-    repository: bitnamilegacy/postgresql
+# PostgreSQL database configuration
+database:
+  # Hostname of the PostgreSQL server
+  host: "oh-main-postgresql-rw"
+  # Port of the PostgreSQL server
+  port: "5432"
+  # Database user
+  user: "postgres"
+  # Database name
+  name: "openhands"
+  # Name of the Kubernetes secret containing the database password
+  secretName: "postgres-password"
+  # Key within the secret that holds the password
+  secretKey: "password"
+  # Wait for the database to be ready before starting the application
+  waitForDatabase: true
+  # Create the database if it does not exist
+  createDatabases: false
+  # Run database migrations on startup
+  migrate: true
 
-externalDatabase:
-  enabled: false
-  existingSecret: postgres-password
+# CloudNative-PG embedded PostgreSQL cluster
+cnpg:
+  enabled: true
+  instances: 1
+  storage:
+    size: 10Gi
+    storageClass: ""
 
 redis:
   enabled: true
@@ -601,17 +602,10 @@ runtime-api:
           - root
           - --user-id
           - "0"
-  databaseMigrations:
+  database:
     waitForDatabase: true
     createDatabases: false
     migrate: true
-  postgresql:
-    auth:
-      username: postgres
-      existingSecret: postgres-password
-  externalDatabase:
-    enabled: false
-    existingSecret: postgres-password
   ingress:
     enabled: false
     # REQUIRED: Update to a hostname in a DNS domain you own
@@ -621,7 +615,7 @@ runtime-api:
       cert-manager.io/cluster-issuer: letsencrypt-production
     tls: true
   env:
-    DB_HOST: oh-main-postgresql
+    DB_HOST: oh-main-postgresql-rw
     DB_USER: postgres
     DB_NAME: runtime_api_db
     K8S_NAMESPACE: "openhands"
@@ -714,6 +708,8 @@ automation:
     # Secret containing the automation database password
     secretName: "automation-db-secret"
     secretKey: "db-password"
+    # Wait for the database to be ready before starting the application
+    waitForDatabase: true
     # Create database and user in an existing PostgreSQL instance
     # When true, runs an init container to create the database and user
     # Useful when sharing a PostgreSQL instance with other services

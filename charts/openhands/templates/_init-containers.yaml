@@ -1,7 +1,7 @@
 {{- define "openhands.dbInitContainers" }}
-{{- if .Values.databaseMigrations.waitForDatabase }}
+{{- if .Values.database.waitForDatabase }}
 - name: wait-for-db
-  image: "bitnamilegacy/postgresql:latest"
+  image: "postgres:16"
   command: ['sh', '-c']
   args:
     - |
@@ -16,9 +16,9 @@
   env:
     {{- include "openhands.env" . | nindent 4 }}
 {{- end }}
-{{- if .Values.databaseMigrations.createDatabases }}
+{{- if .Values.database.createDatabases }}
 - name: create-db
-  image: "bitnamilegacy/postgresql:latest"
+  image: "postgres:16"
   command: ['sh', '-c']
   args:
     - |
@@ -35,7 +35,7 @@
       value: "{{ .Values.keycloak.externalDatabase.database }}{{- if (index .Values "litellm-helm").enabled }} {{ (index .Values "litellm-helm").db.database }}{{- end }}{{- if .Values.langfuse.enabled }} {{ .Values.langfuse.postgresql.auth.database }}{{- end }}"
     {{- include "openhands.env" . | nindent 4 }}
 {{- end }}
-{{- if .Values.databaseMigrations.migrate }}
+{{- if .Values.database.migrate }}
 - name: migrate-db
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
   command: ["/bin/sh", "-c"]

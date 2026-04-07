@@ -52,14 +52,13 @@ spec:
           - app=openhands-mcp
         limits:
           maxAge: 720h
-    {{- if .Values.postgresql.enabled }}
-    # PostgreSQL logs (Bitnami chart)
+    {{- if .Values.cnpg.enabled }}
+    # PostgreSQL logs (CNPG)
     - logs:
-        name: app/{{ .Release.Name }}-postgresql/logs
+        name: app/oh-main-postgresql/logs
         namespace: {{ .Release.Namespace }}
         selector:
-          - app.kubernetes.io/name=postgresql
-          - app.kubernetes.io/instance={{ .Release.Name }}
+          - cnpg.io/cluster=oh-main-postgresql
         limits:
           maxAge: 168h
     {{- end }}
@@ -126,15 +125,15 @@ spec:
         namespace: ingress-nginx
         limits:
           maxAge: 168h
-    {{- if .Values.postgresql.enabled }}
+    {{- if .Values.cnpg.enabled }}
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://postgres:@{{ .Release.Name }}-postgresql:5432/openhands?sslmode=disable
+        uri: postgresql://{{ .Values.database.user }}:@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}?sslmode=disable
         tls:
           disabled: true
         password:
-          secretName: {{ .Release.Name }}-postgresql
-          secretKey: postgres-password
+          secretName: {{ .Values.database.secretName }}
+          secretKey: {{ .Values.database.secretKey }}
     {{- end }}
     {{- if .Values.redis.enabled }}
     - redis:
@@ -217,17 +216,17 @@ spec:
               when: ">= 1"
               message: "OpenHands Runtime API deployment is ready"
     {{- end }}
-    {{- if .Values.postgresql.enabled }}
+    {{- if .Values.cnpg.enabled }}
     - statefulsetStatus:
-        name: {{ .Release.Name }}-postgresql
+        name: oh-main-postgresql-1
         namespace: {{ .Release.Namespace }}
         outcomes:
           - fail:
               when: "< 1"
-              message: "OpenHands PostgreSQL statefulset is not ready"
+              message: "OpenHands PostgreSQL (CNPG) is not ready"
           - pass:
               when: ">= 1"
-              message: "OpenHands PostgreSQL statefulset is ready"
+              message: "OpenHands PostgreSQL (CNPG) is ready"
     {{- end }}
     {{- if .Values.redis.enabled }}
     - statefulsetStatus:
@@ -263,7 +262,7 @@ spec:
           - pass:
               when: ">= 1"
               message: "Ingress NGINX controller deployment is ready"
-    {{- if .Values.postgresql.enabled }}
+    {{- if .Values.cnpg.enabled }}
     - postgresql:
         checkName: "PostgreSQL Database Health"
         collectorName: postgresql
@@ -274,9 +273,6 @@ spec:
           - fail:
               when: "version == \"\""
               message: "PostgreSQL version could not be determined"
-          - warn:
-              when: "version < 12.0.0"
-              message: "PostgreSQL version is older than recommended (12.0.0+)"
           - pass:
               when: "connected == true"
               message: "PostgreSQL database is healthy"

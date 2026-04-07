@@ -1,7 +1,7 @@
 {{- define "runtime-api.dbInitContainers" }}
-{{- if .Values.databaseMigrations.waitForDatabase }}
+{{- if .Values.database.waitForDatabase }}
 - name: wait-for-db
-  image: "bitnamilegacy/postgresql:latest"
+  image: "postgres:16"
   command: ['sh', '-c']
   args:
     - |
@@ -16,9 +16,9 @@
   env:
     {{- include "runtime-api.env" . | nindent 4 }}
 {{- end }}
-{{- if .Values.databaseMigrations.createDatabases }}
+{{- if .Values.database.createDatabases }}
 - name: create-db
-  image: "bitnamilegacy/postgresql:latest"
+  image: "postgres:16"
   command: ['sh', '-c']
   args:
     - |
@@ -31,7 +31,7 @@
   env:
     {{- include "runtime-api.env" . | nindent 4 }}
 {{- end }}
-{{- if .Values.databaseMigrations.migrate }}
+{{- if .Values.database.migrate }}
 - name: migrate-db
   image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
   command: ["alembic", "upgrade", "head"]
