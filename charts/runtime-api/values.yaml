@@ -4,6 +4,7 @@ fullnameOverride: ""
 replicaCount: 1
 
 databaseMigrations:
+  waitForDatabase: true
   createDatabases: false
   migrate: true
 
