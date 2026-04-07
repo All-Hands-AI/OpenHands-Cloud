@@ -146,10 +146,10 @@ serviceKeyFromSecret:
   name: automation-service-key
   key: automation-service-key
 
-# GitHub App webhook secret from K8s secret
-# Used to verify webhook signatures from GitHub App installations
-githubAppWebhookSecretFromSecret:
-  name: automation-github-app-webhook-secret
+# Automation webhook secret from K8s secret
+# Used to verify webhook signatures for automation events
+automationWebhookSecretFromSecret:
+  name: automation-webhook-secret
   key: webhook-secret
 
 # Datadog configuration

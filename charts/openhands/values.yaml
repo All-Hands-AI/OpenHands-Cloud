@@ -655,6 +655,12 @@ automationService:
   # Enable forwarding events to the automation service
   eventForwardingEnabled: false
 
+# Automation webhook secret for verifying webhook signatures
+automationWebhookSecret:
+  enabled: false
+  existingSecret: automation-webhook-secret
+  secretKey: webhook-secret
+
 # Automation subchart configuration
 # When enabled, deploys the automation service as a subchart
 # The automation service handles scheduled and event-driven automation execution

@@ -411,6 +411,14 @@
   value: "true"
 {{- end }}
 
+{{- if .Values.automationWebhookSecret.enabled }}
+- name: AUTOMATION_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationWebhookSecret.existingSecret }}
+      key: {{ .Values.automationWebhookSecret.secretKey }}
+{{- end }}
+
 {{- $providers := list }}
 {{- if .Values.github.enabled }}
 {{- $providers = append $providers "github" }}
