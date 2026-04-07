@@ -1,4 +1,5 @@
 {{- define "runtime-api.dbInitContainers" }}
+{{- if .Values.databaseMigrations.waitForDatabase }}
 - name: wait-for-db
   image: "bitnamilegacy/postgresql:latest"
   command: ['sh', '-c']
@@ -14,6 +15,7 @@
       echo "PostgreSQL is up and running!"
   env:
     {{- include "runtime-api.env" . | nindent 4 }}
+{{- end }}
 {{- if .Values.databaseMigrations.createDatabases }}
 - name: create-db
   image: "bitnamilegacy/postgresql:latest"

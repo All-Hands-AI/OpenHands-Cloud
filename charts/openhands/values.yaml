@@ -28,6 +28,7 @@ debuggingRoutes:
   enabled: false
 
 databaseMigrations:
+  waitForDatabase: true
   createDatabases: false
   migrate: true
 
@@ -601,6 +602,7 @@ runtime-api:
           - --user-id
           - "0"
   databaseMigrations:
+    waitForDatabase: true
     createDatabases: false
     migrate: true
   postgresql:
