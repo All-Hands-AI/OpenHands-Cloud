@@ -14,6 +14,22 @@ deployment:
       memory: 512Mi
       cpu: 500m
 
+# Separate deployment for handling webhook events
+# Routes /v1/events/* traffic to dedicated pods for better isolation and scalability
+events:
+  enabled: false
+  deployment:
+    replicas: 2
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  uvicorn:
+    workers: 2
+
 securityContext:
   runAsUser: 42420
   runAsGroup: 42420

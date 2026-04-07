@@ -31,6 +31,16 @@ spec:
   {{- end }}
     http:
       paths:
+      {{- if .Values.automation.events.enabled }}
+      # Route webhook events to dedicated events pods
+      - path: /api/automation/v1/events
+        pathType: Prefix
+        backend:
+          service:
+            name: automation-events
+            port:
+              number: 80
+      {{- end }}
       - path: /api/automation
         pathType: Prefix
         backend:
