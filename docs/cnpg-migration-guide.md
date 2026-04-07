@@ -191,11 +191,6 @@ keycloak:
 litellm-helm:
   db:
     endpoint: oh-main-postgresql-rw
-
-# If Langfuse is enabled:
-langfuse:
-  postgresql:
-    host: oh-main-postgresql-rw
 ```
 
 ### 4b. Run the helm upgrade with replicas held at zero
@@ -211,7 +206,7 @@ helm upgrade openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands --versio
   --timeout 600s
 ```
 
-Scale down anything the `--set` overrides didn't cover (e.g. LiteLLM, Langfuse):
+Scale down anything the `--set` overrides didn't cover (e.g. LiteLLM):
 
 ```bash
 kubectl scale deployment -n $NAMESPACE --all --replicas=0
