@@ -20,8 +20,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main(dry_run: bool = False) -> None:
     print('Hello World')
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(dry_run=args.dry_run)
