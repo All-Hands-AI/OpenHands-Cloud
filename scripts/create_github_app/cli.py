@@ -54,7 +54,10 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
             "contents": "write",
             "issues": "write",
             "metadata": "read",
+            "pull_requests": "write",
             "statuses": "write",
+            "webhooks": "write",
+            "workflows": "write",
         },
     }
 

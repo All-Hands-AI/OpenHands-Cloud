@@ -82,6 +82,21 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(base_domain="example.com")
         assert manifest["default_permissions"]["issues"] == "write"
 
+    def test_manifest_pull_requests_permission_is_write(self):
+        """Test that pull_requests repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["pull_requests"] == "write"
+
+    def test_manifest_webhooks_permission_is_write(self):
+        """Test that webhooks repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["webhooks"] == "write"
+
+    def test_manifest_workflows_permission_is_write(self):
+        """Test that workflows repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["workflows"] == "write"
+
 
 class TestCreateGithubApp:
     """Tests for create_github_app function."""
