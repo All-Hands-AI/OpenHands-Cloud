@@ -97,6 +97,16 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(base_domain="example.com")
         assert manifest["default_permissions"]["workflows"] == "write"
 
+    def test_manifest_organization_events_permission_is_read(self):
+        """Test that organization events permission is read."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["organization_events"] == "read"
+
+    def test_manifest_emails_permission_is_read(self):
+        """Test that emails account permission is read."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["emails"] == "read"
+
 
 class TestCreateGithubApp:
     """Tests for create_github_app function."""

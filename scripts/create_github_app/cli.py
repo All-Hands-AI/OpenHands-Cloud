@@ -52,8 +52,10 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
         "default_permissions": {
             "actions": "write",
             "contents": "write",
+            "emails": "read",
             "issues": "write",
             "metadata": "read",
+            "organization_events": "read",
             "pull_requests": "write",
             "statuses": "write",
             "webhooks": "write",
