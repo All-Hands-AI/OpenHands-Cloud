@@ -21,8 +21,6 @@ OpenHands Cloud is deployed to a Kubernetes cluster using Helm charts, with mini
 * [Redis](https://redis.io) (caching)
 * [Keycloak](https://www.keycloak.org) (authentication)
 * [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy) (handles connections to AI Language models)
-* [Langfuse](https://langfuse.com) (LLM monitoring)
-* [Clickhouse](https://clickhouse.com) (event-store used by LangFuses)
 * AI Language Models
 
 ## Additional Infrastructure
