@@ -61,6 +61,18 @@ class TestParseArgs:
         args = parse_args()
         assert args.dry_run is True
 
+    def test_app_name_defaults_to_openhands(self, monkeypatch):
+        """Test that app_name defaults to 'openhands' when not specified."""
+        monkeypatch.setattr(sys, "argv", ["script"])
+        args = parse_args()
+        assert args.app_name == "openhands"
+
+    def test_app_name_can_be_overridden(self, monkeypatch):
+        """Test that --app-name argument allows custom value."""
+        monkeypatch.setattr(sys, "argv", ["script", "--app-name", "custom-app"])
+        args = parse_args()
+        assert args.app_name == "custom-app"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

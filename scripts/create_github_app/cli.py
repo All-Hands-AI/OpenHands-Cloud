@@ -17,6 +17,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Show what would be updated without making changes.",
     )
+    parser.add_argument(
+        "--app-name",
+        default="openhands",
+        help="Name of the GitHub App to create (default: openhands).",
+    )
     return parser.parse_args()
 
 
