@@ -348,6 +348,10 @@ spec:
           type: text
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
+          validation:
+            regex:
+              pattern: ^[0-9]+$
+              message: Must be a numeric value
         - name: github_app_webhook_secret
           title: GitHub App Webhook Secret
           help_text: Webhook secret from your GitHub App

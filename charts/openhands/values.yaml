@@ -28,6 +28,7 @@ debuggingRoutes:
   enabled: false
 
 databaseMigrations:
+  waitForDatabase: true
   createDatabases: false
   migrate: true
 
@@ -113,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.19.0
+  tag: cloud-1.21.0
 
 ingress:
   enabled: false
@@ -155,7 +156,6 @@ integrationEvents:
     workers: 2
 
 litellm:
-  enabled: true
   # NOTE: to set the LLM model, set the LITELLM_DEFAULT_MODEL variable in the env section above.
   # REQUIRED: Update to match the hostname set in the litellm-helm ingress section
   url: "https://llm-proxy.example.com"
@@ -211,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: cloud-1.19.0-nikolaik
+    tag: cloud-1.21.0-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -514,7 +514,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.21.0-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -540,6 +540,7 @@ runtime-api:
           - --user-id
           - "0"
   databaseMigrations:
+    waitForDatabase: true
     createDatabases: false
     migrate: true
   postgresql:

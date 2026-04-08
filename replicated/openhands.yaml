@@ -96,7 +96,6 @@ spec:
         image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
 
     litellm:
-      enabled: true
       url: 'http://openhands-litellm:4000'
 
     litellm-helm:
@@ -466,8 +465,6 @@ spec:
 
   builder:
     keycloak:
-      enabled: true
-    litellm:
       enabled: true
     litellm-helm:
       enabled: true

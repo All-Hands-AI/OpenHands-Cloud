@@ -4,12 +4,13 @@ fullnameOverride: ""
 replicaCount: 1
 
 databaseMigrations:
+  waitForDatabase: true
   createDatabases: false
   migrate: true
 
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-7857be8
+  tag: sha-1a920e8
   pullPolicy: Always
 
 imagePullSecrets:
@@ -163,7 +164,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"
+      image: "ghcr.io/openhands/runtime:cloud-1.21.0-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:

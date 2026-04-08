@@ -1,4 +1,3 @@
-{{- if .Values.litellm.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -56,4 +55,3 @@ data:
         echo "ERROR: Unexpected response code: $HTTP_CODE"
         exit 1
     fi
-{{- end }}

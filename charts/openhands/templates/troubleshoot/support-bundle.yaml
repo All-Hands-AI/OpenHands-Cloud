@@ -107,7 +107,7 @@ spec:
         limits:
           maxAge: 168h
     {{- end }}
-    {{- if or .Values.litellm.enabled (and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled")) }}
+    {{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
     # LiteLLM logs
     - logs:
         name: app/{{ .Release.Name }}-litellm/logs
@@ -181,7 +181,7 @@ spec:
           - pass:
               when: ">= 2"
               message: "OpenHands MCP deployment is ready"
-    {{- if or .Values.litellm.enabled (and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled")) }}
+    {{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
     - deploymentStatus:
         name: {{ .Release.Name }}-litellm
         namespace: {{ .Release.Namespace }}
