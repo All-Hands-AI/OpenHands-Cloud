@@ -107,6 +107,11 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(base_domain="example.com")
         assert manifest["default_permissions"]["emails"] == "read"
 
+    def test_manifest_webhook_url(self):
+        """Test that hook_attributes webhook URL is https://app.BASE_DOMAIN/integration/github/events."""
+        manifest = build_app_manifest(base_domain="mycompany.com")
+        assert manifest["hook_attributes"]["url"] == "https://app.mycompany.com/integration/github/events"
+
 
 class TestCreateGithubApp:
     """Tests for create_github_app function."""

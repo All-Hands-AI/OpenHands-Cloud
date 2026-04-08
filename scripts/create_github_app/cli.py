@@ -61,6 +61,9 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
             "webhooks": "write",
             "workflows": "write",
         },
+        "hook_attributes": {
+            "url": f"https://app.{base_domain}/integration/github/events",
+        },
     }
 
 
