@@ -156,7 +156,6 @@ integrationEvents:
     workers: 2
 
 litellm:
-  enabled: true
   # NOTE: to set the LLM model, set the LITELLM_DEFAULT_MODEL variable in the env section above.
   # REQUIRED: Update to match the hostname set in the litellm-helm ingress section
   url: "https://llm-proxy.example.com"
