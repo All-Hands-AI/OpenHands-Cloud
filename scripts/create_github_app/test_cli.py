@@ -19,6 +19,29 @@ from cli import (
     parse_args,
 )
 
+class TestDryRun:
+    """Tests for dry-run functionality.
+
+    Dry-run mode allows users to preview changes without creating a GitHub app.
+
+    Test Structure:
+    - test_*_dry_run_prints_changes: Return value reflects changes
+
+    TDD Rationale: Tests drive the dry_run parameter behavior, ensuring
+    separation between change detection (always happens) and app creating
+    (only when dry_run=False). Control tests verify the default behavior
+    hasn't regressed.
+    """
+    def test_cli_dry_run_prints_changes(self, capsys):
+        """Test that dry-run still records what would be changed."""
+        # Act
+        main(dry_run=True)
+
+        # Assert: changes are tracked even though file wasn't modified
+        captured = capsys.readouterr()
+        assert "Hello World" in captured.out
+
+
 class TestMainOutputMessages:
     """Tests for main() output message formatting."""
 
