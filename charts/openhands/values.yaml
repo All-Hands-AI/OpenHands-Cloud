@@ -288,85 +288,83 @@ clickhouse:
 
 keycloak:
   enabled: false
-  url: "http://keycloak"
-  fullnameOverride: keycloak
-  replicaCount: 1
-  production: true
-  proxyHeaders: forwarded
+  url: "http://openhands-keycloak-http"
+  replicas: 1
+
+  command:
+    - "/opt/keycloak/bin/kc.sh"
+  args:
+    - "start"
+
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.5.5"
+    pullPolicy: IfNotPresent
+
+  database:
+    vendor: postgres
+    hostname: oh-main-postgresql
+    port: 5432
+    database: bitnami_keycloak
+    existingSecret: postgres-password
+    existingSecretKey: password
+
+  dbchecker:
+    enabled: true
+    image:
+      repository: docker.io/library/busybox
+      tag: "1.37"
+
+  proxy:
+    enabled: true
+    mode: xforwarded
+
+  http:
+    relativePath: "/"
+
+  service:
+    type: ClusterIP
+    httpPort: 80
+
+  serviceAccount:
+    create: true
+    name: "keycloak-sa"
+
   ingress:
     enabled: false
-    # REQUIRED: Update to a hostname in a DNS domain you own
-    # hostname: auth.app.example.com
-    servicePort: 80
-    tls: true
+    ingressClassName: traefik
     annotations: {}
       # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
       # cert-manager.io/cluster-issuer: letsencrypt-production
-    ingressClassName: traefik
-  auth:
-    adminUser: tmpadmin
-    existingSecret: keycloak-admin
-    passwordSecretKey: admin-password
-  service:
-    type: ClusterIP
-  serviceAccount:
-    name: "keycloak-sa"
-  postgresql:
-    enabled: false
-  externalDatabase:
-    host: oh-main-postgresql
-    database: bitnami_keycloak
-    existingSecret: postgres-password
-    existingSecretUserKey: username
-    existingSecretPasswordKey: password
-  extraEnvVars:
+    rules: []
+    #  - host: auth.app.example.com
+    #    paths:
+    #      - path: /
+    #        pathType: Prefix
+    tls: []
+    #  - secretName: keycloak-tls
+    #    hosts:
+    #      - auth.app.example.com
+
+  extraEnv: |
+    - name: KEYCLOAK_ADMIN
+      value: tmpadmin
+    - name: KEYCLOAK_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: keycloak-admin
+          key: admin-password
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
-    - name: KC_HTTP_ENABLED
-      value: "true"
-    - name: KC_PROXY_HEADERS
-      value: "xforwarded"
+    - name: KC_HOSTNAME_STRICT
+      value: "false"
     - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
       value: "true"
-  image:
-    repository: bitnamilegacy/keycloak
-  waitForDb:
-    image: "bitnamilegacy/postgresql:latest"
-  initContainers:
-    - name: wait-for-db
-      # The Bitnami Keycloak subchart renders initContainers through common.tplvalues.render,
-      # so this template expression is evaluated at deploy time rather than being treated as
-      # a literal string. This lets us override just the image (e.g. for Replicated proxy)
-      # without duplicating the entire init container.
-      image: '{{ .Values.waitForDb.image }}'
-      command: ['sh', '-c']
-      args:
-        - |
-          echo "Waiting for database \"$KEYCLOAK_DATABASE_NAME\" at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
-          until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" > /dev/null 2>&1; do
-            echo "PostgreSQL is unavailable - sleeping 5s"
-            sleep 5
-          done
-          echo "PostgreSQL is ready, checking database exists..."
-          until PGPASSWORD=$DB_PASS psql -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" -c "SELECT 1" > /dev/null 2>&1; do
-            echo "Database \"$KEYCLOAK_DATABASE_NAME\" not ready - sleeping 5s"
-            sleep 5
-          done
-          echo "Database \"$KEYCLOAK_DATABASE_NAME\" is ready!"
-      envFrom:
-        - configMapRef:
-            name: keycloak-env-vars
-      env:
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-password
-              key: username
-        - name: DB_PASS
-          valueFrom:
-            secretKeyRef:
-              name: postgres-password
-              key: password
+    - name: KC_DB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: postgres-password
+          key: username
 
 langfuse:
   # Enable this if you want to use langfuse for tracing

@@ -57,8 +57,7 @@ spec:
 
     keycloak:
       enabled: true
-      url: 'http://keycloak'
-      resourcesPreset: none
+      url: 'http://openhands-keycloak-http'
       resources:
         requests:
           cpu: 500m
@@ -71,29 +70,54 @@ spec:
       ingress:
         enabled: true
         ingressClassName: traefik
-        hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
-        tls: true
         annotations:
           nginx.ingress.kubernetes.io/upstream-vhost: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
           nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-        secrets:
-          - name: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}-tls'
-            key: |
-              {{repl ConfigOptionData "tls_private_key" | nindent 14}}
-            certificate: |
-              {{repl ConfigOptionData "tls_certificate" | nindent 14}}
-      externalDatabase:
-        host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        rules:
+          - host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
+            paths:
+              - path: /
+                pathType: Prefix
+        tls:
+          - secretName: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}-tls'
+            hosts:
+              - '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
+      database:
+        vendor: postgres
+        hostname: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+        port: 5432
+        database: bitnami_keycloak
         existingSecret: postgres-password
-        existingSecretUserKey: username
-        existingSecretPasswordKey: password
-      image:
-        repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak'
-      keycloakConfigCli:
+        existingSecretKey: password
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+      dbchecker:
+        enabled: true
         image:
-          repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak-config-cli'
-      waitForDb:
-        image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/library/busybox'
+          tag: "1.37"
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/keycloak/keycloak'
+        tag: "26.5.5"
+      extraEnv: |
+        - name: KEYCLOAK_ADMIN
+          value: tmpadmin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-admin
+              key: admin-password
+        - name: KC_FEATURES
+          value: token-exchange,admin-fine-grained-authz
+        - name: KC_HOSTNAME_STRICT
+          value: "false"
+        - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+          value: "true"
+        - name: KC_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-password
+              key: username
 
     litellm:
       enabled: true
@@ -292,7 +316,7 @@ spec:
           # existingSecretUserKey: username
           # existingSecretPasswordKey: password
         keycloak:
-          externalDatabase:
+          database:
             database: '{{repl ConfigOption "external_postgres_keycloak_database"}}'
         litellm-helm:
           db:
@@ -320,10 +344,6 @@ spec:
         postgresql:
           image:
             repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
-        keycloak:
-          postgresql:
-            image:
-              repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
     - when: '{{repl ConfigOptionEquals "langfuse_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -388,12 +408,10 @@ spec:
                 fs_group: 10001
         keycloak:
           image:
-            repository: '{{repl LocalRegistryNamespace }}/keycloak'
-          keycloakConfigCli:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/keycloak'
+          dbchecker:
             image:
-              repository: '{{repl LocalRegistryNamespace }}/keycloak-config-cli'
-          waitForDb:
-            image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/busybox'
         postgresql:
           image:
             repository: '{{repl LocalRegistryNamespace }}/postgresql'
@@ -441,7 +459,7 @@ spec:
         {{repl $llmDomain := $derive | ternary (printf "llm-proxy.%s" $bd) (ConfigOption "llm_proxy_hostname") }}
         {{repl $runtimeApiDomain := $derive | ternary (printf "runtime-api.%s" $bd) (ConfigOption "runtime_api_hostname") }}
         {{repl $runtimeBaseDomain := $derive | ternary (printf "runtime.%s" $bd) (ConfigOption "runtime_base_hostname") }}
-        {{repl $computedNoProxy := "127.0.0.1,cluster.local,keycloak,keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
+        {{repl $computedNoProxy := "127.0.0.1,cluster.local,openhands-keycloak-http,openhands-keycloak-headless,kubernetes,localhost,oh-main-clickhouse,oh-main-langfuse,oh-main-lite-llm,oh-main-runtime-api,openhands-integrations-service,openhands-litellm,openhands-mcp-service,openhands-minio,openhands-runtime-api,openhands-service,svc" }}
         {{repl if ne $bd "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $bd }}{{repl end }}
         {{repl if ne $appDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $appDomain }}{{repl end }}
         {{repl if ne $authDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $authDomain }}{{repl end }}
@@ -459,17 +477,26 @@ spec:
           SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
         keycloak:
-          extraEnvVars:
-            # Existing KC env vars (must be repeated because recursiveMerge replaces arrays)
+          # All extraEnv vars must be repeated because recursiveMerge replaces entire keys
+          extraEnv: |
+            - name: KEYCLOAK_ADMIN
+              value: tmpadmin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: admin-password
             - name: KC_FEATURES
               value: token-exchange,admin-fine-grained-authz
-            - name: KC_HTTP_ENABLED
-              value: "true"
-            - name: KC_PROXY_HEADERS
-              value: "xforwarded"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
             - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
               value: "true"
-            # Proxy env vars
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-password
+                  key: username
             - name: HTTP_PROXY
               value: '{{repl ConfigOption "http_proxy"}}'
             - name: HTTPS_PROXY

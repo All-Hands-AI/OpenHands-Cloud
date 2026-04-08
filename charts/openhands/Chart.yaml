@@ -12,9 +12,10 @@ dependencies:
     repository: oci://registry-1.docker.io/bitnamicharts
     version: 9.2.5
     condition: clickhouse.enabled
-  - name: keycloak
-    version: 24.7.5
-    repository: oci://registry-1.docker.io/bitnamicharts
+  - name: keycloakx
+    alias: keycloak
+    version: 7.1.9
+    repository: https://codecentric.github.io/helm-charts
     condition: keycloak.enabled
   - name: langfuse
     repository: https://langfuse.github.io/langfuse-k8s
