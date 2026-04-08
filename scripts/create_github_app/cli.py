@@ -8,6 +8,8 @@
 import argparse
 from typing import Any, Protocol
 
+DEFAULT_APP_NAME = "openhands"
+
 
 class GithubClient(Protocol):
     """Protocol for GitHub client to enable dependency injection."""
@@ -29,8 +31,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--app-name",
-        default="openhands",
-        help="Name of the GitHub App to create (default: openhands).",
+        default=DEFAULT_APP_NAME,
+        help=f"Name of the GitHub App to create (default: {DEFAULT_APP_NAME}).",
     )
     parser.add_argument(
         "--base-domain",
@@ -40,35 +42,38 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_app_manifest(app_name: str, base_domain: str) -> dict[str, Any]:
+def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> dict[str, Any]:
     """Build the GitHub App manifest configuration."""
     return {
         "name": app_name,
-        "url": f"https://{base_domain}",
-        "callback_urls": [f"https://{base_domain}/github/callback"],
+        "url": f"https://app.{base_domain}",
+        "callback_urls": [f"https://auth.app.{base_domain}/realms/allhands/broker/github/endpoint"],
         "public": False,
         "default_permissions": {
-            "contents": "read",
+            "actions": "write",
+            "contents": "write",
+            "issues": "write",
             "metadata": "read",
+            "statuses": "write",
         },
     }
 
 
 def create_github_app(
-    app_name: str,
     base_domain: str,
     github_client: GithubClient,
+    app_name: str = DEFAULT_APP_NAME,
 ) -> dict:
     """Create a GitHub App using the provided client."""
-    manifest = build_app_manifest(app_name, base_domain)
+    manifest = build_app_manifest(base_domain, app_name)
     return github_client.create_app_from_manifest(manifest)
 
 
 def main(
-    app_name: str,
     base_domain: str,
     dry_run: bool = False,
     github_client: GithubClient | None = None,
+    app_name: str = DEFAULT_APP_NAME,
 ) -> None:
     """Main entry point for creating a GitHub App."""
     if dry_run:
@@ -78,14 +83,14 @@ def main(
     if github_client is None:
         raise ValueError("github_client is required when not in dry-run mode")
 
-    result = create_github_app(app_name, base_domain, github_client)
+    result = create_github_app(base_domain, github_client, app_name)
     print(f"Created GitHub App '{result['name']}' at {result['html_url']}")
 
 
 if __name__ == "__main__":
     args = parse_args()
     main(
-        app_name=args.app_name,
         base_domain=args.base_domain,
         dry_run=args.dry_run,
+        app_name=args.app_name,
     )

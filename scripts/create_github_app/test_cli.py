@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import cli
 from cli import (
+    DEFAULT_APP_NAME,
     build_app_manifest,
     create_github_app,
     main,
@@ -41,16 +42,45 @@ class FakeGithubClient:
 class TestBuildAppManifest:
     """Tests for build_app_manifest function."""
 
-    def test_manifest_contains_app_name(self):
-        """Test that manifest includes the app name."""
+    def test_manifest_contains_app_name_when_provided(self):
+        """Test that manifest includes the app name when provided."""
         manifest = build_app_manifest(app_name="my-app", base_domain="example.com")
         assert manifest["name"] == "my-app"
 
-    def test_manifest_contains_urls_with_base_domain(self):
-        """Test that manifest URLs use the base domain."""
-        manifest = build_app_manifest(app_name="my-app", base_domain="mycompany.com")
-        assert "mycompany.com" in manifest["url"]
-        assert "mycompany.com" in manifest["callback_urls"][0]
+    def test_manifest_app_name_defaults_to_constant(self):
+        """Test that app_name defaults to DEFAULT_APP_NAME when not provided."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["name"] == DEFAULT_APP_NAME
+
+    def test_manifest_url_uses_app_subdomain(self):
+        """Test that manifest URL is https://app.BASE_DOMAIN."""
+        manifest = build_app_manifest(base_domain="mycompany.com")
+        assert manifest["url"] == "https://app.mycompany.com"
+
+    def test_manifest_callback_url_format(self):
+        """Test that callback URL is https://auth.app.BASE_DOMAIN/realms/allhands/broker/github/endpoint."""
+        manifest = build_app_manifest(base_domain="mycompany.com")
+        assert manifest["callback_urls"][0] == "https://auth.app.mycompany.com/realms/allhands/broker/github/endpoint"
+
+    def test_manifest_contents_permission_is_write(self):
+        """Test that contents repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["contents"] == "write"
+
+    def test_manifest_actions_permission_is_write(self):
+        """Test that actions repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["actions"] == "write"
+
+    def test_manifest_statuses_permission_is_write(self):
+        """Test that statuses repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["statuses"] == "write"
+
+    def test_manifest_issues_permission_is_write(self):
+        """Test that issues repository permission is write (includes read)."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["default_permissions"]["issues"] == "write"
 
 
 class TestCreateGithubApp:
@@ -61,9 +91,9 @@ class TestCreateGithubApp:
         client = FakeGithubClient()
 
         result = create_github_app(
-            app_name="test-app",
             base_domain="test.com",
             github_client=client,
+            app_name="test-app",
         )
 
         assert len(client.created_apps) == 1
@@ -75,9 +105,9 @@ class TestCreateGithubApp:
         client = FakeGithubClient()
 
         result = create_github_app(
-            app_name="my-app",
             base_domain="example.com",
             github_client=client,
+            app_name="my-app",
         )
 
         assert result["name"] == "my-app"
@@ -92,10 +122,10 @@ class TestDryRun:
         client = FakeGithubClient()
 
         main(
-            app_name="test-app",
             base_domain="example.com",
             dry_run=True,
             github_client=client,
+            app_name="test-app",
         )
 
         assert len(client.created_apps) == 0
@@ -105,10 +135,10 @@ class TestDryRun:
         client = FakeGithubClient()
 
         main(
-            app_name="test-app",
             base_domain="example.com",
             dry_run=True,
             github_client=client,
+            app_name="test-app",
         )
 
         captured = capsys.readouterr()
@@ -125,10 +155,10 @@ class TestMainCreatesApp:
         client = FakeGithubClient()
 
         main(
-            app_name="prod-app",
             base_domain="production.com",
             dry_run=False,
             github_client=client,
+            app_name="prod-app",
         )
 
         assert len(client.created_apps) == 1
@@ -139,10 +169,10 @@ class TestMainCreatesApp:
         client = FakeGithubClient()
 
         main(
-            app_name="my-app",
             base_domain="example.com",
             dry_run=False,
             github_client=client,
+            app_name="my-app",
         )
 
         captured = capsys.readouterr()
@@ -159,11 +189,11 @@ class TestParseArgs:
         args = parse_args()
         assert args.dry_run is True
 
-    def test_app_name_defaults_to_openhands(self, monkeypatch):
-        """Test that app_name defaults to 'openhands' when not specified."""
+    def test_app_name_defaults_to_constant(self, monkeypatch):
+        """Test that app_name defaults to DEFAULT_APP_NAME when not specified."""
         monkeypatch.setattr(sys, "argv", ["script", "--base-domain", "example.com"])
         args = parse_args()
-        assert args.app_name == "openhands"
+        assert args.app_name == DEFAULT_APP_NAME
 
     def test_app_name_can_be_overridden(self, monkeypatch):
         """Test that --app-name argument allows custom value."""
