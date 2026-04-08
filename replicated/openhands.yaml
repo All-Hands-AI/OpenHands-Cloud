@@ -20,6 +20,35 @@ spec:
     imagePullSecrets:
       - name: '{{repl ImagePullSecretName }}'
 
+    nodeSelector:
+      kots.io/embedded-cluster-role-0: controller
+
+    automation:
+      nodeSelector:
+        kots.io/embedded-cluster-role-0: controller
+
+    postgresql:
+      primary:
+        nodeSelector:
+          kots.io/embedded-cluster-role-0: controller
+
+    redis:
+      master:
+        nodeSelector:
+          kots.io/embedded-cluster-role-0: controller
+
+    minio:
+      nodeSelector:
+        kots.io/embedded-cluster-role-0: controller
+
+    keycloak:
+      nodeSelector:
+        kots.io/embedded-cluster-role-0: controller
+
+    litellm-helm:
+      nodeSelector:
+        kots.io/embedded-cluster-role-0: controller
+
     env:
       LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
       LLM_BASE_URL: "http://openhands-litellm:4000"
@@ -150,6 +179,8 @@ spec:
       replicaCount: 1
       autoscaling:
         enabled: false
+      nodeSelector:
+        kots.io/embedded-cluster-role-0: controller
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
       imagePullSecrets:

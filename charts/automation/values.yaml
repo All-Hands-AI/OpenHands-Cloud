@@ -19,6 +19,8 @@ securityContext:
   runAsGroup: 42420
   runAsNonRoot: true
 
+nodeSelector: {}
+
 serviceAccount:
   create: true
   name: automation-sa

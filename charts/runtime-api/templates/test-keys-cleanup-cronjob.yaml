@@ -16,6 +16,10 @@ spec:
       template:
         spec:
           serviceAccountName: {{ .Values.serviceAccount.name }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}

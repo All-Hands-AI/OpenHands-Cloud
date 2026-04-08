@@ -48,6 +48,8 @@ securityContext:
   fsGroupChangePolicy: Always
   runAsNonRoot: true
 
+nodeSelector: {}
+
 env:
   DISABLE_WAITLIST: "true"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
