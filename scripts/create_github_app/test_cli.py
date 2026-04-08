@@ -62,50 +62,25 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(base_domain="mycompany.com")
         assert manifest["callback_urls"][0] == "https://auth.app.mycompany.com/realms/allhands/broker/github/endpoint"
 
-    def test_manifest_contents_permission_is_write(self):
-        """Test that contents repository permission is write (includes read)."""
+    @pytest.mark.parametrize(
+        "permission,expected_level",
+        [
+            ("actions", "write"),
+            ("contents", "write"),
+            ("emails", "read"),
+            ("issues", "write"),
+            ("metadata", "read"),
+            ("organization_events", "read"),
+            ("pull_requests", "write"),
+            ("statuses", "write"),
+            ("webhooks", "write"),
+            ("workflows", "write"),
+        ],
+    )
+    def test_manifest_permission(self, permission, expected_level):
+        """Test that manifest has correct permission level."""
         manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["contents"] == "write"
-
-    def test_manifest_actions_permission_is_write(self):
-        """Test that actions repository permission is write (includes read)."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["actions"] == "write"
-
-    def test_manifest_statuses_permission_is_write(self):
-        """Test that statuses repository permission is write (includes read)."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["statuses"] == "write"
-
-    def test_manifest_issues_permission_is_write(self):
-        """Test that issues repository permission is write (includes read)."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["issues"] == "write"
-
-    def test_manifest_pull_requests_permission_is_write(self):
-        """Test that pull_requests repository permission is write (includes read)."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["pull_requests"] == "write"
-
-    def test_manifest_webhooks_permission_is_write(self):
-        """Test that webhooks repository permission is write (includes read)."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["webhooks"] == "write"
-
-    def test_manifest_workflows_permission_is_write(self):
-        """Test that workflows repository permission is write (includes read)."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["workflows"] == "write"
-
-    def test_manifest_organization_events_permission_is_read(self):
-        """Test that organization events permission is read."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["organization_events"] == "read"
-
-    def test_manifest_emails_permission_is_read(self):
-        """Test that emails account permission is read."""
-        manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["default_permissions"]["emails"] == "read"
+        assert manifest["default_permissions"][permission] == expected_level
 
     def test_manifest_webhook_url(self):
         """Test that hook_attributes webhook URL is https://app.BASE_DOMAIN/integration/github/events."""
