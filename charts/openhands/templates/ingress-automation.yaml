@@ -9,8 +9,6 @@ metadata:
     {{- else }}
     {{ .Values.ingress.annotations | toYaml | nindent 4 }}
     {{- end }}
-    # Traefik middleware for stripping /api/automation prefix
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-strip-automation-prefix@kubernetescrd
 spec:
   ingressClassName: {{ .Values.ingress.class }}
   {{- if .Values.tls.enabled }}
