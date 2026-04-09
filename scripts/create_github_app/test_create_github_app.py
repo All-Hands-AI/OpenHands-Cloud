@@ -388,7 +388,7 @@ class TestMainInteractiveFlow:
 
         # Verify output mentions saved file location
         captured = capsys.readouterr()
-        assert "keys/my-app.pem" in captured.out
+        assert "Private key file: keys/my-app.pem" in captured.out
 
 
 class TestParseArgs:

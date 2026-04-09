@@ -156,7 +156,7 @@ def main(
         keys_dir.mkdir(exist_ok=True)
         pem_path = keys_dir / f"{app_name}.pem"
         pem_path.write_text(credentials["pem"])
-        print(f"\nPrivate key saved to: {pem_path}")
+        print(f"\nPrivate key file: {pem_path}")
 
     print(f"\nCredentials:")
     display_names = {"id": "App ID", "client_id": "Client ID", "client_secret": "Client secret", "webhook_secret": "Webhook secret"}
