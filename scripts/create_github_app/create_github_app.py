@@ -165,7 +165,7 @@ def main(
             display_key = display_names.get(key, key)
             print(f"  {display_key}: {credentials[key]}")
     if pem_path:
-        print(f"  Private key file: {pem_path}")
+        print(f"  Private key file: ./{pem_path}")
 
 
 if __name__ == "__main__":

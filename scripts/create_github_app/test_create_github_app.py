@@ -388,7 +388,7 @@ class TestMainInteractiveFlow:
 
         # Verify output mentions saved file location after other credentials
         captured = capsys.readouterr()
-        assert "Private key file: keys/my-app.pem" in captured.out
+        assert "Private key file: ./keys/my-app.pem" in captured.out
         # Verify Private key file comes after other credentials
         lines = captured.out.strip().split("\n")
         credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret", "Private key file"))]
