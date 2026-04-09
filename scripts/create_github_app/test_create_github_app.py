@@ -356,13 +356,16 @@ class TestMainInteractiveFlow:
         assert credential_lines[2].startswith("App ID:")
         assert credential_lines[3].startswith("Webhook secret:")
 
-    def test_saves_pem_to_keys_directory(self, capsys, monkeypatch, tmp_path):
-        """Test that pem is saved to keys/ directory."""
+    def test_saves_pem_to_keys_directory_in_script_folder(self, capsys, monkeypatch, tmp_path):
+        """Test that pem is saved to keys/ directory in the script's folder, not cwd."""
         import os
+        from pathlib import Path
         from unittest.mock import MagicMock, patch
 
         monkeypatch.setattr("builtins.input", lambda _: "test-code")
+        # Change to a different directory to verify keys are NOT created in cwd
         monkeypatch.chdir(tmp_path)
+
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "id": 123,
@@ -373,26 +376,43 @@ class TestMainInteractiveFlow:
         }
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.webbrowser.open") as mock_browser:
-            with patch("create_github_app.requests.post", return_value=mock_response):
-                main(base_domain="example.com", dry_run=False, app_name="my-app")
-            if mock_browser.called:
-                filepath = mock_browser.call_args[0][0].replace("file://", "")
-                if os.path.exists(filepath):
-                    os.unlink(filepath)
+        # Get the script directory (where create_github_app.py lives)
+        import create_github_app
+        script_dir = Path(create_github_app.__file__).parent
+        keys_dir = script_dir / "keys"
+        pem_path = keys_dir / "my-app.pem"
 
-        # Verify pem file was created in keys/ directory
-        pem_path = tmp_path / "keys" / "my-app.pem"
-        assert pem_path.exists()
-        assert pem_path.read_text() == "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----"
+        # Clean up before test
+        if pem_path.exists():
+            pem_path.unlink()
 
-        # Verify output mentions saved file location after other credentials
-        captured = capsys.readouterr()
-        assert "Private key file: ./keys/my-app.pem" in captured.out
-        # Verify Private key file comes after other credentials
-        lines = captured.out.strip().split("\n")
-        credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret", "Private key file"))]
-        assert credential_lines[-1].startswith("Private key file:")
+        try:
+            with patch("create_github_app.webbrowser.open") as mock_browser:
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+                if mock_browser.called:
+                    filepath = mock_browser.call_args[0][0].replace("file://", "")
+                    if os.path.exists(filepath):
+                        os.unlink(filepath)
+
+            # Verify pem file was NOT created in cwd
+            assert not (tmp_path / "keys" / "my-app.pem").exists()
+
+            # Verify pem file was created in keys/ directory relative to script
+            assert pem_path.exists()
+            assert pem_path.read_text() == "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----"
+
+            # Verify output shows the full path
+            captured = capsys.readouterr()
+            assert "keys/my-app.pem" in captured.out
+            # Verify Private key file comes after other credentials
+            lines = captured.out.strip().split("\n")
+            credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret", "Private key file"))]
+            assert credential_lines[-1].startswith("Private key file:")
+        finally:
+            # Clean up after test
+            if pem_path.exists():
+                pem_path.unlink()
 
 
 class TestParseArgs:

@@ -150,10 +150,11 @@ def main(
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
 
-    # Save pem to keys/ directory
+    # Save pem to keys/ directory relative to script location
     pem_path = None
     if "pem" in credentials:
-        keys_dir = Path("keys")
+        script_dir = Path(__file__).parent
+        keys_dir = script_dir / "keys"
         keys_dir.mkdir(exist_ok=True)
         pem_path = keys_dir / f"{app_name}.pem"
         pem_path.write_text(credentials["pem"])
