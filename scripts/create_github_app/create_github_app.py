@@ -151,12 +151,12 @@ def main(
     print(f"\nGitHub App created successfully!")
 
     # Save pem to keys/ directory
+    pem_path = None
     if "pem" in credentials:
         keys_dir = Path("keys")
         keys_dir.mkdir(exist_ok=True)
         pem_path = keys_dir / f"{app_name}.pem"
         pem_path.write_text(credentials["pem"])
-        print(f"\nPrivate key file: {pem_path}")
 
     print(f"\nCredentials:")
     display_names = {"id": "App ID", "client_id": "Client ID", "client_secret": "Client secret", "webhook_secret": "Webhook secret"}
@@ -164,6 +164,8 @@ def main(
         if key in credentials:
             display_key = display_names.get(key, key)
             print(f"  {display_key}: {credentials[key]}")
+    if pem_path:
+        print(f"  Private key file: {pem_path}")
 
 
 if __name__ == "__main__":
