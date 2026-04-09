@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["PyGithub", "requests"]
+# dependencies = ["PyGithub", "requests", "playwright"]
 # ///
 """CLI to create a GitHub app for OpenHands Enterprise (OHE)."""
 
@@ -12,8 +12,10 @@ import tempfile
 import webbrowser
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import parse_qs, urlparse
 
 import requests
+from playwright.sync_api import sync_playwright
 
 APP_NAME_PREFIX = "openhands"
 
@@ -116,6 +118,35 @@ def exchange_code_for_credentials(code: str) -> dict:
     return response.json()
 
 
+def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
+    """Run the GitHub App manifest flow in a headless browser and return the code."""
+    manifest = build_app_manifest(base_domain, app_name)
+    html_content = generate_manifest_html(manifest)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+        f.write(html_content)
+        temp_path = f.name
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context()
+            page = context.new_page()
+
+            page.goto(f"file://{temp_path}")
+            page.wait_for_url("**/callback?code=*", timeout=120000)
+
+            parsed = urlparse(page.url)
+            query_params = parse_qs(parsed.query)
+            code = query_params["code"][0]
+
+            browser.close()
+    finally:
+        Path(temp_path).unlink(missing_ok=True)
+
+    return code
+
+
 def create_github_app(
     base_domain: str,
     github_client: GithubClient,
@@ -139,12 +170,10 @@ def main(
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
 
-    # Interactive flow: open browser, prompt for code, exchange for credentials
-    print(f"\nOpening browser to create GitHub App '{app_name}'...")
-    open_manifest_in_browser(base_domain, app_name)
-    print("After completing the flow, GitHub will redirect you to a URL with a 'code' parameter.")
-
-    code = input("\nEnter the code from the URL: ").strip()
+    # Automated browser flow: open headless Chrome, complete flow, extract code
+    print(f"\nLaunching browser to create GitHub App '{app_name}'...")
+    print("Please complete the GitHub authorization flow in the browser window.")
+    code = run_manifest_flow_with_browser(base_domain, app_name)
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
