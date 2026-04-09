@@ -334,6 +334,7 @@ class TestMainInteractiveFlow:
             "name": "my-app",
             "client_id": "Iv1.abc123",
             "client_secret": "secret456",
+            "webhook_secret": "whsec789",
         }
         mock_response.raise_for_status = MagicMock()
 
@@ -350,6 +351,7 @@ class TestMainInteractiveFlow:
         assert "App ID: 123" in captured.out
         assert "Client ID: Iv1.abc123" in captured.out
         assert "Client secret: secret456" in captured.out
+        assert "Webhook secret: whsec789" in captured.out
 
 
 class TestParseArgs:
