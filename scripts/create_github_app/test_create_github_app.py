@@ -77,6 +77,42 @@ class TestNoChangesOutsideScriptFolder:
         assert browsers_path == str(PLAYWRIGHT_BROWSERS_PATH)
         assert Path(browsers_path).parent == SCRIPT_DIR
 
+    def test_env_vars_cleaned_up_after_browser_flow(self):
+        """Test that PLAYWRIGHT_BROWSERS_PATH is unset after browser flow completes."""
+        import os
+        from unittest.mock import MagicMock, patch
+
+        # Ensure env var is not set before
+        original_value = os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+
+        mock_page = MagicMock()
+        mock_page.url = "http://localhost/callback?code=abc123"
+
+        mock_context = MagicMock()
+        mock_context.new_page.return_value = mock_page
+
+        mock_browser = MagicMock()
+        mock_browser.new_context.return_value = mock_context
+
+        mock_playwright = MagicMock()
+        mock_playwright.chromium.launch.return_value = mock_browser
+
+        mock_sync_playwright = MagicMock()
+        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
+        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
+
+        try:
+            with patch("create_github_app.ensure_playwright_browsers"):
+                with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
+                    run_manifest_flow_with_browser("example.com", "my-app")
+
+            # Verify env var is cleaned up after flow
+            assert "PLAYWRIGHT_BROWSERS_PATH" not in os.environ
+        finally:
+            # Restore original value if it existed
+            if original_value is not None:
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = original_value
+
 
 class FakeGithubClient:
     """Fake GitHub client for testing without hitting real API."""

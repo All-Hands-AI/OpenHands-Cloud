@@ -166,6 +166,8 @@ def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
             browser.close()
     finally:
         Path(temp_path).unlink(missing_ok=True)
+        # Clean up environment variable
+        os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
 
     return code
 
