@@ -20,7 +20,62 @@ from create_github_app import (
     main,
     parse_args,
     run_manifest_flow_with_browser,
+    SCRIPT_DIR,
+    PLAYWRIGHT_BROWSERS_PATH,
 )
+
+
+class TestNoChangesOutsideScriptFolder:
+    """Tests to verify all file changes are contained within script folder."""
+
+    def test_playwright_browsers_path_is_inside_script_dir(self):
+        """Test that PLAYWRIGHT_BROWSERS_PATH is inside SCRIPT_DIR."""
+        assert PLAYWRIGHT_BROWSERS_PATH.parent == SCRIPT_DIR
+        assert PLAYWRIGHT_BROWSERS_PATH.name == "playwright"
+
+    def test_keys_saved_relative_to_script(self):
+        """Test that keys are saved in keys/ subdirectory of script location."""
+        from unittest.mock import MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "id": 123,
+            "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        keys_dir = SCRIPT_DIR / "keys"
+        pem_path = keys_dir / "test-app.pem"
+        if pem_path.exists():
+            pem_path.unlink()
+
+        try:
+            with patch("create_github_app.run_manifest_flow_with_browser", return_value="code"):
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="test-app")
+
+            # Verify the pem was saved inside script dir/keys/
+            assert pem_path.exists()
+            assert pem_path.parent.name == "keys"
+            assert pem_path.parent.parent == SCRIPT_DIR
+        finally:
+            if pem_path.exists():
+                pem_path.unlink()
+
+    def test_ensure_browsers_path_is_relative_to_script(self):
+        """Test that ensure_playwright_browsers uses path relative to script."""
+        from unittest.mock import MagicMock, patch
+        from create_github_app import ensure_playwright_browsers
+
+        with patch("create_github_app.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            ensure_playwright_browsers()
+
+        env = mock_run.call_args[1].get("env", {})
+        browsers_path = env.get("PLAYWRIGHT_BROWSERS_PATH")
+        assert browsers_path is not None
+        assert browsers_path == str(PLAYWRIGHT_BROWSERS_PATH)
+        assert Path(browsers_path).parent == SCRIPT_DIR
 
 
 class FakeGithubClient:
