@@ -166,7 +166,8 @@ def main(
             display_key = display_names.get(key, key)
             print(f"  {display_key}: {credentials[key]}")
     if pem_path:
-        print(f"  Private key file: ./{pem_path}")
+        display_path = f"./scripts/create_github_app/keys/{app_name}.pem"
+        print(f"  Private key file: {display_path}")
 
 
 if __name__ == "__main__":

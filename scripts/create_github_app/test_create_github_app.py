@@ -402,9 +402,9 @@ class TestMainInteractiveFlow:
             assert pem_path.exists()
             assert pem_path.read_text() == "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----"
 
-            # Verify output shows the full path
+            # Verify output shows the full path from repo root
             captured = capsys.readouterr()
-            assert "keys/my-app.pem" in captured.out
+            assert "Private key file: ./scripts/create_github_app/keys/my-app.pem" in captured.out
             # Verify Private key file comes after other credentials
             lines = captured.out.strip().split("\n")
             credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret", "Private key file"))]
