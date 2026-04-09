@@ -53,6 +53,7 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
     return {
         "name": app_name,
         "url": f"https://app.{base_domain}",
+        "redirect_url": "http://localhost/callback",
         "callback_urls": [f"https://auth.app.{base_domain}/realms/allhands/broker/github/endpoint"],
         "public": False,
         "default_permissions": {

@@ -87,6 +87,12 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(base_domain="mycompany.com")
         assert manifest["hook_attributes"]["url"] == "https://app.mycompany.com/integration/github/events"
 
+    def test_manifest_redirect_url(self):
+        """Test that redirect_url is set for GitHub to redirect after app creation."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert "redirect_url" in manifest
+        assert manifest["redirect_url"] == "http://localhost/callback"
+
 
 class TestGenerateManifestHtml:
     """Tests for generate_manifest_html function."""
