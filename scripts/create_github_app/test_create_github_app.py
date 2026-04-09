@@ -13,7 +13,6 @@ import pytest
 # Add the script's directory to sys.path so we can import it directly
 sys.path.insert(0, str(Path(__file__).parent))
 
-import create_github_app
 from create_github_app import (
     build_app_manifest,
     create_github_app,
