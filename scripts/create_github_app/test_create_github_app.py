@@ -88,6 +88,73 @@ class TestBuildAppManifest:
         assert manifest["hook_attributes"]["url"] == "https://app.mycompany.com/integration/github/events"
 
 
+class TestGenerateManifestUrl:
+    """Tests for generate_manifest_url function."""
+
+    def test_returns_github_settings_url(self):
+        """Test that URL starts with GitHub settings path."""
+        from create_github_app import generate_manifest_url
+
+        url = generate_manifest_url(base_domain="example.com")
+        assert url.startswith("https://github.com/settings/apps/new?manifest=")
+
+    def test_manifest_is_base64_encoded_in_url(self):
+        """Test that manifest is base64 encoded in the URL."""
+        import base64
+        import json
+        from urllib.parse import parse_qs, urlparse
+
+        from create_github_app import generate_manifest_url
+
+        url = generate_manifest_url(base_domain="example.com", app_name="test-app")
+        parsed = urlparse(url)
+        manifest_b64 = parse_qs(parsed.query)["manifest"][0]
+        manifest = json.loads(base64.b64decode(manifest_b64))
+        assert manifest["name"] == "test-app"
+
+
+class TestExchangeCodeForCredentials:
+    """Tests for exchange_code_for_credentials function."""
+
+    def test_posts_to_github_api(self):
+        """Test that it posts to the correct GitHub API endpoint."""
+        from unittest.mock import MagicMock, patch
+
+        from create_github_app import exchange_code_for_credentials
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123, "client_secret": "secret"}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.requests.post", return_value=mock_response) as mock_post:
+            exchange_code_for_credentials("test-code")
+            mock_post.assert_called_once_with(
+                "https://api.github.com/app-manifests/test-code/conversions",
+                headers={"Accept": "application/vnd.github+json"},
+            )
+
+    def test_returns_credentials(self):
+        """Test that it returns the credentials from the API response."""
+        from unittest.mock import MagicMock, patch
+
+        from create_github_app import exchange_code_for_credentials
+
+        expected = {
+            "id": 123,
+            "client_id": "client-123",
+            "client_secret": "secret-456",
+            "pem": "-----BEGIN RSA PRIVATE KEY-----",
+            "webhook_secret": "webhook-secret",
+        }
+        mock_response = MagicMock()
+        mock_response.json.return_value = expected
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.requests.post", return_value=mock_response):
+            result = exchange_code_for_credentials("test-code")
+            assert result == expected
+
+
 class TestCreateGithubApp:
     """Tests for create_github_app function."""
 
@@ -152,37 +219,65 @@ class TestDryRun:
         assert "Would create" in captured.out
 
 
-class TestMainCreatesApp:
-    """Tests for main() when not in dry-run mode."""
+class TestMainInteractiveFlow:
+    """Tests for main() interactive flow when not in dry-run mode."""
 
-    def test_creates_app_when_not_dry_run(self):
-        """Test that main creates app when dry_run=False."""
-        client = FakeGithubClient()
+    def test_prints_manifest_url(self, capsys, monkeypatch):
+        """Test that main prints the manifest URL for user to visit."""
+        from unittest.mock import MagicMock, patch
 
-        main(
-            base_domain="production.com",
-            dry_run=False,
-            github_client=client,
-            app_name="prod-app",
-        )
+        monkeypatch.setattr("builtins.input", lambda _: "test-code")
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123, "name": "my-app"}
+        mock_response.raise_for_status = MagicMock()
 
-        assert len(client.created_apps) == 1
-        assert client.created_apps[0]["name"] == "prod-app"
-
-    def test_prints_success_message_after_creation(self, capsys):
-        """Test that main prints success message after creating app."""
-        client = FakeGithubClient()
-
-        main(
-            base_domain="example.com",
-            dry_run=False,
-            github_client=client,
-            app_name="my-app",
-        )
+        with patch("create_github_app.requests.post", return_value=mock_response):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "Created" in captured.out
-        assert "my-app" in captured.out
+        assert "https://github.com/settings/apps/new?manifest=" in captured.out
+
+    def test_prompts_for_code(self, monkeypatch):
+        """Test that main prompts user to enter the code."""
+        from unittest.mock import MagicMock, patch
+
+        input_calls = []
+
+        def mock_input(prompt):
+            input_calls.append(prompt)
+            return "test-code"
+
+        monkeypatch.setattr("builtins.input", mock_input)
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.requests.post", return_value=mock_response):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        assert len(input_calls) == 1
+        assert "code" in input_calls[0].lower()
+
+    def test_exchanges_code_and_prints_credentials(self, capsys, monkeypatch):
+        """Test that main exchanges code and prints the credentials."""
+        from unittest.mock import MagicMock, patch
+
+        monkeypatch.setattr("builtins.input", lambda _: "test-code")
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "id": 123,
+            "name": "my-app",
+            "client_id": "Iv1.abc123",
+            "client_secret": "secret456",
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.requests.post", return_value=mock_response):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "client_id" in captured.out
+        assert "Iv1.abc123" in captured.out
 
 
 class TestParseArgs:

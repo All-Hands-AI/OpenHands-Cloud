@@ -1,12 +1,17 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["PyGithub"]
+# dependencies = ["PyGithub", "requests"]
 # ///
 """CLI to create a GitHub app for OpenHands Enterprise (OHE)."""
 
 import argparse
+import base64
+import json
 from typing import Any, Protocol
+from urllib.parse import urlencode
+
+import requests
 
 DEFAULT_APP_NAME = "openhands"
 
@@ -67,6 +72,24 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
     }
 
 
+def generate_manifest_url(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
+    """Generate the GitHub URL to create an app from manifest."""
+    manifest = build_app_manifest(base_domain, app_name)
+    manifest_json = json.dumps(manifest)
+    manifest_b64 = base64.b64encode(manifest_json.encode()).decode()
+    return f"https://github.com/settings/apps/new?{urlencode({'manifest': manifest_b64})}"
+
+
+def exchange_code_for_credentials(code: str) -> dict:
+    """Exchange the temporary code for app credentials."""
+    response = requests.post(
+        f"https://api.github.com/app-manifests/{code}/conversions",
+        headers={"Accept": "application/vnd.github+json"},
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def create_github_app(
     base_domain: str,
     github_client: GithubClient,
@@ -88,11 +111,22 @@ def main(
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
 
-    if github_client is None:
-        raise ValueError("github_client is required when not in dry-run mode")
+    # Interactive flow: print URL, prompt for code, exchange for credentials
+    url = generate_manifest_url(base_domain, app_name)
+    print(f"\nOpen this URL in your browser to create the GitHub App:\n\n{url}\n")
+    print("After completing the flow, GitHub will redirect you to a URL with a 'code' parameter.")
 
-    result = create_github_app(base_domain, github_client, app_name)
-    print(f"Created GitHub App '{result['name']}' at {result['html_url']}")
+    code = input("\nEnter the code from the URL: ").strip()
+
+    credentials = exchange_code_for_credentials(code)
+    print(f"\nGitHub App created successfully!")
+    print(f"\nCredentials:")
+    for key in ["id", "name", "client_id", "client_secret", "pem", "webhook_secret"]:
+        if key in credentials:
+            value = credentials[key]
+            if key == "pem":
+                value = value[:50] + "..." if len(value) > 50 else value
+            print(f"  {key}: {value}")
 
 
 if __name__ == "__main__":
