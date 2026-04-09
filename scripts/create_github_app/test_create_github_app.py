@@ -378,8 +378,8 @@ class TestMainInteractiveFlow:
 
         mock_flow.assert_called_once_with("example.com", "my-app")
 
-    def test_prints_launch_message(self, capsys):
-        """Test that main prints browser launch message."""
+    def test_prints_please_wait_message(self, capsys):
+        """Test that main prints 'Please wait' message (not 'complete the flow')."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
@@ -391,7 +391,8 @@ class TestMainInteractiveFlow:
                 main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "Launching browser" in captured.out
+        assert "Please wait" in captured.out
+        assert "complete the" not in captured.out.lower()
 
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
@@ -621,6 +622,33 @@ class TestRunManifestFlowWithBrowser:
             run_manifest_flow_with_browser("example.com", "my-app")
 
         mock_playwright.chromium.launch.assert_called_once_with(headless=True)
+
+    def test_clicks_create_github_app_button(self):
+        """Test that function clicks the 'Create GitHub App' button after login."""
+        from unittest.mock import MagicMock, patch, call
+
+        mock_page = MagicMock()
+        mock_page.url = "http://localhost/callback?code=abc123"
+
+        mock_context = MagicMock()
+        mock_context.new_page.return_value = mock_page
+
+        mock_browser = MagicMock()
+        mock_browser.new_context.return_value = mock_context
+
+        mock_playwright = MagicMock()
+        mock_playwright.chromium.launch.return_value = mock_browser
+
+        mock_sync_playwright = MagicMock()
+        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
+        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
+
+        with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
+            run_manifest_flow_with_browser("example.com", "my-app")
+
+        # Verify it waits for and clicks the Create GitHub App button
+        mock_page.wait_for_selector.assert_called()
+        mock_page.click.assert_called()
 
 
 class TestParseArgs:

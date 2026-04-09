@@ -156,7 +156,14 @@ def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
             context = browser.new_context()
             page = context.new_page()
 
+            # Load the manifest form and auto-submit to GitHub
             page.goto(f"file://{temp_path}")
+
+            # Wait for and click the "Create GitHub App" button
+            page.wait_for_selector('input[type="submit"][value="Create GitHub App"]')
+            page.click('input[type="submit"][value="Create GitHub App"]')
+
+            # Wait for redirect with code (even if page 404s)
             page.wait_for_url("**/callback?code=*", timeout=120000)
 
             parsed = urlparse(page.url)
@@ -197,7 +204,7 @@ def main(
 
     # Automated browser flow: open headless Chrome, complete flow, extract code
     print(f"\nLaunching browser to create GitHub App '{app_name}'...")
-    print("Please complete the GitHub authorization flow in the browser window.")
+    print("Please wait...")
     code = run_manifest_flow_with_browser(base_domain, app_name)
 
     credentials = exchange_code_for_credentials(code)
