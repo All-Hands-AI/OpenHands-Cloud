@@ -3,7 +3,7 @@
 # requires-python = ">=3.12"
 # dependencies = ["pytest"]
 # ///
-"""Unit tests for cli.py."""
+"""Unit tests for create_github_app.py."""
 
 import sys
 from pathlib import Path
@@ -13,8 +13,8 @@ import pytest
 # Add the script's directory to sys.path so we can import it directly
 sys.path.insert(0, str(Path(__file__).parent))
 
-import cli
-from cli import (
+import create_github_app
+from create_github_app import (
     DEFAULT_APP_NAME,
     build_app_manifest,
     create_github_app,
