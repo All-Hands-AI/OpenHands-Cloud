@@ -28,11 +28,13 @@ Create a GitHub App configured for the Replicated self-hosted install of OpenHan
 
 ## How It Works
 
-1. **Opens your browser** to GitHub's app creation page with a pre-configured manifest
-2. **Click "Create GitHub App for \<your-username\>"** to create the app
-3. **You'll see a 404 page** - this is expected! Copy the `code` parameter from the URL
-4. **Paste the code** back into the terminal
+1. **A local callback server starts** on port 9876 to capture the OAuth code
+2. **Opens your browser** to GitHub's app creation page with a pre-configured manifest
+3. **Click "Create GitHub App for \<your-username\>"** to create the app
+4. **GitHub redirects back to the local callback server** - the code is captured automatically
 5. **Credentials are displayed** and the private key is saved to `./keys/`
+
+No manual copy-paste required - the script automatically captures the authorization code!
 
 ### Output
 
@@ -66,6 +68,7 @@ The created GitHub App requests the following permissions:
 The app is configured with:
 
 - **Homepage URL**: `https://app.<base-domain>`
-- **Callback URL**: `https://auth.app.<base-domain>/realms/allhands/broker/github/endpoint`
+- **Redirect URL** (for app creation): `http://localhost:9876/callback` (local callback server)
+- **Callback URL** (for OAuth): `https://auth.app.<base-domain>/realms/allhands/broker/github/endpoint`
 - **Webhook URL**: `https://app.<base-domain>/integration/github/events`
 - **OAuth on install**: Enabled (users authorize during installation)

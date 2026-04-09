@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pytest", "requests", "playwright"]
+# dependencies = ["pytest", "requests", "playwright", "fastapi", "httpx"]
 # ///
 """Unit tests for create_github_app.py."""
 
@@ -27,6 +27,7 @@ class TestNoChangesOutsideScriptFolder:
 
     def test_keys_saved_relative_to_script(self):
         """Test that keys are saved in keys/ subdirectory of script location."""
+        import threading
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
@@ -36,16 +37,24 @@ class TestNoChangesOutsideScriptFolder:
         }
         mock_response.raise_for_status = MagicMock()
 
+        # Mock the callback server
+        code_holder = MagicMock()
+        code_holder.code = "test-code"
+        code_holder.code_received = threading.Event()
+        code_holder.code_received.set()
+        server_handle = MagicMock()
+
         keys_dir = SCRIPT_DIR / "keys"
         pem_path = keys_dir / "test-app.pem"
         if pem_path.exists():
             pem_path.unlink()
 
         try:
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("builtins.input", return_value="code"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="test-app")
+            with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+                with patch("create_github_app.open_manifest_in_browser"):
+                    with patch("create_github_app.stop_callback_server"):
+                        with patch("create_github_app.requests.post", return_value=mock_response):
+                            main(base_domain="example.com", dry_run=False, app_name="test-app")
 
             # Verify the pem was saved inside script dir/keys/
             assert pem_path.exists()
@@ -139,7 +148,7 @@ class TestBuildAppManifest:
         """Test that redirect_url is set for GitHub to redirect after app creation."""
         manifest = build_app_manifest(base_domain="example.com")
         assert "redirect_url" in manifest
-        assert manifest["redirect_url"] == "http://localhost/callback"
+        assert manifest["redirect_url"] == "http://localhost:9876/callback"
 
     def test_manifest_requests_oauth_on_install(self):
         """Test that manifest requests OAuth authorization during installation."""
@@ -325,57 +334,76 @@ class TestDryRun:
 
 
 class TestMainInteractiveFlow:
-    """Tests for main() interactive flow using user's default browser."""
+    """Tests for main() interactive flow using callback server and user's default browser."""
 
-    def test_opens_browser_and_prompts_for_code(self, capsys):
-        """Test that main opens browser and prompts user for code."""
+    def _mock_callback_server(self, code="test-code"):
+        """Helper to create mock callback server that returns specified code."""
+        import threading
+        from unittest.mock import MagicMock
+
+        code_holder = MagicMock()
+        code_holder.code = code
+        code_holder.code_received = threading.Event()
+        code_holder.code_received.set()
+        server_handle = MagicMock()
+        return server_handle, code_holder
+
+    def test_opens_browser_with_callback_server(self, capsys):
+        """Test that main opens browser after starting callback server."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.open_manifest_in_browser") as mock_open:
-            with patch("builtins.input", return_value="test-code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+        server_handle, code_holder = self._mock_callback_server()
 
-        mock_open.assert_called_once_with("example.com", "my-app")
+        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+            with patch("create_github_app.open_manifest_in_browser") as mock_open:
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-    def test_prompts_user_to_copy_code(self, capsys):
-        """Test that main prompts user to copy the code from URL."""
+        mock_open.assert_called_once()
+
+    def test_tells_user_to_click_button(self, capsys):
+        """Test that main tells user to click the Create GitHub App button."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.open_manifest_in_browser"):
-            with patch("builtins.input", return_value="test-code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+        server_handle, code_holder = self._mock_callback_server()
+
+        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "code" in captured.out.lower()
-        assert "copy" in captured.out.lower()
+        assert "Click" in captured.out
+        assert "Create GitHub App for" in captured.out
 
-    def test_warns_user_about_expected_404(self, capsys):
-        """Test that main warns user the redirect page will 404 but code is still available to copy."""
+    def test_mentions_waiting_for_callback(self, capsys):
+        """Test that main tells user it's waiting for the GitHub callback."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.open_manifest_in_browser"):
-            with patch("builtins.input", return_value="test-code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+        server_handle, code_holder = self._mock_callback_server()
+
+        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "404" in captured.out
-        assert "expected" in captured.out.lower() or "normal" in captured.out.lower()
-        assert "copy" in captured.out.lower()
+        assert "Waiting" in captured.out
 
     def test_mentions_button_includes_username(self, capsys):
         """Test that message mentions the button text includes the user's GitHub username."""
@@ -385,10 +413,13 @@ class TestMainInteractiveFlow:
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.open_manifest_in_browser"):
-            with patch("builtins.input", return_value="test-code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+        server_handle, code_holder = self._mock_callback_server()
+
+        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         # Message should mention that button says "Create GitHub App for <username>"
@@ -408,10 +439,13 @@ class TestMainInteractiveFlow:
         }
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.open_manifest_in_browser"):
-            with patch("builtins.input", return_value="test-code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+        server_handle, code_holder = self._mock_callback_server()
+
+        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         # Verify labels
@@ -438,6 +472,8 @@ class TestMainInteractiveFlow:
         }
         mock_response.raise_for_status = MagicMock()
 
+        server_handle, code_holder = self._mock_callback_server()
+
         # Get the script directory (where create_github_app.py lives)
         import create_github_app
         script_dir = Path(create_github_app.__file__).parent
@@ -449,10 +485,11 @@ class TestMainInteractiveFlow:
             pem_path.unlink()
 
         try:
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("builtins.input", return_value="test-code"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+            with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+                with patch("create_github_app.open_manifest_in_browser"):
+                    with patch("create_github_app.stop_callback_server"):
+                        with patch("create_github_app.requests.post", return_value=mock_response):
+                            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
             # Verify pem file was NOT created in cwd
             assert not (tmp_path / "keys" / "my-app.pem").exists()
@@ -503,6 +540,217 @@ class TestParseArgs:
         monkeypatch.setattr(sys, "argv", ["script", "--base-domain", "mycompany.com"])
         args = parse_args()
         assert args.base_domain == "mycompany.com"
+
+
+class TestCallbackServer:
+    """Tests for the FastAPI callback server that captures the GitHub OAuth code."""
+
+    def test_callback_endpoint_extracts_code_from_query_param(self):
+        """Test that /callback extracts the code from query parameter."""
+        from fastapi.testclient import TestClient
+        from create_github_app import create_callback_app
+
+        app, code_holder = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback?code=test-auth-code-123")
+
+        assert response.status_code == 200
+        assert code_holder.code == "test-auth-code-123"
+
+    def test_callback_endpoint_returns_success_html(self):
+        """Test that /callback returns a user-friendly success HTML page."""
+        from fastapi.testclient import TestClient
+        from create_github_app import create_callback_app
+
+        app, _ = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback?code=some-code")
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "success" in response.text.lower()
+
+    def test_callback_endpoint_handles_missing_code(self):
+        """Test that /callback handles missing code parameter gracefully."""
+        from fastapi.testclient import TestClient
+        from create_github_app import create_callback_app
+
+        app, code_holder = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback")
+
+        assert response.status_code == 400
+        assert code_holder.code is None
+
+    def test_callback_endpoint_signals_code_received(self):
+        """Test that /callback sets an event when code is received."""
+        from fastapi.testclient import TestClient
+        from create_github_app import create_callback_app
+
+        app, code_holder = create_callback_app()
+        client = TestClient(app)
+
+        assert not code_holder.code_received.is_set()
+        client.get("/callback?code=test-code")
+        assert code_holder.code_received.is_set()
+
+
+class TestCallbackServerLifecycle:
+    """Tests for starting and stopping the callback server."""
+
+    def test_start_callback_server_runs_on_specified_port(self):
+        """Test that the callback server runs on localhost:port."""
+        import time
+        import httpx
+        from create_github_app import start_callback_server, stop_callback_server
+
+        server_handle, code_holder = start_callback_server(port=18234)
+        try:
+            time.sleep(0.5)  # Give server time to start
+            response = httpx.get("http://localhost:18234/callback?code=test-code")
+            assert response.status_code == 200
+            assert code_holder.code == "test-code"
+        finally:
+            stop_callback_server(server_handle)
+
+    def test_stop_callback_server_shuts_down_cleanly(self):
+        """Test that stop_callback_server shuts down the server."""
+        import time
+        import httpx
+        from create_github_app import start_callback_server, stop_callback_server
+
+        server_handle, _ = start_callback_server(port=18235)
+        time.sleep(0.5)
+        stop_callback_server(server_handle)
+        time.sleep(0.5)
+
+        with pytest.raises(httpx.ConnectError):
+            httpx.get("http://localhost:18235/callback?code=test")
+
+
+class TestManifestRedirectUrl:
+    """Tests for manifest redirect_url with callback port."""
+
+    def test_manifest_redirect_url_uses_callback_port(self):
+        """Test that manifest redirect_url points to localhost with specified port."""
+        manifest = build_app_manifest(base_domain="example.com", callback_port=18080)
+        assert manifest["redirect_url"] == "http://localhost:18080/callback"
+
+    def test_manifest_redirect_url_defaults_to_port_9876(self):
+        """Test that manifest redirect_url defaults to port 9876 when no port specified."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["redirect_url"] == "http://localhost:9876/callback"
+
+
+class TestMainWithCallbackServer:
+    """Tests for main() integration with callback server."""
+
+    def test_main_starts_callback_server_before_opening_browser(self):
+        """Test that main starts callback server before opening browser."""
+        from unittest.mock import MagicMock, patch, call
+        import threading
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123}
+        mock_response.raise_for_status = MagicMock()
+
+        call_order = []
+
+        def track_start_server(*args, **kwargs):
+            call_order.append("start_server")
+            code_holder = MagicMock()
+            code_holder.code = "test-code"
+            code_holder.code_received = threading.Event()
+            code_holder.code_received.set()
+            return MagicMock(), code_holder
+
+        def track_open_browser(*args, **kwargs):
+            call_order.append("open_browser")
+            return "/tmp/test.html"
+
+        with patch("create_github_app.start_callback_server", side_effect=track_start_server) as mock_start:
+            with patch("create_github_app.open_manifest_in_browser", side_effect=track_open_browser):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        assert call_order == ["start_server", "open_browser"]
+
+    def test_main_waits_for_code_from_callback_server(self, capsys):
+        """Test that main waits for code from callback server instead of prompting."""
+        from unittest.mock import MagicMock, patch
+        import threading
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123, "client_id": "test-client"}
+        mock_response.raise_for_status = MagicMock()
+
+        code_holder = MagicMock()
+        code_holder.code = "received-code-from-callback"
+        code_holder.code_received = threading.Event()
+        code_holder.code_received.set()
+
+        with patch("create_github_app.start_callback_server", return_value=(MagicMock(), code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response) as mock_post:
+                        # Should NOT need input() - no prompting
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        # Verify the code from callback was used
+        mock_post.assert_called_once()
+        call_url = mock_post.call_args[0][0]
+        assert "received-code-from-callback" in call_url
+
+    def test_main_stops_callback_server_after_receiving_code(self):
+        """Test that main stops callback server after receiving the code."""
+        from unittest.mock import MagicMock, patch
+        import threading
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123}
+        mock_response.raise_for_status = MagicMock()
+
+        code_holder = MagicMock()
+        code_holder.code = "test-code"
+        code_holder.code_received = threading.Event()
+        code_holder.code_received.set()
+        server_handle = MagicMock()
+
+        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server") as mock_stop:
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        mock_stop.assert_called_once_with(server_handle)
+
+    def test_main_no_longer_prompts_for_code_input(self):
+        """Test that main does not prompt for manual code input."""
+        from unittest.mock import MagicMock, patch
+        import threading
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123}
+        mock_response.raise_for_status = MagicMock()
+
+        code_holder = MagicMock()
+        code_holder.code = "auto-captured-code"
+        code_holder.code_received = threading.Event()
+        code_holder.code_received.set()
+
+        with patch("create_github_app.start_callback_server", return_value=(MagicMock(), code_holder)):
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("create_github_app.stop_callback_server"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        with patch("builtins.input") as mock_input:
+                            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        # input() should never be called
+        mock_input.assert_not_called()
 
 
 if __name__ == "__main__":

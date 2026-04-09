@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["PyGithub", "requests"]
+# dependencies = ["PyGithub", "requests", "fastapi", "uvicorn"]
 # ///
 """CLI to create a GitHub app for OpenHands Enterprise (OHE)."""
 
@@ -10,11 +10,16 @@ import html
 import json
 import secrets
 import tempfile
+import threading
 import webbrowser
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
 import requests
+import uvicorn
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
 SCRIPT_DIR = Path(__file__).parent
 
@@ -57,14 +62,21 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[str, Any]:
+DEFAULT_CALLBACK_PORT = 9876  # Using high port that doesn't require root
+
+
+def build_app_manifest(
+    base_domain: str,
+    app_name: str | None = None,
+    callback_port: int = DEFAULT_CALLBACK_PORT,
+) -> dict[str, Any]:
     """Build the GitHub App manifest configuration."""
     if app_name is None:
         app_name = generate_unique_app_name()
     return {
         "name": app_name,
         "url": f"https://app.{base_domain}",
-        "redirect_url": "http://localhost/callback",
+        "redirect_url": f"http://localhost:{callback_port}/callback",
         "callback_urls": [f"https://auth.app.{base_domain}/realms/allhands/broker/github/endpoint"],
         "public": False,
         "request_oauth_on_install": True,
@@ -104,15 +116,82 @@ def generate_manifest_html(manifest: dict[str, Any]) -> str:
 </html>"""
 
 
-def open_manifest_in_browser(base_domain: str, app_name: str | None = None) -> str:
+def open_manifest_in_browser(
+    base_domain: str,
+    app_name: str | None = None,
+    callback_port: int = DEFAULT_CALLBACK_PORT,
+) -> str:
     """Write manifest HTML to temp file and open in browser. Returns file path."""
-    manifest = build_app_manifest(base_domain, app_name)
+    manifest = build_app_manifest(base_domain, app_name, callback_port=callback_port)
     html = generate_manifest_html(manifest)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(html)
         filepath = f.name
     webbrowser.open(f"file://{filepath}")
     return filepath
+
+
+@dataclass
+class CodeHolder:
+    """Holds the OAuth code received from GitHub callback."""
+
+    code: str | None = None
+    code_received: threading.Event = field(default_factory=threading.Event)
+
+
+def create_callback_app() -> tuple[FastAPI, CodeHolder]:
+    """Create a FastAPI app with a /callback endpoint to capture the OAuth code."""
+    app = FastAPI()
+    code_holder = CodeHolder()
+
+    @app.get("/callback", response_class=HTMLResponse)
+    def callback(code: str | None = None):
+        if code is None:
+            return HTMLResponse(
+                content="<html><body><h1>Error</h1><p>Missing code parameter.</p></body></html>",
+                status_code=400,
+            )
+        code_holder.code = code
+        code_holder.code_received.set()
+        return HTMLResponse(
+            content="""<html>
+<head><title>Success</title></head>
+<body>
+<h1>Success!</h1>
+<p>GitHub App code received. You can close this window.</p>
+<p>Return to the terminal to continue.</p>
+</body>
+</html>""",
+            status_code=200,
+        )
+
+    return app, code_holder
+
+
+class ServerHandle:
+    """Handle for managing a running uvicorn server."""
+
+    def __init__(self, server: uvicorn.Server, thread: threading.Thread):
+        self.server = server
+        self.thread = thread
+
+
+def start_callback_server(port: int = 80) -> tuple[ServerHandle, CodeHolder]:
+    """Start the callback server in a background thread."""
+    app, code_holder = create_callback_app()
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
+    return ServerHandle(server, thread), code_holder
+
+
+def stop_callback_server(handle: ServerHandle) -> None:
+    """Stop the callback server."""
+    handle.server.should_exit = True
+    handle.thread.join(timeout=5)
 
 
 def exchange_code_for_credentials(code: str) -> dict:
@@ -140,6 +219,7 @@ def main(
     dry_run: bool = False,
     github_client: GithubClient | None = None,
     app_name: str | None = None,
+    callback_port: int = DEFAULT_CALLBACK_PORT,
 ) -> None:
     """Main entry point for creating a GitHub App."""
     if app_name is None:
@@ -148,14 +228,29 @@ def main(
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
 
-    # Open browser for user to create app (they're already logged into GitHub)
-    print(f"\nOpening browser to create GitHub App '{app_name}'...")
-    print("Click 'Create GitHub App for <your-username>' to continue.")
-    print("You'll be redirected to a page that shows a 404 error - this is expected.")
-    print("Copy the 'code' parameter from the URL.\n")
-    open_manifest_in_browser(base_domain, app_name)
+    # Start callback server to capture the code from GitHub redirect
+    server_handle, code_holder = start_callback_server(port=callback_port)
 
-    code = input("Enter the code from the redirect URL: ").strip()
+    try:
+        # Open browser for user to create app (they're already logged into GitHub)
+        print(f"\nOpening browser to create GitHub App '{app_name}'...")
+        print("Click 'Create GitHub App for <your-username>' to continue.")
+        print("Waiting for GitHub callback...\n")
+        open_manifest_in_browser(base_domain, app_name, callback_port=callback_port)
+
+        # Wait for the code to be received via callback
+        print("Waiting for authorization code...")
+        code_holder.code_received.wait(timeout=300)  # 5 minute timeout
+        code = code_holder.code
+
+        if code is None:
+            print("Error: Timed out waiting for authorization code.")
+            return
+
+        print("Authorization code received!")
+    finally:
+        # Always stop the callback server
+        stop_callback_server(server_handle)
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
