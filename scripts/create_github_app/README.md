@@ -1,6 +1,6 @@
 # Description
 
-Create a GitHub App configured for OpenHands Enterprise (OHE).
+Create a GitHub App configured for the Replicated self-hosted install of OpenHands Enterprise (OHE).
 
 ## Prerequisites
 
