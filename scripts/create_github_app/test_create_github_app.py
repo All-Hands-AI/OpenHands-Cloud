@@ -67,10 +67,8 @@ class TestBuildAppManifest:
         [
             ("actions", "write"),
             ("contents", "write"),
-            ("email_addresses", "read"),
             ("issues", "write"),
             ("metadata", "read"),
-            ("organization_events", "read"),
             ("pull_requests", "write"),
             ("statuses", "write"),
             ("workflows", "write"),
@@ -80,6 +78,12 @@ class TestBuildAppManifest:
         """Test that manifest has correct permission level."""
         manifest = build_app_manifest(base_domain="example.com")
         assert manifest["default_permissions"][permission] == expected_level
+
+    def test_manifest_has_only_expected_permissions(self):
+        """Test that manifest has exactly the expected permissions, no more."""
+        manifest = build_app_manifest(base_domain="example.com")
+        expected = {"actions", "contents", "issues", "metadata", "pull_requests", "statuses", "workflows"}
+        assert set(manifest["default_permissions"].keys()) == expected
 
     def test_manifest_webhook_url(self):
         """Test that hook_attributes webhook URL is https://app.BASE_DOMAIN/integration/github/events."""
