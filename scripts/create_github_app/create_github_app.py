@@ -8,6 +8,8 @@
 import argparse
 import json
 import secrets
+import subprocess
+import sys
 import tempfile
 import webbrowser
 from pathlib import Path
@@ -118,8 +120,19 @@ def exchange_code_for_credentials(code: str) -> dict:
     return response.json()
 
 
+def ensure_playwright_browsers() -> None:
+    """Ensure Playwright Chromium browser is installed."""
+    subprocess.run(
+        [sys.executable, "-m", "playwright", "install", "chromium"],
+        check=True,
+        capture_output=True,
+    )
+
+
 def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
     """Run the GitHub App manifest flow in a headless browser and return the code."""
+    ensure_playwright_browsers()
+
     manifest = build_app_manifest(base_domain, app_name)
     html_content = generate_manifest_html(manifest)
 
