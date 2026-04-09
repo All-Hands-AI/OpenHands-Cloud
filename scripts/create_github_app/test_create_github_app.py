@@ -335,8 +335,8 @@ class TestMainInteractiveFlow:
 
         mock_open.assert_called_once_with("example.com", "my-app")
 
-    def test_prompts_user_to_paste_code(self, capsys):
-        """Test that main prompts user to paste the code from URL."""
+    def test_prompts_user_to_copy_code(self, capsys):
+        """Test that main prompts user to copy the code from URL."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
@@ -350,7 +350,25 @@ class TestMainInteractiveFlow:
 
         captured = capsys.readouterr()
         assert "code" in captured.out.lower()
-        assert "paste" in captured.out.lower() or "enter" in captured.out.lower()
+        assert "copy" in captured.out.lower()
+
+    def test_warns_user_about_expected_404(self, capsys):
+        """Test that main warns user the redirect page will 404 but code is still available to copy."""
+        from unittest.mock import MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.open_manifest_in_browser"):
+            with patch("builtins.input", return_value="test-code"):
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "404" in captured.out
+        assert "expected" in captured.out.lower() or "normal" in captured.out.lower()
+        assert "copy" in captured.out.lower()
 
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
