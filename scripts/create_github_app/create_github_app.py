@@ -71,6 +71,7 @@ def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[st
         "default_permissions": {
             "actions": "write",
             "contents": "write",
+            "emails": "read",
             "issues": "write",
             "metadata": "read",
             "pull_requests": "write",
