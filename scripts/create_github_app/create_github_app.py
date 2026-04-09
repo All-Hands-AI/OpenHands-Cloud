@@ -155,15 +155,20 @@ def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            # Use visible browser - user needs to sign into GitHub
+            browser = p.chromium.launch(headless=False)
             context = browser.new_context()
             page = context.new_page()
 
             # Load the manifest form and auto-submit to GitHub
             page.goto(f"file://{temp_path}")
 
-            # Wait for and click the "Create GitHub App" button
-            page.wait_for_selector('input[type="submit"][value="Create GitHub App"]')
+            # Wait for the "Create GitHub App" button (user may need to sign in first)
+            # Give user up to 5 minutes to authenticate with GitHub
+            page.wait_for_selector(
+                'input[type="submit"][value="Create GitHub App"]',
+                timeout=300000,
+            )
             page.click('input[type="submit"][value="Create GitHub App"]')
 
             # Wait for redirect with code (even if page 404s)
@@ -205,9 +210,9 @@ def main(
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
 
-    # Automated browser flow: open headless Chrome, complete flow, extract code
+    # Browser flow: open visible Chrome for user to sign in and create app
     print(f"\nLaunching browser to create GitHub App '{app_name}'...")
-    print("Please wait...")
+    print("Please sign in to GitHub if prompted, then wait for the app to be created.")
     code = run_manifest_flow_with_browser(base_domain, app_name)
 
     credentials = exchange_code_for_credentials(code)

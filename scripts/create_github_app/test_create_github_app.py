@@ -391,8 +391,8 @@ class TestMainInteractiveFlow:
 
         mock_flow.assert_called_once_with("example.com", "my-app")
 
-    def test_prints_please_wait_message(self, capsys):
-        """Test that main prints 'Please wait' message (not 'complete the flow')."""
+    def test_prints_sign_in_message(self, capsys):
+        """Test that main prints sign-in message for user."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
@@ -404,8 +404,7 @@ class TestMainInteractiveFlow:
                 main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "Please wait" in captured.out
-        assert "complete the" not in captured.out.lower()
+        assert "sign in" in captured.out.lower()
 
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
@@ -611,8 +610,8 @@ class TestRunManifestFlowWithBrowser:
 
         assert code == "test-extracted-code"
 
-    def test_launches_headless_chrome(self):
-        """Test that function launches headless Chrome browser."""
+    def test_launches_visible_chrome_for_sign_in(self):
+        """Test that function launches visible Chrome browser for user sign-in."""
         from unittest.mock import MagicMock, patch
 
         mock_page = MagicMock()
@@ -634,7 +633,8 @@ class TestRunManifestFlowWithBrowser:
         with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
             run_manifest_flow_with_browser("example.com", "my-app")
 
-        mock_playwright.chromium.launch.assert_called_once_with(headless=True)
+        # Browser must be visible (not headless) so user can sign in to GitHub
+        mock_playwright.chromium.launch.assert_called_once_with(headless=False)
 
     def test_clicks_create_github_app_button(self):
         """Test that function clicks the 'Create GitHub App' button after login."""
