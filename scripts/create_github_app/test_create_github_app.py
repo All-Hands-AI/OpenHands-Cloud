@@ -370,6 +370,23 @@ class TestMainInteractiveFlow:
         assert "expected" in captured.out.lower() or "normal" in captured.out.lower()
         assert "copy" in captured.out.lower()
 
+    def test_mentions_button_includes_username(self, capsys):
+        """Test that message mentions the button text includes the user's GitHub username."""
+        from unittest.mock import MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"id": 123}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.open_manifest_in_browser"):
+            with patch("builtins.input", return_value="test-code"):
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        # Message should mention that button says "Create GitHub App for <username>"
+        assert "Create GitHub App for" in captured.out
+
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
         from unittest.mock import MagicMock, patch

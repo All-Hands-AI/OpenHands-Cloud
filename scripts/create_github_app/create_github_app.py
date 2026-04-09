@@ -146,8 +146,9 @@ def main(
 
     # Open browser for user to create app (they're already logged into GitHub)
     print(f"\nOpening browser to create GitHub App '{app_name}'...")
-    print("After clicking 'Create GitHub App', you'll be redirected to a page that shows a 404 error.")
-    print("This is expected - you can still copy the 'code' parameter from the URL.\n")
+    print("Click 'Create GitHub App for <your-username>' to continue.")
+    print("You'll be redirected to a page that shows a 404 error - this is expected.")
+    print("Copy the 'code' parameter from the URL.\n")
     open_manifest_in_browser(base_domain, app_name)
 
     code = input("Enter the code from the redirect URL: ").strip()
