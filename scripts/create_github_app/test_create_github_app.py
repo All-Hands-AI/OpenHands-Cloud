@@ -91,26 +91,35 @@ class TestBuildAppManifest:
 class TestGenerateManifestUrl:
     """Tests for generate_manifest_url function."""
 
-    def test_returns_github_settings_url(self):
-        """Test that URL starts with GitHub settings path."""
+    def test_returns_data_url_with_html(self):
+        """Test that URL is a data URL with HTML form."""
         from create_github_app import generate_manifest_url
 
         url = generate_manifest_url(base_domain="example.com")
-        assert url.startswith("https://github.com/settings/apps/new?manifest=")
+        assert url.startswith("data:text/html;base64,")
 
-    def test_manifest_is_base64_encoded_in_url(self):
-        """Test that manifest is base64 encoded in the URL."""
+    def test_html_contains_post_form_to_github(self):
+        """Test that HTML form POSTs to GitHub settings."""
         import base64
-        import json
-        from urllib.parse import parse_qs, urlparse
+
+        from create_github_app import generate_manifest_url
+
+        url = generate_manifest_url(base_domain="example.com")
+        html_b64 = url.split(",", 1)[1]
+        html = base64.b64decode(html_b64).decode()
+        assert 'action="https://github.com/settings/apps/new"' in html
+        assert 'method="post"' in html
+
+    def test_html_contains_manifest_with_app_name(self):
+        """Test that HTML form contains manifest with app name."""
+        import base64
 
         from create_github_app import generate_manifest_url
 
         url = generate_manifest_url(base_domain="example.com", app_name="test-app")
-        parsed = urlparse(url)
-        manifest_b64 = parse_qs(parsed.query)["manifest"][0]
-        manifest = json.loads(base64.b64decode(manifest_b64))
-        assert manifest["name"] == "test-app"
+        html_b64 = url.split(",", 1)[1]
+        html = base64.b64decode(html_b64).decode()
+        assert '"name": "test-app"' in html
 
 
 class TestExchangeCodeForCredentials:
@@ -235,7 +244,7 @@ class TestMainInteractiveFlow:
             main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "https://github.com/settings/apps/new?manifest=" in captured.out
+        assert "data:text/html;base64," in captured.out
 
     def test_prompts_for_code(self, monkeypatch):
         """Test that main prompts user to enter the code."""

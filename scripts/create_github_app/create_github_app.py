@@ -73,11 +73,24 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
 
 
 def generate_manifest_url(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
-    """Generate the GitHub URL to create an app from manifest."""
+    """Generate the GitHub URL to create an app from manifest.
+    
+    Note: This returns a data: URL containing an HTML form that auto-submits.
+    The GitHub manifest flow requires a POST request with the manifest.
+    """
     manifest = build_app_manifest(base_domain, app_name)
     manifest_json = json.dumps(manifest)
-    manifest_b64 = base64.b64encode(manifest_json.encode()).decode()
-    return f"https://github.com/settings/apps/new?{urlencode({'manifest': manifest_b64})}"
+    html = f"""<!DOCTYPE html>
+<html>
+<body>
+<form id="manifest-form" action="https://github.com/settings/apps/new" method="post">
+<input type="hidden" name="manifest" value='{manifest_json}'>
+</form>
+<script>document.getElementById('manifest-form').submit();</script>
+</body>
+</html>"""
+    html_b64 = base64.b64encode(html.encode()).decode()
+    return f"data:text/html;base64,{html_b64}"
 
 
 def exchange_code_for_credentials(code: str) -> dict:
