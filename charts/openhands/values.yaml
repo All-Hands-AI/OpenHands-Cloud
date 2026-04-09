@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.19.0
+  tag: cloud-1.21.0
 
 ingress:
   enabled: false
@@ -156,7 +156,6 @@ integrationEvents:
     workers: 2
 
 litellm:
-  enabled: true
   # NOTE: to set the LLM model, set the LITELLM_DEFAULT_MODEL variable in the env section above.
   # REQUIRED: Update to match the hostname set in the litellm-helm ingress section
   url: "https://llm-proxy.example.com"
@@ -212,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: cloud-1.19.0-nikolaik
+    tag: cloud-1.21.0-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -269,22 +268,6 @@ uvicorn:
   workers: 3
 
 ## Chart dependency configurations
-
-clickhouse:
-  # Enable this if you enable langfuse, as it will use clickhouse for storage
-  enabled: false
-  shards: 2
-  replicaCount: 1
-  keeper:
-    enabled: true
-    image:
-      repository: bitnamilegacy/clickhouse-keeper
-  auth:
-    username: default
-    existingSecret: clickhouse-password
-    existingSecretKey: password
-  image:
-    repository: bitnamilegacy/clickhouse
 
 keycloak:
   enabled: false
@@ -368,44 +351,6 @@ keycloak:
               name: postgres-password
               key: password
 
-langfuse:
-  # Enable this if you want to use langfuse for tracing
-  enabled: false
-  s3:
-    image:
-      repository: bitnamilegacy/minio
-  langfuse:
-    salt:
-      secretKeyRef:
-        name: langfuse-salt
-        key: salt
-    nextauth:
-      secret:
-        secretKeyRef:
-          name: langfuse-nextauth
-          key: nextauth-secret
-  clickhouse:
-    deploy: false
-    host: oh-main-clickhouse
-    auth:
-      username: default
-      existingSecret: clickhouse-password
-      existingSecretKey: password
-  postgresql:
-    deploy: false
-    host: oh-main-postgresql
-    auth:
-      username: postgres
-      database: postgres_langfuse
-      existingSecret: postgres-password
-      existingSecretKey: password
-  redis:
-    deploy: false
-    host: oh-main-redis
-    auth:
-      existingSecret: redis
-      existingSecretPasswordKey: redis-password
-
 litellm-helm:
   # Set this to false if you are using your own litellm instance
   # NOTE: We recommend using the provided LiteLLM instance (enabled: true) for simplicity
@@ -415,9 +360,6 @@ litellm-helm:
   masterkeySecretName: lite-llm-api-key
   masterkeySecretKey: lite-llm-api-key
   environmentSecrets: [litellm-env-secrets]
-  # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
-  # envVars:
-  #   LANGFUSE_HOST: "http://oh-main-langfuse"
   # Migrations run automatically when litellm starts. This disables running them separately as a job.
   migrationJob:
     enabled: false
@@ -465,10 +407,6 @@ litellm-helm:
     litellm_settings:
       num_retries: 3
       request_timeout: 600
-      # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
-      # success_callback: ["langfuse"]
-      # failure_callback: ["langfuse"]
-      # langfuse_default_tags: ["cache_hit", "cache_key", "proxy_base_url", "user_api_key_alias", "user_api_key_user_id", "user_api_key_team_alias"]
       context_window_fallbacks: []
       allowed_fails: 3
 
@@ -576,7 +514,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.19.0-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.21.0-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
