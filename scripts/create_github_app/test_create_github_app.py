@@ -139,6 +139,11 @@ class TestBuildAppManifest:
         assert "redirect_url" in manifest
         assert manifest["redirect_url"] == "http://localhost/callback"
 
+    def test_manifest_requests_oauth_on_install(self):
+        """Test that manifest requests OAuth authorization during installation."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert manifest["request_oauth_on_install"] is True
+
 
 class TestGenerateManifestHtml:
     """Tests for generate_manifest_html function."""

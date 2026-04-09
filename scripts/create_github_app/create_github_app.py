@@ -67,6 +67,7 @@ def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[st
         "redirect_url": "http://localhost/callback",
         "callback_urls": [f"https://auth.app.{base_domain}/realms/allhands/broker/github/endpoint"],
         "public": False,
+        "request_oauth_on_install": True,
         "default_permissions": {
             "actions": "write",
             "contents": "write",
