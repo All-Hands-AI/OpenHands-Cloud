@@ -67,13 +67,12 @@ class TestBuildAppManifest:
         [
             ("actions", "write"),
             ("contents", "write"),
-            ("emails", "read"),
+            ("email_addresses", "read"),
             ("issues", "write"),
             ("metadata", "read"),
             ("organization_events", "read"),
             ("pull_requests", "write"),
             ("statuses", "write"),
-            ("webhooks", "write"),
             ("workflows", "write"),
         ],
     )
