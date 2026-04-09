@@ -394,6 +394,23 @@ class TestEnsurePlaywrightBrowsers:
         assert "install" in call_args
         assert "chromium" in call_args
 
+    def test_sets_browsers_path_to_script_directory(self):
+        """Test that PLAYWRIGHT_BROWSERS_PATH is set to script's playwright folder."""
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+        from create_github_app import ensure_playwright_browsers
+        import create_github_app
+
+        script_dir = Path(create_github_app.__file__).parent
+        expected_path = str(script_dir / "playwright")
+
+        with patch("create_github_app.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            ensure_playwright_browsers()
+
+        env = mock_run.call_args[1].get("env", {})
+        assert env.get("PLAYWRIGHT_BROWSERS_PATH") == expected_path
+
     def test_browser_flow_calls_ensure_browsers(self):
         """Test that run_manifest_flow_with_browser calls ensure_playwright_browsers."""
         from unittest.mock import MagicMock, patch
@@ -419,6 +436,45 @@ class TestEnsurePlaywrightBrowsers:
                 run_manifest_flow_with_browser("example.com", "my-app")
 
         mock_ensure.assert_called_once()
+
+    def test_browser_flow_sets_browsers_path_env(self, monkeypatch):
+        """Test that browser flow sets PLAYWRIGHT_BROWSERS_PATH env var."""
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+        import os
+        import create_github_app
+
+        script_dir = Path(create_github_app.__file__).parent
+        expected_path = str(script_dir / "playwright")
+
+        mock_page = MagicMock()
+        mock_page.url = "http://localhost/callback?code=abc123"
+
+        mock_context = MagicMock()
+        mock_context.new_page.return_value = mock_page
+
+        mock_browser = MagicMock()
+        mock_browser.new_context.return_value = mock_context
+
+        mock_playwright = MagicMock()
+        mock_playwright.chromium.launch.return_value = mock_browser
+
+        mock_sync_playwright = MagicMock()
+        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
+        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
+
+        captured_env = {}
+        original_environ = os.environ.copy()
+
+        def capture_env():
+            captured_env.update(os.environ)
+            return mock_sync_playwright
+
+        with patch("create_github_app.ensure_playwright_browsers"):
+            with patch("create_github_app.sync_playwright", side_effect=capture_env):
+                run_manifest_flow_with_browser("example.com", "my-app")
+
+        assert captured_env.get("PLAYWRIGHT_BROWSERS_PATH") == expected_path
 
 
 class TestRunManifestFlowWithBrowser:

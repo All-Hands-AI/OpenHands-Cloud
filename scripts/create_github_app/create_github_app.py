@@ -7,6 +7,7 @@
 
 import argparse
 import json
+import os
 import secrets
 import subprocess
 import sys
@@ -18,6 +19,9 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 from playwright.sync_api import sync_playwright
+
+SCRIPT_DIR = Path(__file__).parent
+PLAYWRIGHT_BROWSERS_PATH = SCRIPT_DIR / "playwright"
 
 APP_NAME_PREFIX = "openhands"
 
@@ -121,17 +125,23 @@ def exchange_code_for_credentials(code: str) -> dict:
 
 
 def ensure_playwright_browsers() -> None:
-    """Ensure Playwright Chromium browser is installed."""
+    """Ensure Playwright Chromium browser is installed in script directory."""
+    env = os.environ.copy()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = str(PLAYWRIGHT_BROWSERS_PATH)
     subprocess.run(
         [sys.executable, "-m", "playwright", "install", "chromium"],
         check=True,
         capture_output=True,
+        env=env,
     )
 
 
 def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
     """Run the GitHub App manifest flow in a headless browser and return the code."""
     ensure_playwright_browsers()
+
+    # Set browser path for Playwright to find the installed browser
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(PLAYWRIGHT_BROWSERS_PATH)
 
     manifest = build_app_manifest(base_domain, app_name)
     html_content = generate_manifest_html(manifest)
