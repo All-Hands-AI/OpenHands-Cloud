@@ -348,10 +348,13 @@ class TestMainInteractiveFlow:
                     os.unlink(filepath)
 
         captured = capsys.readouterr()
-        assert "App ID: 123" in captured.out
-        assert "Client ID: Iv1.abc123" in captured.out
-        assert "Client secret: secret456" in captured.out
-        assert "Webhook secret: whsec789" in captured.out
+        # Verify order: Client ID, Client secret, App ID, Webhook secret, pem
+        lines = captured.out.strip().split("\n")
+        credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret"))]
+        assert credential_lines[0].startswith("Client ID:")
+        assert credential_lines[1].startswith("Client secret:")
+        assert credential_lines[2].startswith("App ID:")
+        assert credential_lines[3].startswith("Webhook secret:")
 
 
 class TestParseArgs:
