@@ -19,19 +19,12 @@ from create_github_app import (
     create_github_app,
     main,
     parse_args,
-    run_manifest_flow_with_browser,
     SCRIPT_DIR,
-    PLAYWRIGHT_BROWSERS_PATH,
 )
 
 
 class TestNoChangesOutsideScriptFolder:
     """Tests to verify all file changes are contained within script folder."""
-
-    def test_playwright_browsers_path_is_inside_script_dir(self):
-        """Test that PLAYWRIGHT_BROWSERS_PATH is inside SCRIPT_DIR."""
-        assert PLAYWRIGHT_BROWSERS_PATH.parent == SCRIPT_DIR
-        assert PLAYWRIGHT_BROWSERS_PATH.name == "playwright"
 
     def test_keys_saved_relative_to_script(self):
         """Test that keys are saved in keys/ subdirectory of script location."""
@@ -50,9 +43,10 @@ class TestNoChangesOutsideScriptFolder:
             pem_path.unlink()
 
         try:
-            with patch("create_github_app.run_manifest_flow_with_browser", return_value="code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="test-app")
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("builtins.input", return_value="code"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="test-app")
 
             # Verify the pem was saved inside script dir/keys/
             assert pem_path.exists()
@@ -61,57 +55,6 @@ class TestNoChangesOutsideScriptFolder:
         finally:
             if pem_path.exists():
                 pem_path.unlink()
-
-    def test_ensure_browsers_path_is_relative_to_script(self):
-        """Test that ensure_playwright_browsers uses path relative to script."""
-        from unittest.mock import MagicMock, patch
-        from create_github_app import ensure_playwright_browsers
-
-        with patch("create_github_app.subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0)
-            ensure_playwright_browsers()
-
-        env = mock_run.call_args[1].get("env", {})
-        browsers_path = env.get("PLAYWRIGHT_BROWSERS_PATH")
-        assert browsers_path is not None
-        assert browsers_path == str(PLAYWRIGHT_BROWSERS_PATH)
-        assert Path(browsers_path).parent == SCRIPT_DIR
-
-    def test_env_vars_cleaned_up_after_browser_flow(self):
-        """Test that PLAYWRIGHT_BROWSERS_PATH is unset after browser flow completes."""
-        import os
-        from unittest.mock import MagicMock, patch
-
-        # Ensure env var is not set before
-        original_value = os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=abc123"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        try:
-            with patch("create_github_app.ensure_playwright_browsers"):
-                with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
-                    run_manifest_flow_with_browser("example.com", "my-app")
-
-            # Verify env var is cleaned up after flow
-            assert "PLAYWRIGHT_BROWSERS_PATH" not in os.environ
-        finally:
-            # Restore original value if it existed
-            if original_value is not None:
-                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = original_value
 
 
 class FakeGithubClient:
@@ -375,36 +318,39 @@ class TestDryRun:
 
 
 class TestMainInteractiveFlow:
-    """Tests for main() interactive flow using Playwright browser."""
+    """Tests for main() interactive flow using user's default browser."""
 
-    def test_uses_browser_flow(self, capsys):
-        """Test that main uses browser flow to get code."""
+    def test_opens_browser_and_prompts_for_code(self, capsys):
+        """Test that main opens browser and prompts user for code."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.run_manifest_flow_with_browser", return_value="test-code") as mock_flow:
-            with patch("create_github_app.requests.post", return_value=mock_response):
-                main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with patch("create_github_app.open_manifest_in_browser") as mock_open:
+            with patch("builtins.input", return_value="test-code"):
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-        mock_flow.assert_called_once_with("example.com", "my-app")
+        mock_open.assert_called_once_with("example.com", "my-app")
 
-    def test_prints_sign_in_message(self, capsys):
-        """Test that main prints sign-in message for user."""
+    def test_prompts_user_to_paste_code(self, capsys):
+        """Test that main prompts user to paste the code from URL."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.run_manifest_flow_with_browser", return_value="test-code"):
-            with patch("create_github_app.requests.post", return_value=mock_response):
-                main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with patch("create_github_app.open_manifest_in_browser"):
+            with patch("builtins.input", return_value="test-code"):
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "sign in" in captured.out.lower()
+        assert "code" in captured.out.lower()
+        assert "paste" in captured.out.lower() or "enter" in captured.out.lower()
 
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
@@ -420,9 +366,10 @@ class TestMainInteractiveFlow:
         }
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.run_manifest_flow_with_browser", return_value="test-code"):
-            with patch("create_github_app.requests.post", return_value=mock_response):
-                main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with patch("create_github_app.open_manifest_in_browser"):
+            with patch("builtins.input", return_value="test-code"):
+                with patch("create_github_app.requests.post", return_value=mock_response):
+                    main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         # Verify labels
@@ -460,9 +407,10 @@ class TestMainInteractiveFlow:
             pem_path.unlink()
 
         try:
-            with patch("create_github_app.run_manifest_flow_with_browser", return_value="test-code"):
-                with patch("create_github_app.requests.post", return_value=mock_response):
-                    main(base_domain="example.com", dry_run=False, app_name="my-app")
+            with patch("create_github_app.open_manifest_in_browser"):
+                with patch("builtins.input", return_value="test-code"):
+                    with patch("create_github_app.requests.post", return_value=mock_response):
+                        main(base_domain="example.com", dry_run=False, app_name="my-app")
 
             # Verify pem file was NOT created in cwd
             assert not (tmp_path / "keys" / "my-app.pem").exists()
@@ -478,243 +426,6 @@ class TestMainInteractiveFlow:
             # Clean up after test
             if pem_path.exists():
                 pem_path.unlink()
-
-
-class TestEnsurePlaywrightBrowsers:
-    """Tests for ensure_playwright_browsers function."""
-
-    def test_installs_chromium_if_missing(self):
-        """Test that function installs chromium if not present."""
-        from unittest.mock import MagicMock, patch
-        from create_github_app import ensure_playwright_browsers
-
-        with patch("create_github_app.subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0)
-            ensure_playwright_browsers()
-
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args[0][0]
-        assert "playwright" in call_args
-        assert "install" in call_args
-        assert "chromium" in call_args
-
-    def test_sets_browsers_path_to_script_directory(self):
-        """Test that PLAYWRIGHT_BROWSERS_PATH is set to script's playwright folder."""
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-        from create_github_app import ensure_playwright_browsers
-        import create_github_app
-
-        script_dir = Path(create_github_app.__file__).parent
-        expected_path = str(script_dir / "playwright")
-
-        with patch("create_github_app.subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0)
-            ensure_playwright_browsers()
-
-        env = mock_run.call_args[1].get("env", {})
-        assert env.get("PLAYWRIGHT_BROWSERS_PATH") == expected_path
-
-    def test_browser_flow_calls_ensure_browsers(self):
-        """Test that run_manifest_flow_with_browser calls ensure_playwright_browsers."""
-        from unittest.mock import MagicMock, patch
-
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=abc123"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        with patch("create_github_app.ensure_playwright_browsers") as mock_ensure:
-            with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
-                run_manifest_flow_with_browser("example.com", "my-app")
-
-        mock_ensure.assert_called_once()
-
-    def test_browser_flow_sets_browsers_path_env(self, monkeypatch):
-        """Test that browser flow sets PLAYWRIGHT_BROWSERS_PATH env var."""
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-        import os
-        import create_github_app
-
-        script_dir = Path(create_github_app.__file__).parent
-        expected_path = str(script_dir / "playwright")
-
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=abc123"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        captured_env = {}
-        original_environ = os.environ.copy()
-
-        def capture_env():
-            captured_env.update(os.environ)
-            return mock_sync_playwright
-
-        with patch("create_github_app.ensure_playwright_browsers"):
-            with patch("create_github_app.sync_playwright", side_effect=capture_env):
-                run_manifest_flow_with_browser("example.com", "my-app")
-
-        assert captured_env.get("PLAYWRIGHT_BROWSERS_PATH") == expected_path
-
-
-class TestRunManifestFlowWithBrowser:
-    """Tests for run_manifest_flow_with_browser function."""
-
-    def test_extracts_code_from_redirect_url(self):
-        """Test that function extracts code from the redirect URL."""
-        from unittest.mock import MagicMock, patch
-
-        # Mock Playwright components
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=test-extracted-code"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
-            code = run_manifest_flow_with_browser("example.com", "my-app")
-
-        assert code == "test-extracted-code"
-
-    def test_launches_visible_chrome_for_sign_in(self):
-        """Test that function launches visible Chrome browser for user sign-in."""
-        from unittest.mock import MagicMock, patch
-
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=abc123"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
-            run_manifest_flow_with_browser("example.com", "my-app")
-
-        # Browser must be visible (not headless) so user can sign in to GitHub
-        mock_playwright.chromium.launch.assert_called_once_with(headless=False)
-
-    def test_clicks_create_github_app_button(self):
-        """Test that function clicks the 'Create GitHub App' button after login."""
-        from unittest.mock import MagicMock, patch, call
-
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=abc123"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
-            run_manifest_flow_with_browser("example.com", "my-app")
-
-        # Verify it waits for and clicks the Create GitHub App button
-        mock_page.wait_for_selector.assert_called()
-        mock_page.click.assert_called()
-
-    def test_generates_valid_manifest_html(self):
-        """Test that browser flow generates HTML with valid manifest JSON."""
-        from unittest.mock import MagicMock, patch
-        import json
-        import html as html_module
-        import re
-
-        captured_html = []
-
-        def capture_write(content):
-            captured_html.append(content)
-
-        mock_file = MagicMock()
-        mock_file.__enter__ = MagicMock(return_value=mock_file)
-        mock_file.__exit__ = MagicMock(return_value=False)
-        mock_file.write = capture_write
-        mock_file.name = "/tmp/test.html"
-
-        mock_page = MagicMock()
-        mock_page.url = "http://localhost/callback?code=abc123"
-
-        mock_context = MagicMock()
-        mock_context.new_page.return_value = mock_page
-
-        mock_browser = MagicMock()
-        mock_browser.new_context.return_value = mock_context
-
-        mock_playwright = MagicMock()
-        mock_playwright.chromium.launch.return_value = mock_browser
-
-        mock_sync_playwright = MagicMock()
-        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
-        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
-
-        with patch("create_github_app.tempfile.NamedTemporaryFile", return_value=mock_file):
-            with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
-                with patch("create_github_app.Path"):
-                    run_manifest_flow_with_browser("example.com", "my-app")
-
-        # Verify HTML was written with valid manifest JSON
-        assert len(captured_html) == 1
-        raw_html = captured_html[0]
-        assert "my-app" in raw_html
-        assert "example.com" in raw_html
-        # Extract HTML-escaped JSON from value attribute and verify it's valid
-        match = re.search(r'value="([^"]+)"', raw_html)
-        assert match is not None, f"Could not find value attribute in HTML: {raw_html}"
-        escaped_json = match.group(1)
-        # Unescape HTML entities to get valid JSON
-        manifest_json = html_module.unescape(escaped_json)
-        manifest = json.loads(manifest_json)
-        assert manifest["name"] == "my-app"
 
 
 class TestParseArgs:

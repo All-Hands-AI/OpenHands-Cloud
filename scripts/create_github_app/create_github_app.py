@@ -1,28 +1,22 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["PyGithub", "requests", "playwright"]
+# dependencies = ["PyGithub", "requests"]
 # ///
 """CLI to create a GitHub app for OpenHands Enterprise (OHE)."""
 
 import argparse
 import html
 import json
-import os
 import secrets
-import subprocess
-import sys
 import tempfile
 import webbrowser
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import parse_qs, urlparse
 
 import requests
-from playwright.sync_api import sync_playwright
 
 SCRIPT_DIR = Path(__file__).parent
-PLAYWRIGHT_BROWSERS_PATH = SCRIPT_DIR / "playwright"
 
 APP_NAME_PREFIX = "openhands"
 
@@ -127,66 +121,6 @@ def exchange_code_for_credentials(code: str) -> dict:
     return response.json()
 
 
-def ensure_playwright_browsers() -> None:
-    """Ensure Playwright Chromium browser is installed in script directory."""
-    env = os.environ.copy()
-    env["PLAYWRIGHT_BROWSERS_PATH"] = str(PLAYWRIGHT_BROWSERS_PATH)
-    subprocess.run(
-        [sys.executable, "-m", "playwright", "install", "chromium"],
-        check=True,
-        capture_output=True,
-        env=env,
-    )
-
-
-def run_manifest_flow_with_browser(base_domain: str, app_name: str) -> str:
-    """Run the GitHub App manifest flow in a headless browser and return the code."""
-    ensure_playwright_browsers()
-
-    # Set browser path for Playwright to find the installed browser
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(PLAYWRIGHT_BROWSERS_PATH)
-
-    manifest = build_app_manifest(base_domain, app_name)
-    html_content = generate_manifest_html(manifest)
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
-        f.write(html_content)
-        temp_path = f.name
-
-    try:
-        with sync_playwright() as p:
-            # Use visible browser - user needs to sign into GitHub
-            browser = p.chromium.launch(headless=False)
-            context = browser.new_context()
-            page = context.new_page()
-
-            # Load the manifest form and auto-submit to GitHub
-            page.goto(f"file://{temp_path}")
-
-            # Wait for the "Create GitHub App" button (user may need to sign in first)
-            # Give user up to 5 minutes to authenticate with GitHub
-            page.wait_for_selector(
-                'input[type="submit"][value="Create GitHub App"]',
-                timeout=300000,
-            )
-            page.click('input[type="submit"][value="Create GitHub App"]')
-
-            # Wait for redirect with code (even if page 404s)
-            page.wait_for_url("**/callback?code=*", timeout=120000)
-
-            parsed = urlparse(page.url)
-            query_params = parse_qs(parsed.query)
-            code = query_params["code"][0]
-
-            browser.close()
-    finally:
-        Path(temp_path).unlink(missing_ok=True)
-        # Clean up environment variable
-        os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
-
-    return code
-
-
 def create_github_app(
     base_domain: str,
     github_client: GithubClient,
@@ -210,10 +144,13 @@ def main(
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
 
-    # Browser flow: open visible Chrome for user to sign in and create app
-    print(f"\nLaunching browser to create GitHub App '{app_name}'...")
-    print("Please sign in to GitHub if prompted, then wait for the app to be created.")
-    code = run_manifest_flow_with_browser(base_domain, app_name)
+    # Open browser for user to create app (they're already logged into GitHub)
+    print(f"\nOpening browser to create GitHub App '{app_name}'...")
+    print("After clicking 'Create GitHub App', you'll be redirected to a page.")
+    print("Copy the 'code' parameter from the URL and paste it below.\n")
+    open_manifest_in_browser(base_domain, app_name)
+
+    code = input("Enter the code from the redirect URL: ").strip()
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
