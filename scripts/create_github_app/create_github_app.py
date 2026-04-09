@@ -8,8 +8,9 @@
 import argparse
 import base64
 import json
+import tempfile
+import webbrowser
 from typing import Any, Protocol
-from urllib.parse import urlencode
 
 import requests
 
@@ -72,25 +73,31 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
     }
 
 
-def generate_manifest_url(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
-    """Generate the GitHub URL to create an app from manifest.
-    
-    Note: This returns a data: URL containing an HTML form that auto-submits.
-    The GitHub manifest flow requires a POST request with the manifest.
-    """
+def generate_manifest_html(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
+    """Generate HTML form that POSTs to GitHub to create app from manifest."""
     manifest = build_app_manifest(base_domain, app_name)
     manifest_json = json.dumps(manifest)
-    html = f"""<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html>
+<head><title>Creating GitHub App...</title></head>
 <body>
+<p>Redirecting to GitHub to create your app...</p>
 <form id="manifest-form" action="https://github.com/settings/apps/new" method="post">
 <input type="hidden" name="manifest" value='{manifest_json}'>
 </form>
 <script>document.getElementById('manifest-form').submit();</script>
 </body>
 </html>"""
-    html_b64 = base64.b64encode(html.encode()).decode()
-    return f"data:text/html;base64,{html_b64}"
+
+
+def open_manifest_in_browser(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
+    """Write manifest HTML to temp file and open in browser. Returns file path."""
+    html = generate_manifest_html(base_domain, app_name)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+        f.write(html)
+        filepath = f.name
+    webbrowser.open(f"file://{filepath}")
+    return filepath
 
 
 def exchange_code_for_credentials(code: str) -> dict:
@@ -124,9 +131,9 @@ def main(
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
 
-    # Interactive flow: print URL, prompt for code, exchange for credentials
-    url = generate_manifest_url(base_domain, app_name)
-    print(f"\nOpen this URL in your browser to create the GitHub App:\n\n{url}\n")
+    # Interactive flow: open browser, prompt for code, exchange for credentials
+    print(f"\nOpening browser to create GitHub App '{app_name}'...")
+    open_manifest_in_browser(base_domain, app_name)
     print("After completing the flow, GitHub will redirect you to a URL with a 'code' parameter.")
 
     code = input("\nEnter the code from the URL: ").strip()

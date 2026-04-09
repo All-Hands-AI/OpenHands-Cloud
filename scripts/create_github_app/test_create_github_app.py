@@ -88,38 +88,62 @@ class TestBuildAppManifest:
         assert manifest["hook_attributes"]["url"] == "https://app.mycompany.com/integration/github/events"
 
 
-class TestGenerateManifestUrl:
-    """Tests for generate_manifest_url function."""
-
-    def test_returns_data_url_with_html(self):
-        """Test that URL is a data URL with HTML form."""
-        from create_github_app import generate_manifest_url
-
-        url = generate_manifest_url(base_domain="example.com")
-        assert url.startswith("data:text/html;base64,")
+class TestGenerateManifestHtml:
+    """Tests for generate_manifest_html function."""
 
     def test_html_contains_post_form_to_github(self):
         """Test that HTML form POSTs to GitHub settings."""
-        import base64
+        from create_github_app import generate_manifest_html
 
-        from create_github_app import generate_manifest_url
-
-        url = generate_manifest_url(base_domain="example.com")
-        html_b64 = url.split(",", 1)[1]
-        html = base64.b64decode(html_b64).decode()
+        html = generate_manifest_html(base_domain="example.com")
         assert 'action="https://github.com/settings/apps/new"' in html
         assert 'method="post"' in html
 
     def test_html_contains_manifest_with_app_name(self):
         """Test that HTML form contains manifest with app name."""
-        import base64
+        from create_github_app import generate_manifest_html
 
-        from create_github_app import generate_manifest_url
-
-        url = generate_manifest_url(base_domain="example.com", app_name="test-app")
-        html_b64 = url.split(",", 1)[1]
-        html = base64.b64decode(html_b64).decode()
+        html = generate_manifest_html(base_domain="example.com", app_name="test-app")
         assert '"name": "test-app"' in html
+
+    def test_html_auto_submits_form(self):
+        """Test that HTML includes auto-submit script."""
+        from create_github_app import generate_manifest_html
+
+        html = generate_manifest_html(base_domain="example.com")
+        assert "submit()" in html
+
+
+class TestOpenManifestInBrowser:
+    """Tests for open_manifest_in_browser function."""
+
+    def test_writes_html_to_temp_file(self):
+        """Test that HTML is written to a temp file."""
+        import os
+        from unittest.mock import patch
+
+        from create_github_app import open_manifest_in_browser
+
+        with patch("create_github_app.webbrowser.open"):
+            filepath = open_manifest_in_browser(base_domain="example.com")
+            assert os.path.exists(filepath)
+            assert filepath.endswith(".html")
+            with open(filepath) as f:
+                content = f.read()
+            assert "https://github.com/settings/apps/new" in content
+            os.unlink(filepath)
+
+    def test_opens_browser_with_file_url(self):
+        """Test that browser is opened with file:// URL."""
+        import os
+        from unittest.mock import patch
+
+        from create_github_app import open_manifest_in_browser
+
+        with patch("create_github_app.webbrowser.open") as mock_open:
+            filepath = open_manifest_in_browser(base_domain="example.com")
+            mock_open.assert_called_once_with(f"file://{filepath}")
+            os.unlink(filepath)
 
 
 class TestExchangeCodeForCredentials:
@@ -231,8 +255,9 @@ class TestDryRun:
 class TestMainInteractiveFlow:
     """Tests for main() interactive flow when not in dry-run mode."""
 
-    def test_prints_manifest_url(self, capsys, monkeypatch):
-        """Test that main prints the manifest URL for user to visit."""
+    def test_opens_browser(self, capsys, monkeypatch):
+        """Test that main opens browser with manifest."""
+        import os
         from unittest.mock import MagicMock, patch
 
         monkeypatch.setattr("builtins.input", lambda _: "test-code")
@@ -240,14 +265,21 @@ class TestMainInteractiveFlow:
         mock_response.json.return_value = {"id": 123, "name": "my-app"}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.requests.post", return_value=mock_response):
-            main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with patch("create_github_app.webbrowser.open") as mock_browser:
+            with patch("create_github_app.requests.post", return_value=mock_response):
+                main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-        captured = capsys.readouterr()
-        assert "data:text/html;base64," in captured.out
+        assert mock_browser.called
+        call_arg = mock_browser.call_args[0][0]
+        assert call_arg.startswith("file://")
+        # Cleanup temp file
+        filepath = call_arg.replace("file://", "")
+        if os.path.exists(filepath):
+            os.unlink(filepath)
 
     def test_prompts_for_code(self, monkeypatch):
         """Test that main prompts user to enter the code."""
+        import os
         from unittest.mock import MagicMock, patch
 
         input_calls = []
@@ -261,14 +293,21 @@ class TestMainInteractiveFlow:
         mock_response.json.return_value = {"id": 123}
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.requests.post", return_value=mock_response):
-            main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with patch("create_github_app.webbrowser.open") as mock_browser:
+            with patch("create_github_app.requests.post", return_value=mock_response):
+                main(base_domain="example.com", dry_run=False, app_name="my-app")
+            # Cleanup temp file
+            if mock_browser.called:
+                filepath = mock_browser.call_args[0][0].replace("file://", "")
+                if os.path.exists(filepath):
+                    os.unlink(filepath)
 
         assert len(input_calls) == 1
         assert "code" in input_calls[0].lower()
 
     def test_exchanges_code_and_prints_credentials(self, capsys, monkeypatch):
         """Test that main exchanges code and prints the credentials."""
+        import os
         from unittest.mock import MagicMock, patch
 
         monkeypatch.setattr("builtins.input", lambda _: "test-code")
@@ -281,8 +320,14 @@ class TestMainInteractiveFlow:
         }
         mock_response.raise_for_status = MagicMock()
 
-        with patch("create_github_app.requests.post", return_value=mock_response):
-            main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with patch("create_github_app.webbrowser.open") as mock_browser:
+            with patch("create_github_app.requests.post", return_value=mock_response):
+                main(base_domain="example.com", dry_run=False, app_name="my-app")
+            # Cleanup temp file
+            if mock_browser.called:
+                filepath = mock_browser.call_args[0][0].replace("file://", "")
+                if os.path.exists(filepath):
+                    os.unlink(filepath)
 
         captured = capsys.readouterr()
         assert "client_id" in captured.out
