@@ -6,7 +6,6 @@
 """CLI to create a GitHub app for OpenHands Enterprise (OHE)."""
 
 import argparse
-import base64
 import json
 import secrets
 import tempfile
@@ -160,14 +159,19 @@ def main(
         pem_path.write_text(credentials["pem"])
 
     print(f"\nCredentials:")
-    display_names = {"id": "App ID", "client_id": "Client ID", "client_secret": "Client secret", "webhook_secret": "Webhook secret"}
+    display_names = {
+        "id": "GitHub App ID",
+        "client_id": "GitHub OAuth Client ID",
+        "client_secret": "GitHub OAuth Client Secret",
+        "webhook_secret": "GitHub App Webhook Secret",
+    }
     for key in ["client_id", "client_secret", "id", "webhook_secret"]:
         if key in credentials:
             display_key = display_names.get(key, key)
             print(f"  {display_key}: {credentials[key]}")
     if pem_path:
         display_path = f"./scripts/create_github_app/keys/{app_name}.pem"
-        print(f"  Private key file: {display_path}")
+        print(f"  GitHub App Private Key: {display_path}")
 
 
 if __name__ == "__main__":

@@ -348,13 +348,11 @@ class TestMainInteractiveFlow:
                     os.unlink(filepath)
 
         captured = capsys.readouterr()
-        # Verify order: Client ID, Client secret, App ID, Webhook secret
-        lines = captured.out.strip().split("\n")
-        credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret"))]
-        assert credential_lines[0].startswith("Client ID:")
-        assert credential_lines[1].startswith("Client secret:")
-        assert credential_lines[2].startswith("App ID:")
-        assert credential_lines[3].startswith("Webhook secret:")
+        # Verify labels
+        assert "GitHub OAuth Client ID: Iv1.abc123" in captured.out
+        assert "GitHub OAuth Client Secret: secret456" in captured.out
+        assert "GitHub App ID: 123" in captured.out
+        assert "GitHub App Webhook Secret: whsec789" in captured.out
 
     def test_saves_pem_to_keys_directory_in_script_folder(self, capsys, monkeypatch, tmp_path):
         """Test that pem is saved to keys/ directory in the script's folder, not cwd."""
@@ -404,11 +402,7 @@ class TestMainInteractiveFlow:
 
             # Verify output shows the full path from repo root
             captured = capsys.readouterr()
-            assert "Private key file: ./scripts/create_github_app/keys/my-app.pem" in captured.out
-            # Verify Private key file comes after other credentials
-            lines = captured.out.strip().split("\n")
-            credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret", "Private key file"))]
-            assert credential_lines[-1].startswith("Private key file:")
+            assert "GitHub App Private Key: ./scripts/create_github_app/keys/my-app.pem" in captured.out
         finally:
             # Clean up after test
             if pem_path.exists():
