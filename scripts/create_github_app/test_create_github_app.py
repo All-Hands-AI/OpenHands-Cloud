@@ -114,7 +114,6 @@ class TestBuildAppManifest:
             ("issues", "write"),
             ("metadata", "read"),
             ("organization_events", "read"),
-            ("organization_hooks", "write"),
             ("pull_requests", "write"),
             ("repository_hooks", "write"),
             ("statuses", "write"),
@@ -129,7 +128,7 @@ class TestBuildAppManifest:
     def test_manifest_has_only_expected_permissions(self):
         """Test that manifest has exactly the expected permissions, no more."""
         manifest = build_app_manifest(base_domain="example.com")
-        expected = {"actions", "contents", "emails", "issues", "metadata", "organization_events", "organization_hooks", "pull_requests", "repository_hooks", "statuses", "workflows"}
+        expected = {"actions", "contents", "emails", "issues", "metadata", "organization_events", "pull_requests", "repository_hooks", "statuses", "workflows"}
         assert set(manifest["default_permissions"].keys()) == expected
 
     def test_manifest_webhook_url(self):

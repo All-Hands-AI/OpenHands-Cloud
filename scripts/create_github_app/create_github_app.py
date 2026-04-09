@@ -75,7 +75,6 @@ def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[st
             "issues": "write",
             "metadata": "read",
             "organization_events": "read",
-            "organization_hooks": "write",
             "pull_requests": "write",
             "repository_hooks": "write",
             "statuses": "write",
