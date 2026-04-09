@@ -6,6 +6,7 @@
 """CLI to create a GitHub app for OpenHands Enterprise (OHE)."""
 
 import argparse
+import html
 import json
 import os
 import secrets
@@ -90,13 +91,15 @@ def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[st
 def generate_manifest_html(manifest: dict[str, Any]) -> str:
     """Generate HTML form that POSTs to GitHub to create app from manifest."""
     manifest_json = json.dumps(manifest)
+    # HTML-escape the JSON to safely embed in the value attribute
+    escaped_json = html.escape(manifest_json)
     return f"""<!DOCTYPE html>
 <html>
 <head><title>Creating GitHub App...</title></head>
 <body>
 <p>Redirecting to GitHub to create your app...</p>
 <form id="manifest-form" action="https://github.com/settings/apps/new" method="post">
-<input type="hidden" name="manifest" value='{manifest_json}'>
+<input type="hidden" name="manifest" value="{escaped_json}">
 </form>
 <script>document.getElementById('manifest-form').submit();</script>
 </body>

@@ -215,7 +215,17 @@ class TestGenerateManifestHtml:
 
         manifest = build_app_manifest(base_domain="example.com", app_name="test-app")
         html = generate_manifest_html(manifest)
-        assert '"name": "test-app"' in html
+        # The app name should be in the HTML (HTML-escaped)
+        assert "test-app" in html
+
+    def test_html_escapes_manifest_json_for_attribute(self):
+        """Test that manifest JSON is HTML-escaped for safe embedding in attribute."""
+        from create_github_app import generate_manifest_html, build_app_manifest
+
+        manifest = build_app_manifest(base_domain="example.com", app_name="test-app")
+        html = generate_manifest_html(manifest)
+        # Double quotes in JSON should be escaped as &quot; for HTML attribute
+        assert "&quot;" in html or 'value="' in html
 
     def test_html_auto_submits_form(self):
         """Test that HTML includes auto-submit script."""
@@ -657,6 +667,8 @@ class TestRunManifestFlowWithBrowser:
         """Test that browser flow generates HTML with valid manifest JSON."""
         from unittest.mock import MagicMock, patch
         import json
+        import html as html_module
+        import re
 
         captured_html = []
 
@@ -692,14 +704,15 @@ class TestRunManifestFlowWithBrowser:
 
         # Verify HTML was written with valid manifest JSON
         assert len(captured_html) == 1
-        html = captured_html[0]
-        assert "my-app" in html
-        assert "example.com" in html
-        # Extract JSON from HTML and verify it's valid
-        import re
-        match = re.search(r"value='(\{.*?\})'", html)
-        assert match is not None, f"Could not find JSON in HTML: {html}"
-        manifest_json = match.group(1)
+        raw_html = captured_html[0]
+        assert "my-app" in raw_html
+        assert "example.com" in raw_html
+        # Extract HTML-escaped JSON from value attribute and verify it's valid
+        match = re.search(r'value="([^"]+)"', raw_html)
+        assert match is not None, f"Could not find value attribute in HTML: {raw_html}"
+        escaped_json = match.group(1)
+        # Unescape HTML entities to get valid JSON
+        manifest_json = html_module.unescape(escaped_json)
         manifest = json.loads(manifest_json)
         assert manifest["name"] == "my-app"
 
