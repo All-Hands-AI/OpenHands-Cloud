@@ -1,6 +1,6 @@
-# Create GitHub App for OpenHands Enterprise
+# Description
 
-CLI tool to create a GitHub App configured for OpenHands Enterprise (OHE).
+Create a GitHub App configured for OpenHands Enterprise (OHE).
 
 ## Prerequisites
 
