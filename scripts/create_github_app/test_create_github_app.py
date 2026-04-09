@@ -348,8 +348,7 @@ class TestMainInteractiveFlow:
 
         captured = capsys.readouterr()
         assert "App ID: 123" in captured.out
-        assert "client_id" in captured.out
-        assert "Iv1.abc123" in captured.out
+        assert "Client ID: Iv1.abc123" in captured.out
 
 
 class TestParseArgs:

@@ -148,7 +148,7 @@ def main(
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
-    display_names = {"id": "App ID"}
+    display_names = {"id": "App ID", "client_id": "Client ID"}
     for key in ["id", "name", "client_id", "client_secret", "pem", "webhook_secret"]:
         if key in credentials:
             value = credentials[key]
