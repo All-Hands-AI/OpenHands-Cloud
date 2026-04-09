@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import create_github_app
 from create_github_app import (
-    DEFAULT_APP_NAME,
     build_app_manifest,
     create_github_app,
     main,
@@ -47,10 +46,19 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(app_name="my-app", base_domain="example.com")
         assert manifest["name"] == "my-app"
 
-    def test_manifest_app_name_defaults_to_constant(self):
-        """Test that app_name defaults to DEFAULT_APP_NAME when not provided."""
+    def test_manifest_app_name_defaults_to_unique_name(self):
+        """Test that default app name is unique (has random suffix)."""
         manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["name"] == DEFAULT_APP_NAME
+        assert manifest["name"].startswith("openhands-")
+        suffix = manifest["name"].split("-", 1)[1]
+        assert len(suffix) == 8
+        int(suffix, 16)  # Should be valid hex
+
+    def test_default_app_names_are_different(self):
+        """Test that multiple calls generate different default names."""
+        manifest1 = build_app_manifest(base_domain="example.com")
+        manifest2 = build_app_manifest(base_domain="example.com")
+        assert manifest1["name"] != manifest2["name"]
 
     def test_manifest_url_uses_app_subdomain(self):
         """Test that manifest URL is https://app.BASE_DOMAIN."""
@@ -352,11 +360,11 @@ class TestParseArgs:
         args = parse_args()
         assert args.dry_run is True
 
-    def test_app_name_defaults_to_constant(self, monkeypatch):
-        """Test that app_name defaults to DEFAULT_APP_NAME when not specified."""
+    def test_app_name_defaults_to_none(self, monkeypatch):
+        """Test that app_name defaults to None when not specified (unique name generated later)."""
         monkeypatch.setattr(sys, "argv", ["script", "--base-domain", "example.com"])
         args = parse_args()
-        assert args.app_name == DEFAULT_APP_NAME
+        assert args.app_name is None
 
     def test_app_name_can_be_overridden(self, monkeypatch):
         """Test that --app-name argument allows custom value."""

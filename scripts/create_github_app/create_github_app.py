@@ -8,13 +8,19 @@
 import argparse
 import base64
 import json
+import secrets
 import tempfile
 import webbrowser
 from typing import Any, Protocol
 
 import requests
 
-DEFAULT_APP_NAME = "openhands"
+APP_NAME_PREFIX = "openhands"
+
+
+def generate_unique_app_name() -> str:
+    """Generate a unique app name with random suffix."""
+    return f"{APP_NAME_PREFIX}-{secrets.token_hex(4)}"
 
 
 class GithubClient(Protocol):
@@ -37,8 +43,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--app-name",
-        default=DEFAULT_APP_NAME,
-        help=f"Name of the GitHub App to create (default: {DEFAULT_APP_NAME}).",
+        default=None,
+        help="Name of the GitHub App to create (default: openhands-<random>).",
     )
     parser.add_argument(
         "--base-domain",
@@ -48,8 +54,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> dict[str, Any]:
+def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[str, Any]:
     """Build the GitHub App manifest configuration."""
+    if app_name is None:
+        app_name = generate_unique_app_name()
     return {
         "name": app_name,
         "url": f"https://app.{base_domain}",
@@ -71,7 +79,7 @@ def build_app_manifest(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> di
     }
 
 
-def generate_manifest_html(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
+def generate_manifest_html(base_domain: str, app_name: str | None = None) -> str:
     """Generate HTML form that POSTs to GitHub to create app from manifest."""
     manifest = build_app_manifest(base_domain, app_name)
     manifest_json = json.dumps(manifest)
@@ -88,7 +96,7 @@ def generate_manifest_html(base_domain: str, app_name: str = DEFAULT_APP_NAME) -
 </html>"""
 
 
-def open_manifest_in_browser(base_domain: str, app_name: str = DEFAULT_APP_NAME) -> str:
+def open_manifest_in_browser(base_domain: str, app_name: str | None = None) -> str:
     """Write manifest HTML to temp file and open in browser. Returns file path."""
     html = generate_manifest_html(base_domain, app_name)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
@@ -111,7 +119,7 @@ def exchange_code_for_credentials(code: str) -> dict:
 def create_github_app(
     base_domain: str,
     github_client: GithubClient,
-    app_name: str = DEFAULT_APP_NAME,
+    app_name: str | None = None,
 ) -> dict:
     """Create a GitHub App using the provided client."""
     manifest = build_app_manifest(base_domain, app_name)
@@ -122,9 +130,11 @@ def main(
     base_domain: str,
     dry_run: bool = False,
     github_client: GithubClient | None = None,
-    app_name: str = DEFAULT_APP_NAME,
+    app_name: str | None = None,
 ) -> None:
     """Main entry point for creating a GitHub App."""
+    if app_name is None:
+        app_name = generate_unique_app_name()
     if dry_run:
         print(f"Would create GitHub App '{app_name}' for domain '{base_domain}'")
         return
