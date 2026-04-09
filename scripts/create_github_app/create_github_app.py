@@ -87,9 +87,8 @@ def build_app_manifest(base_domain: str, app_name: str | None = None) -> dict[st
     }
 
 
-def generate_manifest_html(base_domain: str, app_name: str | None = None) -> str:
+def generate_manifest_html(manifest: dict[str, Any]) -> str:
     """Generate HTML form that POSTs to GitHub to create app from manifest."""
-    manifest = build_app_manifest(base_domain, app_name)
     manifest_json = json.dumps(manifest)
     return f"""<!DOCTYPE html>
 <html>
@@ -106,7 +105,8 @@ def generate_manifest_html(base_domain: str, app_name: str | None = None) -> str
 
 def open_manifest_in_browser(base_domain: str, app_name: str | None = None) -> str:
     """Write manifest HTML to temp file and open in browser. Returns file path."""
-    html = generate_manifest_html(base_domain, app_name)
+    manifest = build_app_manifest(base_domain, app_name)
+    html = generate_manifest_html(manifest)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
         f.write(html)
         filepath = f.name

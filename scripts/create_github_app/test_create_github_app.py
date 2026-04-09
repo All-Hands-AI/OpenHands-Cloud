@@ -202,24 +202,27 @@ class TestGenerateManifestHtml:
 
     def test_html_contains_post_form_to_github(self):
         """Test that HTML form POSTs to GitHub settings."""
-        from create_github_app import generate_manifest_html
+        from create_github_app import generate_manifest_html, build_app_manifest
 
-        html = generate_manifest_html(base_domain="example.com")
+        manifest = build_app_manifest(base_domain="example.com")
+        html = generate_manifest_html(manifest)
         assert 'action="https://github.com/settings/apps/new"' in html
         assert 'method="post"' in html
 
     def test_html_contains_manifest_with_app_name(self):
         """Test that HTML form contains manifest with app name."""
-        from create_github_app import generate_manifest_html
+        from create_github_app import generate_manifest_html, build_app_manifest
 
-        html = generate_manifest_html(base_domain="example.com", app_name="test-app")
+        manifest = build_app_manifest(base_domain="example.com", app_name="test-app")
+        html = generate_manifest_html(manifest)
         assert '"name": "test-app"' in html
 
     def test_html_auto_submits_form(self):
         """Test that HTML includes auto-submit script."""
-        from create_github_app import generate_manifest_html
+        from create_github_app import generate_manifest_html, build_app_manifest
 
-        html = generate_manifest_html(base_domain="example.com")
+        manifest = build_app_manifest(base_domain="example.com")
+        html = generate_manifest_html(manifest)
         assert "submit()" in html
 
 
@@ -649,6 +652,56 @@ class TestRunManifestFlowWithBrowser:
         # Verify it waits for and clicks the Create GitHub App button
         mock_page.wait_for_selector.assert_called()
         mock_page.click.assert_called()
+
+    def test_generates_valid_manifest_html(self):
+        """Test that browser flow generates HTML with valid manifest JSON."""
+        from unittest.mock import MagicMock, patch
+        import json
+
+        captured_html = []
+
+        def capture_write(content):
+            captured_html.append(content)
+
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.write = capture_write
+        mock_file.name = "/tmp/test.html"
+
+        mock_page = MagicMock()
+        mock_page.url = "http://localhost/callback?code=abc123"
+
+        mock_context = MagicMock()
+        mock_context.new_page.return_value = mock_page
+
+        mock_browser = MagicMock()
+        mock_browser.new_context.return_value = mock_context
+
+        mock_playwright = MagicMock()
+        mock_playwright.chromium.launch.return_value = mock_browser
+
+        mock_sync_playwright = MagicMock()
+        mock_sync_playwright.__enter__ = MagicMock(return_value=mock_playwright)
+        mock_sync_playwright.__exit__ = MagicMock(return_value=False)
+
+        with patch("create_github_app.tempfile.NamedTemporaryFile", return_value=mock_file):
+            with patch("create_github_app.sync_playwright", return_value=mock_sync_playwright):
+                with patch("create_github_app.Path"):
+                    run_manifest_flow_with_browser("example.com", "my-app")
+
+        # Verify HTML was written with valid manifest JSON
+        assert len(captured_html) == 1
+        html = captured_html[0]
+        assert "my-app" in html
+        assert "example.com" in html
+        # Extract JSON from HTML and verify it's valid
+        import re
+        match = re.search(r"value='(\{.*?\})'", html)
+        assert match is not None, f"Could not find JSON in HTML: {html}"
+        manifest_json = match.group(1)
+        manifest = json.loads(manifest_json)
+        assert manifest["name"] == "my-app"
 
 
 class TestParseArgs:
