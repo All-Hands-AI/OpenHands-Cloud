@@ -148,13 +148,14 @@ def main(
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
-    print(f"\nCredentials:")
+    display_names = {"id": "App ID"}
     for key in ["id", "name", "client_id", "client_secret", "pem", "webhook_secret"]:
         if key in credentials:
             value = credentials[key]
             if key == "pem":
                 value = value[:50] + "..." if len(value) > 50 else value
-            print(f"  {key}: {value}")
+            display_key = display_names.get(key, key)
+            print(f"  {display_key}: {value}")
 
 
 if __name__ == "__main__":

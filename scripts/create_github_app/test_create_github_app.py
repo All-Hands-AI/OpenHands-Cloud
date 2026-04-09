@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pytest"]
+# dependencies = ["pytest", "requests"]
 # ///
 """Unit tests for create_github_app.py."""
 
@@ -347,6 +347,7 @@ class TestMainInteractiveFlow:
                     os.unlink(filepath)
 
         captured = capsys.readouterr()
+        assert "App ID: 123" in captured.out
         assert "client_id" in captured.out
         assert "Iv1.abc123" in captured.out
 
