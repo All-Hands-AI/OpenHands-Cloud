@@ -348,13 +348,47 @@ class TestMainInteractiveFlow:
                     os.unlink(filepath)
 
         captured = capsys.readouterr()
-        # Verify order: Client ID, Client secret, App ID, Webhook secret, pem
+        # Verify order: Client ID, Client secret, App ID, Webhook secret
         lines = captured.out.strip().split("\n")
         credential_lines = [l.strip() for l in lines if l.strip().startswith(("Client ID", "Client secret", "App ID", "Webhook secret"))]
         assert credential_lines[0].startswith("Client ID:")
         assert credential_lines[1].startswith("Client secret:")
         assert credential_lines[2].startswith("App ID:")
         assert credential_lines[3].startswith("Webhook secret:")
+
+    def test_saves_pem_to_keys_directory(self, capsys, monkeypatch, tmp_path):
+        """Test that pem is saved to keys/ directory."""
+        import os
+        from unittest.mock import MagicMock, patch
+
+        monkeypatch.setattr("builtins.input", lambda _: "test-code")
+        monkeypatch.chdir(tmp_path)
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "id": 123,
+            "name": "my-app",
+            "client_id": "Iv1.abc123",
+            "client_secret": "secret456",
+            "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----",
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("create_github_app.webbrowser.open") as mock_browser:
+            with patch("create_github_app.requests.post", return_value=mock_response):
+                main(base_domain="example.com", dry_run=False, app_name="my-app")
+            if mock_browser.called:
+                filepath = mock_browser.call_args[0][0].replace("file://", "")
+                if os.path.exists(filepath):
+                    os.unlink(filepath)
+
+        # Verify pem file was created in keys/ directory
+        pem_path = tmp_path / "keys" / "my-app.pem"
+        assert pem_path.exists()
+        assert pem_path.read_text() == "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----"
+
+        # Verify output mentions saved file location
+        captured = capsys.readouterr()
+        assert "keys/my-app.pem" in captured.out
 
 
 class TestParseArgs:

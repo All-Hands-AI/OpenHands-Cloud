@@ -11,6 +11,7 @@ import json
 import secrets
 import tempfile
 import webbrowser
+from pathlib import Path
 from typing import Any, Protocol
 
 import requests
@@ -148,14 +149,21 @@ def main(
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
+
+    # Save pem to keys/ directory
+    if "pem" in credentials:
+        keys_dir = Path("keys")
+        keys_dir.mkdir(exist_ok=True)
+        pem_path = keys_dir / f"{app_name}.pem"
+        pem_path.write_text(credentials["pem"])
+        print(f"\nPrivate key saved to: {pem_path}")
+
+    print(f"\nCredentials:")
     display_names = {"id": "App ID", "client_id": "Client ID", "client_secret": "Client secret", "webhook_secret": "Webhook secret"}
-    for key in ["client_id", "client_secret", "id", "webhook_secret", "pem"]:
+    for key in ["client_id", "client_secret", "id", "webhook_secret"]:
         if key in credentials:
-            value = credentials[key]
-            if key == "pem":
-                value = value[:50] + "..." if len(value) > 50 else value
             display_key = display_names.get(key, key)
-            print(f"  {display_key}: {value}")
+            print(f"  {display_key}: {credentials[key]}")
 
 
 if __name__ == "__main__":
