@@ -351,6 +351,29 @@ keycloak:
               name: postgres-password
               key: password
 
+laminar:
+  # Enable this if you want to use laminar
+  enabled: false
+  frontend:
+    ingress:
+      # Hostname for the frontend ingress
+      # When set, creates an Ingress with TLS via cert-manager
+      hostname: ""
+      # Ingress class name (defaults to "traefik")
+      className: ""
+      # Additional annotations for the ingress
+      annotations: {}
+  appServer:
+    ingress:
+      # Hostname for the app-server API ingress
+      # When set, creates an Ingress with TLS via cert-manager
+      # Used for trace ingestion from external services (e.g., runtime pods)
+      hostname: ""
+      # Ingress class name (defaults to "traefik")
+      className: ""
+      # Additional annotations for the ingress
+      annotations: {}
+
 litellm-helm:
   # Set this to false if you are using your own litellm instance
   # NOTE: We recommend using the provided LiteLLM instance (enabled: true) for simplicity

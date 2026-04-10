@@ -1,0 +1,34 @@
+{{/*
+  For exposing the Laminar frontend externally on GCP. For AWS configuration, see https://github.com/lmnr-ai/lmnr-helm/blob/main/CONFIGURATION.md#https-with-acm-certificate.
+  Ingress for laminar frontend service with TLS support via cert-manager.
+*/}}
+{{- if and .Values.laminar.enabled (and (eq .Values.laminar.global.cloudProvider "gcp") .Values.laminar.frontend.ingress.hostname) }}
+{{- $hostname := .Values.laminar.frontend.ingress.hostname }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: laminar-frontend-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    external-dns.alpha.kubernetes.io/hostname: {{ $hostname }}
+    {{- with .Values.laminar.frontend.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.laminar.frontend.ingress.className | default "traefik" }}
+  tls:
+    - hosts:
+        - {{ $hostname }}
+      secretName: laminar-frontend-tls
+  rules:
+    - host: {{ $hostname }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: laminar-frontend-service
+                port:
+                  number: {{ .Values.laminar.frontend.service.port | default 80 }}
+{{- end }}
