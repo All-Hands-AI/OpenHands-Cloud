@@ -392,31 +392,18 @@ class TestMainInteractiveFlow:
 
         mocks["open_browser"].assert_called_once()
 
-    def test_tells_user_to_click_button(self, capsys):
-        """Test that main tells user to click the Create GitHub App button."""
+    @pytest.mark.parametrize("expected_text,description", [
+        ("Click", "instructs user to click"),
+        ("Create GitHub App for", "mentions button text with username placeholder"),
+        ("Waiting", "indicates waiting for callback"),
+    ])
+    def test_console_output_guides_user(self, capsys, expected_text, description):
+        """Test that main() prints helpful guidance messages to the user."""
         with mock_main_dependencies({"id": 123}):
             main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "Click" in captured.out
-        assert "Create GitHub App for" in captured.out
-
-    def test_mentions_waiting_for_callback(self, capsys):
-        """Test that main tells user it's waiting for the GitHub callback."""
-        with mock_main_dependencies({"id": 123}):
-            main(base_domain="example.com", dry_run=False, app_name="my-app")
-
-        captured = capsys.readouterr()
-        assert "Waiting" in captured.out
-
-    def test_mentions_button_includes_username(self, capsys):
-        """Test that message mentions the button text includes the user's GitHub username."""
-        with mock_main_dependencies({"id": 123}):
-            main(base_domain="example.com", dry_run=False, app_name="my-app")
-
-        captured = capsys.readouterr()
-        # Message should mention that button says "Create GitHub App for <username>"
-        assert "Create GitHub App for" in captured.out
+        assert expected_text in captured.out, f"Output should contain '{expected_text}' ({description})"
 
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
