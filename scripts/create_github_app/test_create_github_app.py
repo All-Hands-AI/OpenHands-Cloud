@@ -87,6 +87,21 @@ def wait_for_server_shutdown(url: str, timeout: float = 2.0, interval: float = 0
 
 
 @contextmanager
+def temporary_pem_file(pem_path: Path):
+    """Context manager that ensures a pem file is cleaned up after test.
+
+    Removes the file before and after the test to ensure clean state.
+    """
+    if pem_path.exists():
+        pem_path.unlink()
+    try:
+        yield pem_path
+    finally:
+        if pem_path.exists():
+            pem_path.unlink()
+
+
+@contextmanager
 def mock_main_dependencies(response_data: dict, code: str = "test-code"):
     """Context manager that mocks all external dependencies for main().
 
@@ -119,12 +134,9 @@ class TestNoChangesOutsideScriptFolder:
 
     def test_keys_saved_relative_to_script(self):
         """Test that keys are saved in keys/ subdirectory of script location."""
-        keys_dir = SCRIPT_DIR / "keys"
-        pem_path = keys_dir / "test-app.pem"
-        if pem_path.exists():
-            pem_path.unlink()
+        pem_path = SCRIPT_DIR / "keys" / "test-app.pem"
 
-        try:
+        with temporary_pem_file(pem_path):
             with mock_main_dependencies({
                 "id": 123,
                 "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
@@ -135,9 +147,6 @@ class TestNoChangesOutsideScriptFolder:
             assert pem_path.exists()
             assert pem_path.parent.name == "keys"
             assert pem_path.parent.parent == SCRIPT_DIR
-        finally:
-            if pem_path.exists():
-                pem_path.unlink()
 
 
 class FakeGithubClient:
@@ -430,14 +439,9 @@ class TestMainInteractiveFlow:
 
         # Get the script directory (where create_github_app.py lives)
         script_dir = Path(create_github_app.__file__).parent
-        keys_dir = script_dir / "keys"
-        pem_path = keys_dir / "my-app.pem"
+        pem_path = script_dir / "keys" / "my-app.pem"
 
-        # Clean up before test
-        if pem_path.exists():
-            pem_path.unlink()
-
-        try:
+        with temporary_pem_file(pem_path):
             with mock_main_dependencies({
                 "id": 123,
                 "name": "my-app",
@@ -457,10 +461,6 @@ class TestMainInteractiveFlow:
             # Verify output shows the full path from repo root
             captured = capsys.readouterr()
             assert "GitHub App Private Key: ./scripts/create_github_app/keys/my-app.pem" in captured.out
-        finally:
-            # Clean up after test
-            if pem_path.exists():
-                pem_path.unlink()
 
 
 class TestParseArgs:
