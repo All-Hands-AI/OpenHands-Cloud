@@ -9,6 +9,7 @@ import os
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 
@@ -35,36 +36,69 @@ from create_github_app import (
 )
 
 
+# --- Test Helpers ---
+
+def make_mock_code_holder(code: str = "test-code") -> MagicMock:
+    """Create a mock code holder that simulates receiving an OAuth code."""
+    code_holder = MagicMock()
+    code_holder.code = code
+    code_holder.code_received = threading.Event()
+    code_holder.code_received.set()
+    return code_holder
+
+
+def make_mock_response(response_data: dict) -> MagicMock:
+    """Create a mock HTTP response with the given JSON data."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = response_data
+    mock_response.raise_for_status = MagicMock()
+    return mock_response
+
+
+@contextmanager
+def mock_main_dependencies(response_data: dict, code: str = "test-code"):
+    """Context manager that mocks all external dependencies for main().
+
+    Mocks: start_callback_server, open_manifest_in_browser,
+           stop_callback_server, and requests.post.
+
+    Yields a dict with references to all mocks for inspection.
+    """
+    code_holder = make_mock_code_holder(code)
+    server_handle = MagicMock()
+    mock_response = make_mock_response(response_data)
+
+    with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)) as mock_start:
+        with patch("create_github_app.open_manifest_in_browser") as mock_browser:
+            with patch("create_github_app.stop_callback_server") as mock_stop:
+                with patch("create_github_app.requests.post", return_value=mock_response) as mock_post:
+                    yield {
+                        "start_server": mock_start,
+                        "open_browser": mock_browser,
+                        "stop_server": mock_stop,
+                        "post": mock_post,
+                        "code_holder": code_holder,
+                        "server_handle": server_handle,
+                        "response": mock_response,
+                    }
+
+
 class TestNoChangesOutsideScriptFolder:
     """Tests to verify all file changes are contained within script folder."""
 
     def test_keys_saved_relative_to_script(self):
         """Test that keys are saved in keys/ subdirectory of script location."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "id": 123,
-            "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
-        }
-        mock_response.raise_for_status = MagicMock()
-
-        # Mock the callback server
-        code_holder = MagicMock()
-        code_holder.code = "test-code"
-        code_holder.code_received = threading.Event()
-        code_holder.code_received.set()
-        server_handle = MagicMock()
-
         keys_dir = SCRIPT_DIR / "keys"
         pem_path = keys_dir / "test-app.pem"
         if pem_path.exists():
             pem_path.unlink()
 
         try:
-            with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-                with patch("create_github_app.open_manifest_in_browser"):
-                    with patch("create_github_app.stop_callback_server"):
-                        with patch("create_github_app.requests.post", return_value=mock_response):
-                            main(base_domain="example.com", dry_run=False, app_name="test-app")
+            with mock_main_dependencies({
+                "id": 123,
+                "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+            }):
+                main(base_domain="example.com", dry_run=False, app_name="test-app")
 
             # Verify the pem was saved inside script dir/keys/
             assert pem_path.exists()
@@ -320,44 +354,17 @@ class TestDryRun:
 class TestMainInteractiveFlow:
     """Tests for main() interactive flow using callback server and user's default browser."""
 
-    def _mock_callback_server(self, code="test-code"):
-        """Helper to create mock callback server that returns specified code."""
-        code_holder = MagicMock()
-        code_holder.code = code
-        code_holder.code_received = threading.Event()
-        code_holder.code_received.set()
-        server_handle = MagicMock()
-        return server_handle, code_holder
-
     def test_opens_browser_with_callback_server(self, capsys):
         """Test that main opens browser after starting callback server."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
+        with mock_main_dependencies({"id": 123}) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-        server_handle, code_holder = self._mock_callback_server()
-
-        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-            with patch("create_github_app.open_manifest_in_browser") as mock_open:
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
-
-        mock_open.assert_called_once()
+        mocks["open_browser"].assert_called_once()
 
     def test_tells_user_to_click_button(self, capsys):
         """Test that main tells user to click the Create GitHub App button."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
-
-        server_handle, code_holder = self._mock_callback_server()
-
-        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with mock_main_dependencies({"id": 123}):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         assert "Click" in captured.out
@@ -365,34 +372,16 @@ class TestMainInteractiveFlow:
 
     def test_mentions_waiting_for_callback(self, capsys):
         """Test that main tells user it's waiting for the GitHub callback."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
-
-        server_handle, code_holder = self._mock_callback_server()
-
-        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with mock_main_dependencies({"id": 123}):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         assert "Waiting" in captured.out
 
     def test_mentions_button_includes_username(self, capsys):
         """Test that message mentions the button text includes the user's GitHub username."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
-
-        server_handle, code_holder = self._mock_callback_server()
-
-        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with mock_main_dependencies({"id": 123}):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         # Message should mention that button says "Create GitHub App for <username>"
@@ -400,23 +389,14 @@ class TestMainInteractiveFlow:
 
     def test_exchanges_code_and_prints_credentials(self, capsys):
         """Test that main exchanges code and prints the credentials."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
+        with mock_main_dependencies({
             "id": 123,
             "name": "my-app",
             "client_id": "Iv1.abc123",
             "client_secret": "secret456",
             "webhook_secret": "whsec789",
-        }
-        mock_response.raise_for_status = MagicMock()
-
-        server_handle, code_holder = self._mock_callback_server()
-
-        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+        }):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
         # Verify labels
@@ -430,18 +410,6 @@ class TestMainInteractiveFlow:
         # Change to a different directory to verify keys are NOT created in cwd
         monkeypatch.chdir(tmp_path)
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "id": 123,
-            "name": "my-app",
-            "client_id": "Iv1.abc123",
-            "client_secret": "secret456",
-            "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----",
-        }
-        mock_response.raise_for_status = MagicMock()
-
-        server_handle, code_holder = self._mock_callback_server()
-
         # Get the script directory (where create_github_app.py lives)
         script_dir = Path(create_github_app.__file__).parent
         keys_dir = script_dir / "keys"
@@ -452,11 +420,14 @@ class TestMainInteractiveFlow:
             pem_path.unlink()
 
         try:
-            with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-                with patch("create_github_app.open_manifest_in_browser"):
-                    with patch("create_github_app.stop_callback_server"):
-                        with patch("create_github_app.requests.post", return_value=mock_response):
-                            main(base_domain="example.com", dry_run=False, app_name="my-app")
+            with mock_main_dependencies({
+                "id": 123,
+                "name": "my-app",
+                "client_id": "Iv1.abc123",
+                "client_secret": "secret456",
+                "pem": "-----BEGIN RSA PRIVATE KEY-----\ntest-key-content\n-----END RSA PRIVATE KEY-----",
+            }):
+                main(base_domain="example.com", dry_run=False, app_name="my-app")
 
             # Verify pem file was NOT created in cwd
             assert not (tmp_path / "keys" / "my-app.pem").exists()
@@ -597,23 +568,17 @@ class TestMainWithCallbackServer:
 
     def test_main_starts_callback_server_before_opening_browser(self):
         """Test that main starts callback server before opening browser."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
-
         call_order = []
 
         def track_start_server(*args, **kwargs):
             call_order.append("start_server")
-            code_holder = MagicMock()
-            code_holder.code = "test-code"
-            code_holder.code_received = threading.Event()
-            code_holder.code_received.set()
-            return MagicMock(), code_holder
+            return MagicMock(), make_mock_code_holder()
 
         def track_open_browser(*args, **kwargs):
             call_order.append("open_browser")
             return "/tmp/test.html"
+
+        mock_response = make_mock_response({"id": 123})
 
         with patch("create_github_app.start_callback_server", side_effect=track_start_server):
             with patch("create_github_app.open_manifest_in_browser", side_effect=track_open_browser):
@@ -625,64 +590,29 @@ class TestMainWithCallbackServer:
 
     def test_main_waits_for_code_from_callback_server(self, capsys):
         """Test that main waits for code from callback server instead of prompting."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123, "client_id": "test-client"}
-        mock_response.raise_for_status = MagicMock()
-
-        code_holder = MagicMock()
-        code_holder.code = "received-code-from-callback"
-        code_holder.code_received = threading.Event()
-        code_holder.code_received.set()
-
-        with patch("create_github_app.start_callback_server", return_value=(MagicMock(), code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response) as mock_post:
-                        # Should NOT need input() - no prompting
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with mock_main_dependencies(
+            {"id": 123, "client_id": "test-client"},
+            code="received-code-from-callback"
+        ) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         # Verify the code from callback was used
-        mock_post.assert_called_once()
-        call_url = mock_post.call_args[0][0]
+        mocks["post"].assert_called_once()
+        call_url = mocks["post"].call_args[0][0]
         assert "received-code-from-callback" in call_url
 
     def test_main_stops_callback_server_after_receiving_code(self):
         """Test that main stops callback server after receiving the code."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
+        with mock_main_dependencies({"id": 123}) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-        code_holder = MagicMock()
-        code_holder.code = "test-code"
-        code_holder.code_received = threading.Event()
-        code_holder.code_received.set()
-        server_handle = MagicMock()
-
-        with patch("create_github_app.start_callback_server", return_value=(server_handle, code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server") as mock_stop:
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
-
-        mock_stop.assert_called_once_with(server_handle)
+        mocks["stop_server"].assert_called_once_with(mocks["server_handle"])
 
     def test_main_no_longer_prompts_for_code_input(self):
         """Test that main does not prompt for manual code input."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": 123}
-        mock_response.raise_for_status = MagicMock()
-
-        code_holder = MagicMock()
-        code_holder.code = "auto-captured-code"
-        code_holder.code_received = threading.Event()
-        code_holder.code_received.set()
-
-        with patch("create_github_app.start_callback_server", return_value=(MagicMock(), code_holder)):
-            with patch("create_github_app.open_manifest_in_browser"):
-                with patch("create_github_app.stop_callback_server"):
-                    with patch("create_github_app.requests.post", return_value=mock_response):
-                        with patch("builtins.input") as mock_input:
-                            main(base_domain="example.com", dry_run=False, app_name="my-app")
+        with mock_main_dependencies({"id": 123}):
+            with patch("builtins.input") as mock_input:
+                main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         # input() should never be called
         mock_input.assert_not_called()
