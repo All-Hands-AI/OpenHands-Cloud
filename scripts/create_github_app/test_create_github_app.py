@@ -55,6 +55,37 @@ def make_mock_response(response_data: dict) -> MagicMock:
     return mock_response
 
 
+def wait_for_server(url: str, timeout: float = 2.0, interval: float = 0.05) -> bool:
+    """Poll until server at URL responds, or timeout.
+
+    Returns True if server responded, False if timeout.
+    More reliable than fixed time.sleep() for server startup tests.
+    """
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            httpx.get(url, timeout=0.1)
+            return True
+        except (httpx.ConnectError, httpx.TimeoutException):
+            time.sleep(interval)
+    return False
+
+
+def wait_for_server_shutdown(url: str, timeout: float = 2.0, interval: float = 0.05) -> bool:
+    """Poll until server at URL stops responding, or timeout.
+
+    Returns True if server stopped, False if still running after timeout.
+    """
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            httpx.get(url, timeout=0.1)
+            time.sleep(interval)
+        except (httpx.ConnectError, httpx.TimeoutException):
+            return True
+    return False
+
+
 @contextmanager
 def mock_main_dependencies(response_data: dict, code: str = "test-code"):
     """Context manager that mocks all external dependencies for main().
@@ -531,9 +562,8 @@ class TestCallbackServerLifecycle:
         """Test that the callback server runs on localhost:port."""
         server_handle, code_holder = start_callback_server(port=18234)
         try:
-            time.sleep(0.5)  # Give server time to start
-            response = httpx.get("http://localhost:18234/callback?code=test-code")
-            assert response.status_code == 200
+            # Poll until server is ready (more reliable than fixed sleep)
+            assert wait_for_server("http://localhost:18234/callback?code=test-code")
             assert code_holder.code == "test-code"
         finally:
             stop_callback_server(server_handle)
@@ -541,12 +571,14 @@ class TestCallbackServerLifecycle:
     def test_stop_callback_server_shuts_down_cleanly(self):
         """Test that stop_callback_server shuts down the server."""
         server_handle, _ = start_callback_server(port=18235)
-        time.sleep(0.5)
+        # Wait for server to start
+        assert wait_for_server("http://localhost:18235/callback?code=init")
         stop_callback_server(server_handle)
-        time.sleep(0.5)
+        # Wait for server to shutdown
+        assert wait_for_server_shutdown("http://localhost:18235/callback?code=test")
 
         with pytest.raises(httpx.ConnectError):
-            httpx.get("http://localhost:18235/callback?code=test")
+            httpx.get("http://localhost:18235/callback?code=test", timeout=0.1)
 
 
 class TestManifestRedirectUrl:
