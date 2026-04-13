@@ -9,7 +9,13 @@ jobs:
     uses: ./.github/workflows/validate-chart-versions.yml
     with:
       base_ref: origin/${{ github.event.pull_request.base.ref }}
-      enforce_version_bump: false
+      # IMPORTANT: Set to true to enforce version bumps on PRs.
+      # However, enforcement alone does NOT prevent race conditions when two PRs
+      # modify the same chart concurrently. To fully prevent race conditions:
+      # 1. Enable "Require branches to be up to date before merging" in branch protection
+      # 2. This ensures PRs always validate against the latest main before merge
+      # See: docs/helm-chart-publishing-race-condition.md
+      enforce_version_bump: true
 
   detect-changes:
     runs-on: ubuntu-latest
