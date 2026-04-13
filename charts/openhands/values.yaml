@@ -609,6 +609,19 @@ automationServiceKey:
   existingSecret: automation-service-key
   secretKey: automation-service-key
 
+# Automation service configuration for event forwarding
+automationService:
+  # URL of the automation service (e.g., https://staging.all-hands.dev/api/automation)
+  url: ""
+  # Enable forwarding events to the automation service
+  eventForwardingEnabled: false
+
+# Automation webhook secret for verifying webhook signatures
+automationWebhookSecret:
+  enabled: false
+  existingSecret: automation-webhook-secret
+  secretKey: webhook-secret
+
 # Automation subchart configuration
 # When enabled, deploys the automation service as a subchart
 # The automation service handles scheduled and event-driven automation execution
@@ -631,6 +644,22 @@ automation:
       limits:
         memory: 512Mi
         cpu: 500m
+  
+  # Separate deployment for handling webhook events
+  # Routes /v1/events/* traffic to dedicated pods for better isolation and scalability
+  events:
+    enabled: false
+    deployment:
+      replicas: 2
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 500m
+    uvicorn:
+      workers: 2
   
   securityContext:
     runAsUser: 42420

@@ -80,6 +80,14 @@
       name: {{ .Values.serviceKeyFromSecret.name }}
       key: {{ .Values.serviceKeyFromSecret.key }}
 {{- end }}
+# Automation webhook secret for verifying webhook signatures
+{{- if .Values.automationWebhookSecretFromSecret }}
+- name: AUTOMATION_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationWebhookSecretFromSecret.name }}
+      key: {{ .Values.automationWebhookSecretFromSecret.key }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
