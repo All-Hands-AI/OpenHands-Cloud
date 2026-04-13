@@ -10,7 +10,7 @@ databaseMigrations:
 
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-1a920e8
+  tag: sha-e24aef6
   pullPolicy: Always
 
 imagePullSecrets:
@@ -164,7 +164,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.21.0-nikolaik"
+      image: "ghcr.io/openhands/runtime:cloud-1.22.0-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
       command:
