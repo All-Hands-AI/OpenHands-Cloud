@@ -13,11 +13,18 @@ This environment uses **path-based routing**:
 ## Directory Structure
 
 ```
-envs/staging-pathroute/
-├── README.md           # This file
-├── values.yaml         # Helm values (non-secret configuration)
-└── secrets/            # SOPS-encrypted Kubernetes secrets
-    └── *.yaml          # Individual secret files
+envs/
+├── common/
+│   └── values.yaml         # Shared staging config (base)
+└── staging-pathroute/
+    ├── README.md           # This file
+    ├── values.yaml         # Environment-specific overrides (host, URLs)
+    └── secrets/            # SOPS-encrypted Kubernetes secrets
+```
+
+Helm is invoked with both values files:
+```bash
+helm upgrade ... -f envs/common/values.yaml -f envs/staging-pathroute/values.yaml
 ```
 
 ## Kubernetes Details

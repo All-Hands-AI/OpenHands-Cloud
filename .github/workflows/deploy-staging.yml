@@ -1,7 +1,6 @@
 name: Deploy to Staging
 
 on:
-  # Manual trigger with options
   workflow_dispatch:
     inputs:
       image_tag:
@@ -32,17 +31,26 @@ env:
   GCP_CLUSTER: staging-core-application
 
 jobs:
-  deploy-pathroute:
-    name: Deploy to staging-pathroute
-    if: ${{ inputs.environment == 'both' || inputs.environment == 'pathroute' }}
+  deploy:
+    name: Deploy to staging-${{ matrix.env.name }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
-    env:
-      NAMESPACE: openhands-pathroute
-      HELM_RELEASE: openhands-pathroute
-      ENV_DIR: envs/staging-pathroute
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - name: pathroute
+            namespace: openhands-pathroute
+            helm_release: openhands-pathroute
+            env_dir: envs/staging-pathroute
+          - name: subdomain
+            namespace: openhands-subdomain
+            helm_release: openhands-subdomain
+            env_dir: envs/staging-subdomain
+    # Only run for selected environment(s)
+    if: ${{ inputs.environment == 'both' || inputs.environment == matrix.env.name }}
 
     steps:
       - name: Checkout repository
@@ -69,8 +77,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Install gke-gcloud-auth-plugin
-        run: |
-          gcloud components install gke-gcloud-auth-plugin
+        run: gcloud components install gke-gcloud-auth-plugin
 
       - name: Configure kubectl
         run: |
@@ -81,60 +88,57 @@ jobs:
       - name: Create namespace if not exists
         if: ${{ !inputs.dry_run }}
         run: |
-          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace ${{ matrix.env.namespace }} --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Decrypt and apply secrets
         if: ${{ !inputs.skip_secrets && !inputs.dry_run }}
         run: |
-          SECRETS_DIR="${{ env.ENV_DIR }}/secrets"
-          
+          SECRETS_DIR="${{ matrix.env.env_dir }}/secrets"
           if [[ -d "$SECRETS_DIR" ]]; then
             echo "Applying secrets from $SECRETS_DIR"
             for file in "$SECRETS_DIR"/*.yaml; do
-              # Skip .gitkeep or non-existent files
               [[ -e "$file" ]] || continue
               [[ "$(basename "$file")" == ".gitkeep" ]] && continue
-              
               echo "Decrypting and applying: $file"
-              sops --decrypt "$file" | kubectl apply -n ${{ env.NAMESPACE }} -f -
+              sops --decrypt "$file" | kubectl apply -n ${{ matrix.env.namespace }} -f -
             done
-            echo "All secrets applied successfully"
           else
             echo "No secrets directory found at $SECRETS_DIR"
           fi
 
       - name: Update Helm dependencies
-        run: |
-          helm dependency update charts/openhands
+        run: helm dependency update charts/openhands
 
       - name: Helm template (dry run)
         if: ${{ inputs.dry_run }}
         run: |
-          helm template ${{ env.HELM_RELEASE }} charts/openhands \
-            --namespace ${{ env.NAMESPACE }} \
-            --values ${{ env.ENV_DIR }}/values.yaml \
+          helm template ${{ matrix.env.helm_release }} charts/openhands \
+            --namespace ${{ matrix.env.namespace }} \
+            --values envs/common/values.yaml \
+            --values ${{ matrix.env.env_dir }}/values.yaml \
             --set image.tag=${{ inputs.image_tag }} \
             --debug
 
       - name: Deploy with Helm
         if: ${{ !inputs.dry_run }}
         run: |
-          # Check current release status
-          if helm status ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} &>/dev/null; then
-            status=$(helm status ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} -o json | jq -r '.info.status')
+          # Check current release status and rollback if needed
+          if helm status ${{ matrix.env.helm_release }} -n ${{ matrix.env.namespace }} &>/dev/null; then
+            status=$(helm status ${{ matrix.env.helm_release }} -n ${{ matrix.env.namespace }} -o json | jq -r '.info.status')
             if [[ "$status" != "deployed" ]]; then
               echo "Found release in non-deployed state ($status). Attempting rollback..."
-              helm rollback ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} || true
+              helm rollback ${{ matrix.env.helm_release }} -n ${{ matrix.env.namespace }} || true
             fi
           fi
 
           helm upgrade --install \
             --wait \
             --timeout 10m \
-            ${{ env.HELM_RELEASE }} \
+            ${{ matrix.env.helm_release }} \
             charts/openhands \
-            --namespace ${{ env.NAMESPACE }} \
-            --values ${{ env.ENV_DIR }}/values.yaml \
+            --namespace ${{ matrix.env.namespace }} \
+            --values envs/common/values.yaml \
+            --values ${{ matrix.env.env_dir }}/values.yaml \
             --set image.tag=${{ inputs.image_tag }} \
             --debug
 
@@ -142,174 +146,31 @@ jobs:
         if: ${{ !inputs.dry_run }}
         id: deployment_info
         run: |
-          echo "## Deployment Summary (pathroute)" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Summary (${{ matrix.env.name }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment:** staging-pathroute" >> $GITHUB_STEP_SUMMARY
-          echo "- **Namespace:** ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** staging-${{ matrix.env.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace:** ${{ matrix.env.namespace }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Image Tag:** ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Get ingress hostname
-          hostname=$(kubectl get ing -n ${{ env.NAMESPACE }} -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null || echo "N/A")
+          hostname=$(kubectl get ing -n ${{ matrix.env.namespace }} -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null || echo "N/A")
           echo "- **Hostname:** https://$hostname" >> $GITHUB_STEP_SUMMARY
           echo "hostname=$hostname" >> $GITHUB_OUTPUT
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pods Status" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }} >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ${{ matrix.env.namespace }} -l app.kubernetes.io/instance=${{ matrix.env.helm_release }} >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Verify deployment health
         if: ${{ !inputs.dry_run }}
         run: |
           echo "Waiting for deployment to stabilize..."
-          kubectl rollout status deployment -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }} --timeout=5m || true
-          
+          kubectl rollout status deployment -n ${{ matrix.env.namespace }} -l app.kubernetes.io/instance=${{ matrix.env.helm_release }} --timeout=5m || true
           echo ""
           echo "Current pod status:"
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }}
-
-    outputs:
-      hostname: ${{ steps.deployment_info.outputs.hostname }}
-
-  deploy-subdomain:
-    name: Deploy to staging-subdomain
-    if: ${{ inputs.environment == 'both' || inputs.environment == 'subdomain' }}
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      NAMESPACE: openhands-subdomain
-      HELM_RELEASE: openhands-subdomain
-      ENV_DIR: envs/staging-subdomain
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install SOPS
-        run: |
-          curl -L "https://github.com/mozilla/sops/releases/download/v3.9.1/sops-v3.9.1.linux.amd64" -o sops
-          chmod +x sops
-          sudo mv sops /usr/local/bin/sops
-          sops --version
-
-      - name: Install Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'latest'
-
-      - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_KEY }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Install gke-gcloud-auth-plugin
-        run: |
-          gcloud components install gke-gcloud-auth-plugin
-
-      - name: Configure kubectl
-        run: |
-          gcloud container clusters get-credentials ${{ env.GCP_CLUSTER }} \
-            --zone ${{ env.GCP_ZONE }} \
-            --project ${{ env.GCP_PROJECT }}
-
-      - name: Create namespace if not exists
-        if: ${{ !inputs.dry_run }}
-        run: |
-          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Decrypt and apply secrets
-        if: ${{ !inputs.skip_secrets && !inputs.dry_run }}
-        run: |
-          SECRETS_DIR="${{ env.ENV_DIR }}/secrets"
-          
-          if [[ -d "$SECRETS_DIR" ]]; then
-            echo "Applying secrets from $SECRETS_DIR"
-            for file in "$SECRETS_DIR"/*.yaml; do
-              # Skip .gitkeep or non-existent files
-              [[ -e "$file" ]] || continue
-              [[ "$(basename "$file")" == ".gitkeep" ]] && continue
-              
-              echo "Decrypting and applying: $file"
-              sops --decrypt "$file" | kubectl apply -n ${{ env.NAMESPACE }} -f -
-            done
-            echo "All secrets applied successfully"
-          else
-            echo "No secrets directory found at $SECRETS_DIR"
-          fi
-
-      - name: Update Helm dependencies
-        run: |
-          helm dependency update charts/openhands
-
-      - name: Helm template (dry run)
-        if: ${{ inputs.dry_run }}
-        run: |
-          helm template ${{ env.HELM_RELEASE }} charts/openhands \
-            --namespace ${{ env.NAMESPACE }} \
-            --values ${{ env.ENV_DIR }}/values.yaml \
-            --set image.tag=${{ inputs.image_tag }} \
-            --debug
-
-      - name: Deploy with Helm
-        if: ${{ !inputs.dry_run }}
-        run: |
-          # Check current release status
-          if helm status ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} &>/dev/null; then
-            status=$(helm status ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} -o json | jq -r '.info.status')
-            if [[ "$status" != "deployed" ]]; then
-              echo "Found release in non-deployed state ($status). Attempting rollback..."
-              helm rollback ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} || true
-            fi
-          fi
-
-          helm upgrade --install \
-            --wait \
-            --timeout 10m \
-            ${{ env.HELM_RELEASE }} \
-            charts/openhands \
-            --namespace ${{ env.NAMESPACE }} \
-            --values ${{ env.ENV_DIR }}/values.yaml \
-            --set image.tag=${{ inputs.image_tag }} \
-            --debug
-
-      - name: Get deployment info
-        if: ${{ !inputs.dry_run }}
-        id: deployment_info
-        run: |
-          echo "## Deployment Summary (subdomain)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment:** staging-subdomain" >> $GITHUB_STEP_SUMMARY
-          echo "- **Namespace:** ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Tag:** ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Get ingress hostname
-          hostname=$(kubectl get ing -n ${{ env.NAMESPACE }} -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null || echo "N/A")
-          echo "- **Hostname:** https://$hostname" >> $GITHUB_STEP_SUMMARY
-          echo "hostname=$hostname" >> $GITHUB_OUTPUT
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pods Status" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }} >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-      - name: Verify deployment health
-        if: ${{ !inputs.dry_run }}
-        run: |
-          echo "Waiting for deployment to stabilize..."
-          kubectl rollout status deployment -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }} --timeout=5m || true
-          
-          echo ""
-          echo "Current pod status:"
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }}
+          kubectl get pods -n ${{ matrix.env.namespace }} -l app.kubernetes.io/instance=${{ matrix.env.helm_release }}
 
     outputs:
       hostname: ${{ steps.deployment_info.outputs.hostname }}

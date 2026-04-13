@@ -14,11 +14,18 @@ The key difference from staging-pathroute is that this environment tests the pro
 ## Directory Structure
 
 ```
-envs/staging-subdomain/
-├── README.md           # This file
-├── values.yaml         # Helm values (non-secret configuration)
-└── secrets/            # SOPS-encrypted Kubernetes secrets
-    └── *.yaml          # Individual secret files
+envs/
+├── common/
+│   └── values.yaml         # Shared staging config (base)
+└── staging-subdomain/
+    ├── README.md           # This file
+    ├── values.yaml         # Environment-specific overrides (host, URLs)
+    └── secrets/            # SOPS-encrypted Kubernetes secrets
+```
+
+Helm is invoked with both values files:
+```bash
+helm upgrade ... -f envs/common/values.yaml -f envs/staging-subdomain/values.yaml
 ```
 
 ## Kubernetes Details
