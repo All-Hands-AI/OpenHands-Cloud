@@ -507,6 +507,26 @@ spec:
           rabbitmq:
             persistence:
               storageClass: "openebs-hostpath"
+    - when: '{{repl ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        plugin-directory:
+          enabled: true
+          appUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/plugins'
+          pluginDirectoryBaseUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/plugins'
+          database:
+            host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+            createDatabase: true
+          oidc:
+            issuerUrl: 'http://keycloak'
+          client:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-client'
+          server:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-server'
+          imagePullSecrets:
+            - name: '{{repl ImagePullSecretName }}'
 
   builder:
     keycloak:
