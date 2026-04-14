@@ -88,21 +88,40 @@ data:
     if [ "$GITHUB_PROXY" = "1" ]; then
       export GITHUB_BASE_URL="https://{{ .Values.ingress.host }}/github-proxy/test-auth-feat"
     fi
+    # If Bitbucket Data Center is not enabled, we still need to provide
+    # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
+    # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
+    #
+    # This is different from the other providers we configure, where keycloak defaults
+    # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
+    # Self-hosted Bitbucket Data Center instances don't have a well known host.
+    #
+    # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
+    export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
+
+    envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
+
     if [ "$ERROR_MESSAGE" = "Realm not found." ]; then
       echo "Creating allhands realm..."
-
-      # If Bitbucket Data Center is not enabled, we still need to provide
-      # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
-      # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
-      #
-      # This is different from the other providers we configure, where keycloak defaults
-      # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
-      # Self-hosted Bitbucket Data Center instances don't have a well known host.
-      #
-      # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
-      export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
-
-      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
       keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms\" -H \"Authorization: Bearer $ACCESS_TOKEN\" -H \"Content-Type: application/json\" --data \"@/app/allhands-realm-github-provider.json\""
       echo "Created allhands realm."
+    else
+      echo "Updating allhands realm configuration..."
+
+      # Update realm-level settings (token lifespans, login config, etc.)
+      keycloak_api_call "curl -s -X PUT \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME\" \
+        -H \"Authorization: Bearer $ACCESS_TOKEN\" \
+        -H \"Content-Type: application/json\" \
+        --data \"@/app/allhands-realm-github-provider.json\""
+
+      # Update sub-resources (identity providers, clients, roles, mappers) via partial import.
+      # OVERWRITE policy replaces existing resources with the template version,
+      # making the template the source of truth on every deployment.
+      jq '. + {"ifResourceExists": "OVERWRITE"}' /app/allhands-realm-github-provider.json > /tmp/partial-import.json
+      keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/partialImport\" \
+        -H \"Authorization: Bearer $ACCESS_TOKEN\" \
+        -H \"Content-Type: application/json\" \
+        --data \"@/tmp/partial-import.json\""
+
+      echo "Updated allhands realm configuration."
     fi
