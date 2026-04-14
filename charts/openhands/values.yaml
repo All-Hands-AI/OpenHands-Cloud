@@ -635,6 +635,10 @@ plugin-directory:
   # App URL - set by parent chart based on ingress configuration
   appUrl: ""
 
+  # Base URL for path-based routing - set based on ingress host
+  # e.g., https://app.example.com/plugins
+  pluginDirectoryBaseUrl: ""
+
   # PostgreSQL database configuration
   database:
     # Full hostname of the PostgreSQL server

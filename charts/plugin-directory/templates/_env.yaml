@@ -34,6 +34,12 @@
       name: {{ .Values.auth.existingSecret }}
       key: {{ .Values.auth.identitySharedSecretKey }}
 
+# Base URL for path-based routing (e.g., https://app.example.com/plugins)
+{{- if .Values.pluginDirectoryBaseUrl }}
+- name: PLUGIN_DIRECTORY_BASE_URL
+  value: {{ .Values.pluginDirectoryBaseUrl | quote }}
+{{- end }}
+
 {{- if .Values.datadog.enabled }}
 # Datadog configuration
 - name: DD_ENV
@@ -73,6 +79,12 @@
 # Application URL
 - name: APP_URL
   value: {{ .Values.appUrl | quote }}
+
+# Base URL for path-based routing (e.g., https://app.example.com/plugins)
+{{- if .Values.pluginDirectoryBaseUrl }}
+- name: PLUGIN_DIRECTORY_BASE_URL
+  value: {{ .Values.pluginDirectoryBaseUrl | quote }}
+{{- end }}
 
 # Authentication - shared secret for server communication
 - name: IDENTITY_SHARED_SECRET

@@ -69,6 +69,12 @@ appEnv:
 # App URL for the client (e.g., https://plugins.example.com or https://example.com/plugins)
 appUrl: ""
 
+# Base URL for path-based routing when served under a subpath
+# (e.g., https://app.example.com/plugins)
+# The path segment is extracted and used as Vite base, React Router basename,
+# and FastAPI router prefix
+pluginDirectoryBaseUrl: ""
+
 # PostgreSQL database configuration
 database:
   # Full hostname of the PostgreSQL server

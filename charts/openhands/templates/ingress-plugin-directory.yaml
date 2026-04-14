@@ -9,8 +9,6 @@ metadata:
     {{- else }}
     {{ .Values.ingress.annotations | toYaml | nindent 4 }}
     {{- end }}
-    # Traefik middleware for stripping /api/plugins prefix
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-strip-plugins-prefix@kubernetescrd
 spec:
   ingressClassName: {{ .Values.ingress.class }}
   {{- if .Values.tls.enabled }}
@@ -31,7 +29,7 @@ spec:
   {{- end }}
     http:
       paths:
-      - path: /api/plugins
+      - path: /plugins
         pathType: Prefix
         backend:
           service:
