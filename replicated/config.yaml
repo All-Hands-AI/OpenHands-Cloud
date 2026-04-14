@@ -299,6 +299,21 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
+        - name: plugin_directory_identity_shared_secret
+          title: Plugin Directory Identity Shared Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: plugin_directory_session_secret
+          title: Plugin Directory Session Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: plugin_directory_oidc_client_secret
+          title: Plugin Directory OIDC Client Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication
