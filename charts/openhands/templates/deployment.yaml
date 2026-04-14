@@ -16,6 +16,7 @@ spec:
       annotations:
         checksum/keycloak-config: {{ include (print $.Template.BasePath "/keycloak-config-script.yaml") . | sha256sum }}
         checksum/litellm-config: {{ include (print $.Template.BasePath "/litellm-config-script.yaml") . | sha256sum }}
+        rollme: {{ now | quote }}
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}
         {{- end }}
