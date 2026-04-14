@@ -588,6 +588,12 @@ spec:
           help_text: Deploy the Plugin Directory marketplace, accessible at /plugins on your application hostname.
           type: bool
           default: "0"
+        - name: plugin_directory_marketplace_source
+          title: Marketplace Source
+          help_text: "URI of the plugin catalog to load. Supports github://owner/repo[@ref], https:// URLs to a catalog JSON file, or file:// paths."
+          type: text
+          when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+          required: true
 
     - name: advanced_options
       title: Advanced Options
