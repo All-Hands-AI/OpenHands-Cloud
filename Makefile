@@ -1,11 +1,16 @@
 PROJECTDIR := $(shell pwd)
 
-# Discover all Helm charts (one subdirectory each under charts/)
+# Discover Helm charts that have a corresponding Replicated HelmChart manifest.
+# Charts without a manifest (e.g. subcharts only used as dependencies) are
+# excluded from the Replicated release to avoid lint errors.
 CHARTDIR    := $(PROJECTDIR)/charts
-CHARTS      := $(shell find $(CHARTDIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+MANIFESTDIR := $(PROJECTDIR)/replicated
+CHARTS      := $(shell for f in $(MANIFESTDIR)/*.yaml $(MANIFESTDIR)/*.yml; do \
+                  name=$$(yq '.spec.chart.name // ""' "$$f" 2>/dev/null); \
+                  [ -n "$$name" ] && [ -d $(CHARTDIR)/$$name ] && echo $$name; \
+                done | sort -u)
 
 # Discover all Replicated manifest files
-MANIFESTDIR := $(PROJECTDIR)/replicated
 MANIFESTS   := $(shell find $(MANIFESTDIR) -name '*.yaml' -o -name '*.yml')
 
 # All Chart.yaml files — used as dependencies so manifest builds re-run when any chart version changes
