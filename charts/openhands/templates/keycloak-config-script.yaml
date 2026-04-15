@@ -88,64 +88,21 @@ data:
     if [ "$GITHUB_PROXY" = "1" ]; then
       export GITHUB_BASE_URL="https://{{ .Values.ingress.host }}/github-proxy/test-auth-feat"
     fi
-    # If Bitbucket Data Center is not enabled, we still need to provide
-    # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
-    # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
-    #
-    # This is different from the other providers we configure, where keycloak defaults
-    # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
-    # Self-hosted Bitbucket Data Center instances don't have a well known host.
-    #
-    # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
-    export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
-
-    envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
-
     if [ "$ERROR_MESSAGE" = "Realm not found." ]; then
       echo "Creating allhands realm..."
+
+      # If Bitbucket Data Center is not enabled, we still need to provide
+      # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
+      # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
+      #
+      # This is different from the other providers we configure, where keycloak defaults
+      # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
+      # Self-hosted Bitbucket Data Center instances don't have a well known host.
+      #
+      # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
+      export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
+
+      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
       keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms\" -H \"Authorization: Bearer $ACCESS_TOKEN\" -H \"Content-Type: application/json\" --data \"@/app/allhands-realm-github-provider.json\""
       echo "Created allhands realm."
-    else
-      echo "Updating allhands realm configuration..."
-
-      # Update realm-level settings (token lifespans, login config, etc.)
-      keycloak_api_call "curl -s -X PUT \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME\" \
-        -H \"Authorization: Bearer $ACCESS_TOKEN\" \
-        -H \"Content-Type: application/json\" \
-        --data \"@/app/allhands-realm-github-provider.json\""
-
-      # Update the allhands client in-place (preserves UUID, sessions, and role assignments).
-      # partialImport with OVERWRITE would delete and recreate the client with a new UUID,
-      # orphaning user sessions and any in-flight OAuth flows.
-      # Safe for concurrent execution — PUT is idempotent.
-      ALLHANDS_UUID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients?clientId=$KEYCLOAK_CLIENT_ID" \
-        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
-      if [ -z "$ALLHANDS_UUID" ] || [ "$ALLHANDS_UUID" = "null" ]; then
-        echo "Error: Could not find client $KEYCLOAK_CLIENT_ID"
-        exit 1
-      fi
-      jq --arg cid "$KEYCLOAK_CLIENT_ID" '.clients[] | select(.clientId == $cid)' \
-        /app/allhands-realm-github-provider.json > /tmp/allhands-client.json
-      keycloak_api_call "curl -s -X PUT \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ALLHANDS_UUID\" \
-        -H \"Authorization: Bearer $ACCESS_TOKEN\" \
-        -H \"Content-Type: application/json\" \
-        --data \"@/tmp/allhands-client.json\""
-      echo "Updated allhands client."
-
-      # Update identity providers and mappers via partialImport.
-      # Only IDPs and mappers are included — built-in clients (broker, account, realm-management, etc.)
-      # are excluded because OVERWRITE would recreate them with new role UUIDs, orphaning every
-      # user's role assignments (read-token, offline_access, default-roles) and destroying
-      # scope mappings.
-      jq '{
-        ifResourceExists: "OVERWRITE",
-        identityProviders: .identityProviders,
-        identityProviderMappers: .identityProviderMappers
-      }' /app/allhands-realm-github-provider.json > /tmp/partial-import.json
-      keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/partialImport\" \
-        -H \"Authorization: Bearer $ACCESS_TOKEN\" \
-        -H \"Content-Type: application/json\" \
-        --data \"@/tmp/partial-import.json\""
-
-      echo "Updated allhands realm configuration."
     fi
