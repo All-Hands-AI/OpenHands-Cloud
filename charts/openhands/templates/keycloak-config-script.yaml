@@ -114,10 +114,29 @@ data:
         -H \"Content-Type: application/json\" \
         --data \"@/app/allhands-realm-github-provider.json\""
 
-      # Update sub-resources (identity providers, clients, roles, mappers) via partial import.
-      # OVERWRITE policy replaces existing resources with the template version,
-      # making the template the source of truth on every deployment.
-      jq '. + {"ifResourceExists": "OVERWRITE"}' /app/allhands-realm-github-provider.json > /tmp/partial-import.json
+      # Update the allhands client in-place (preserves UUID, sessions, and role assignments).
+      # partialImport with OVERWRITE would delete and recreate the client with a new UUID,
+      # orphaning user sessions and any in-flight OAuth flows.
+      ALLHANDS_UUID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients?clientId=$KEYCLOAK_CLIENT_ID" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+      jq --arg cid "$KEYCLOAK_CLIENT_ID" '.clients[] | select(.clientId == $cid)' \
+        /app/allhands-realm-github-provider.json > /tmp/allhands-client.json
+      keycloak_api_call "curl -s -X PUT \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ALLHANDS_UUID\" \
+        -H \"Authorization: Bearer $ACCESS_TOKEN\" \
+        -H \"Content-Type: application/json\" \
+        --data \"@/tmp/allhands-client.json\""
+      echo "Updated allhands client."
+
+      # Update identity providers and mappers via partialImport.
+      # Only IDPs and mappers are included — built-in clients (broker, account, realm-management, etc.)
+      # are excluded because OVERWRITE would recreate them with new role UUIDs, orphaning every
+      # user's role assignments (read-token, offline_access, default-roles) and destroying
+      # scope mappings.
+      jq '{
+        ifResourceExists: "OVERWRITE",
+        identityProviders: .identityProviders,
+        identityProviderMappers: .identityProviderMappers
+      }' /app/allhands-realm-github-provider.json > /tmp/partial-import.json
       keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/partialImport\" \
         -H \"Authorization: Bearer $ACCESS_TOKEN\" \
         -H \"Content-Type: application/json\" \
