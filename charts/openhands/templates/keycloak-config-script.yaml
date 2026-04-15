@@ -117,8 +117,13 @@ data:
       # Update the allhands client in-place (preserves UUID, sessions, and role assignments).
       # partialImport with OVERWRITE would delete and recreate the client with a new UUID,
       # orphaning user sessions and any in-flight OAuth flows.
+      # Safe for concurrent execution — PUT is idempotent.
       ALLHANDS_UUID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients?clientId=$KEYCLOAK_CLIENT_ID" \
         -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+      if [ -z "$ALLHANDS_UUID" ] || [ "$ALLHANDS_UUID" = "null" ]; then
+        echo "Error: Could not find client $KEYCLOAK_CLIENT_ID"
+        exit 1
+      fi
       jq --arg cid "$KEYCLOAK_CLIENT_ID" '.clients[] | select(.clientId == $cid)' \
         /app/allhands-realm-github-provider.json > /tmp/allhands-client.json
       keycloak_api_call "curl -s -X PUT \"$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ALLHANDS_UUID\" \
