@@ -119,6 +119,10 @@ spec:
           failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
 
       # Client container (React Router SSR)
+      {{- $clientBasePath := "" }}
+      {{- if .Values.pluginDirectoryBaseUrl }}
+      {{- $clientBasePath = trimSuffix "/" (get (urlParse .Values.pluginDirectoryBaseUrl) "path") }}
+      {{- end }}
       - name: client
         image: "{{ .Values.client.image.repository }}:{{ .Values.client.image.tag }}"
         imagePullPolicy: Always
@@ -132,20 +136,20 @@ spec:
           {{- toYaml .Values.client.resources | nindent 10 }}
         startupProbe:
           httpGet:
-            path: /health/live
+            path: {{ $clientBasePath }}/health/live
             port: 3000
           failureThreshold: {{ .Values.probes.startup.failureThreshold }}
           periodSeconds: {{ .Values.probes.startup.periodSeconds }}
         livenessProbe:
           httpGet:
-            path: /health/live
+            path: {{ $clientBasePath }}/health/live
             port: 3000
           initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
           periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
           failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
         readinessProbe:
           httpGet:
-            path: /health/ready
+            path: {{ $clientBasePath }}/health/ready
             port: 3000
           initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
           periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
