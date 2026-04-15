@@ -88,21 +88,78 @@ data:
     if [ "$GITHUB_PROXY" = "1" ]; then
       export GITHUB_BASE_URL="https://{{ .Values.ingress.host }}/github-proxy/test-auth-feat"
     fi
+    # Render the realm template (needed for both create and update paths).
+    # Bitbucket Data Center needs a placeholder host when not configured, otherwise
+    # the OAuth2 provider creation fails with an invalid host.
+    export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
+    envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
+    REALM_JSON=/app/allhands-realm-github-provider.json
+
     if [ "$ERROR_MESSAGE" = "Realm not found." ]; then
       echo "Creating allhands realm..."
-
-      # If Bitbucket Data Center is not enabled, we still need to provide
-      # a host, otherwise the realm creation will fail since it tries to create an OAuth2 provider
-      # with an invalid host. We set it to a placeholder value since the provider won't actually be used.
-      #
-      # This is different from the other providers we configure, where keycloak defaults
-      # the host name to the well known host for the provider (e.g. github.com), even if the provider is disabled.
-      # Self-hosted Bitbucket Data Center instances don't have a well known host.
-      #
-      # Some refactoring of the provider configuration would help, but this is a simple workaround for now.
-      export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
-
-      envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /app/allhands-realm-github-provider.json.tmpl > /app/allhands-realm-github-provider.json
-      keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms\" -H \"Authorization: Bearer $ACCESS_TOKEN\" -H \"Content-Type: application/json\" --data \"@/app/allhands-realm-github-provider.json\""
+      keycloak_api_call "curl -s -X POST \"$KEYCLOAK_SERVER_URL/admin/realms\" -H \"Authorization: Bearer $ACCESS_TOKEN\" -H \"Content-Type: application/json\" --data \"@$REALM_JSON\""
       echo "Created allhands realm."
+    else
+      echo "Updating allhands realm configuration..."
+      KC_REALM="$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME"
+      AUTH="-H \"Authorization: Bearer $ACCESS_TOKEN\""
+      CT="-H \"Content-Type: application/json\""
+
+      # 1. Update realm-level settings only (token lifespans, login config, SMTP, etc.).
+      #    Strip all sub-resource collections to avoid side effects.
+      jq 'del(.clients, .clientScopes, .roles, .groups, .defaultRole,
+             .scopeMappings, .clientScopeMappings, .identityProviders,
+             .identityProviderMappers, .authenticationFlows, .authenticatorConfig,
+             .requiredActions, .components, .defaultDefaultClientScopes,
+             .defaultOptionalClientScopes, .clientProfiles, .clientPolicies,
+             .keycloakVersion, .id)' $REALM_JSON > /tmp/realm-settings.json
+      keycloak_api_call "curl -s -X PUT \"$KC_REALM\" $AUTH $CT --data \"@/tmp/realm-settings.json\""
+      echo "  Updated realm settings."
+
+      # 2. Update the allhands client in-place by UUID.
+      ALLHANDS_UUID=$(curl -s "$KC_REALM/clients?clientId=$KEYCLOAK_CLIENT_ID" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+      if [ -z "$ALLHANDS_UUID" ] || [ "$ALLHANDS_UUID" = "null" ]; then
+        echo "Error: Could not find client $KEYCLOAK_CLIENT_ID"
+        exit 1
+      fi
+      jq --arg cid "$KEYCLOAK_CLIENT_ID" '.clients[] | select(.clientId == $cid)' \
+        $REALM_JSON > /tmp/allhands-client.json
+      keycloak_api_call "curl -s -X PUT \"$KC_REALM/clients/$ALLHANDS_UUID\" $AUTH $CT --data \"@/tmp/allhands-client.json\""
+      echo "  Updated client $KEYCLOAK_CLIENT_ID."
+
+      # 3. Update identity providers by alias.
+      for alias in $(jq -r '.identityProviders[].alias' $REALM_JSON); do
+        jq --arg a "$alias" '.identityProviders[] | select(.alias == $a)' \
+          $REALM_JSON > /tmp/idp-$alias.json
+        keycloak_api_call "curl -s -X PUT \"$KC_REALM/identity-provider/instances/$alias\" $AUTH $CT --data \"@/tmp/idp-$alias.json\""
+        echo "  Updated identity provider: $alias"
+      done
+
+      # 4. Update identity provider mappers (PUT existing by ID, POST new).
+      for alias in $(jq -r '.identityProviders[].alias' $REALM_JSON); do
+        EXISTING_MAPPERS=$(curl -s "$KC_REALM/identity-provider/instances/$alias/mappers" \
+          -H "Authorization: Bearer $ACCESS_TOKEN")
+        for mapper_name in $(jq -r --arg a "$alias" \
+          '.identityProviderMappers[] | select(.identityProviderAlias == $a) | .name' $REALM_JSON); do
+
+          jq --arg a "$alias" --arg n "$mapper_name" \
+            '.identityProviderMappers[] | select(.identityProviderAlias == $a and .name == $n)' \
+            $REALM_JSON > /tmp/mapper.json
+
+          EXISTING_ID=$(echo "$EXISTING_MAPPERS" | jq -r --arg n "$mapper_name" \
+            '.[] | select(.name == $n) | .id')
+
+          if [ -n "$EXISTING_ID" ] && [ "$EXISTING_ID" != "null" ]; then
+            jq --arg id "$EXISTING_ID" '. + {id: $id}' /tmp/mapper.json > /tmp/mapper-update.json
+            keycloak_api_call "curl -s -X PUT \"$KC_REALM/identity-provider/instances/$alias/mappers/$EXISTING_ID\" $AUTH $CT --data \"@/tmp/mapper-update.json\""
+            echo "  Updated mapper: $alias/$mapper_name"
+          else
+            keycloak_api_call "curl -s -X POST \"$KC_REALM/identity-provider/instances/$alias/mappers\" $AUTH $CT --data \"@/tmp/mapper.json\""
+            echo "  Created mapper: $alias/$mapper_name"
+          fi
+        done
+      done
+
+      echo "Updated allhands realm configuration."
     fi
