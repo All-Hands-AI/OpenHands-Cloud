@@ -11,5 +11,9 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    - port: 8000
+      targetPort: api
+      protocol: TCP
+      name: api
   selector:
     app: plugin-directory

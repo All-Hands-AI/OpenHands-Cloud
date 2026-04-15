@@ -6,7 +6,7 @@
 client:
   image:
     repository: ghcr.io/openhands/plugin-directory-client
-    tag: "pr-77"
+    tag: "sha-38c5480"
   resources:
     requests:
       memory: 256Mi
@@ -18,7 +18,7 @@ client:
 server:
   image:
     repository: ghcr.io/openhands/plugin-directory-server
-    tag: "pr-77"
+    tag: "sha-38c5480"
   resources:
     requests:
       memory: 256Mi

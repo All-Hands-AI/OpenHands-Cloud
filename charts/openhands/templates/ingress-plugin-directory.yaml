@@ -29,6 +29,13 @@ spec:
   {{- end }}
     http:
       paths:
+      - path: /plugins/api
+        pathType: Prefix
+        backend:
+          service:
+            name: plugin-directory
+            port:
+              number: 8000
       - path: /plugins
         pathType: Prefix
         backend:
