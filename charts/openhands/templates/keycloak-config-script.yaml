@@ -147,5 +147,49 @@ data:
         -H \"Content-Type: application/json\" \
         --data \"@/tmp/partial-import.json\""
 
+      # Repair role assignments and scope mappings.
+      # Previous versions of this script used partialImport OVERWRITE on all clients,
+      # which recreated built-in clients with new role UUIDs and orphaned user role
+      # assignments and scope mappings. These calls are idempotent — safe to run every
+      # time as a defensive measure.
+      echo "Ensuring role assignments and scope mappings are intact..."
+
+      BROKER_UUID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients?clientId=broker" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+      ACCOUNT_UUID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients?clientId=account" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+      ACCOUNT_CONSOLE_UUID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients?clientId=account-console" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+
+      READ_TOKEN_ROLE=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$BROKER_UUID/roles/read-token" \
+        -H "Authorization: Bearer $ACCESS_TOKEN")
+      MANAGE_ACCOUNT_ROLE=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ACCOUNT_UUID/roles/manage-account" \
+        -H "Authorization: Bearer $ACCESS_TOKEN")
+      VIEW_GROUPS_ROLE=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ACCOUNT_UUID/roles/view-groups" \
+        -H "Authorization: Bearer $ACCESS_TOKEN")
+      OFFLINE_ACCESS_ROLE=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/roles/offline_access" \
+        -H "Authorization: Bearer $ACCESS_TOKEN")
+      DEFAULT_ROLE=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/roles/default-roles-$KEYCLOAK_REALM_NAME" \
+        -H "Authorization: Bearer $ACCESS_TOKEN")
+
+      OFFLINE_SCOPE_ID=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/client-scopes" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[] | select(.name == "offline_access") | .id')
+
+      # Ensure scope mappings exist
+      curl -s -X POST "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/client-scopes/$OFFLINE_SCOPE_ID/scope-mappings/realm" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" -d "[$OFFLINE_ACCESS_ROLE]" > /dev/null
+      curl -s -X POST "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ACCOUNT_CONSOLE_UUID/scope-mappings/clients/$BROKER_UUID" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" -d "[$READ_TOKEN_ROLE]" > /dev/null
+      curl -s -X POST "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/clients/$ACCOUNT_CONSOLE_UUID/scope-mappings/clients/$ACCOUNT_UUID" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" -d "[$MANAGE_ACCOUNT_ROLE, $VIEW_GROUPS_ROLE]" > /dev/null
+
+      # Ensure all users have the default role (includes offline_access, uma_authorization, read-token)
+      USER_IDS=$(curl -s "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/users?max=1000" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[].id')
+      for uid in $USER_IDS; do
+        curl -s -X POST "$KEYCLOAK_SERVER_URL/admin/realms/$KEYCLOAK_REALM_NAME/users/$uid/role-mappings/realm" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" -H "Content-Type: application/json" -d "[$DEFAULT_ROLE]" > /dev/null
+      done
+
       echo "Updated allhands realm configuration."
     fi
