@@ -323,22 +323,22 @@ spec:
 
     - name: github_authentication
       title: GitHub Authentication
-      description: Configure GitHub OAuth and App integration for user authentication
+      description: Configure GitHub App integration for user authentication. Note that this is a GitHub App and NOT a GitHub OAuth app.
       items:
         - name: github_auth_enabled
           title: Enable GitHub Authentication
           help_text: Enable GitHub OAuth for user authentication
           type: bool
           default: "0"
-        - name: github_oauth_client_id
-          title: GitHub OAuth Client ID
-          help_text: Client ID from your GitHub OAuth App
+        - name: github_client_id
+          title: GitHub App Client ID
+          help_text: "Client ID from your GitHub App. Note: You must create a GitHub App, not a GitHub OAuth App."
           type: text
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
-        - name: github_oauth_client_secret
-          title: GitHub OAuth Client Secret
-          help_text: Client Secret from your GitHub OAuth App
+        - name: github_client_secret
+          title: GitHub App Client Secret
+          help_text: "Client Secret from your GitHub App. Note: You must create a GitHub App, not a GitHub OAuth App."
           type: password
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
