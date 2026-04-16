@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.22.0
+  tag: cloud-1.22.1
 
 ingress:
   enabled: false
@@ -211,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: cloud-1.22.0-nikolaik
+    tag: cloud-1.22.1-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -537,7 +537,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.22.0-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.22.1-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
