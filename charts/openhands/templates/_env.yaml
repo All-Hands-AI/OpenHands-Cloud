@@ -44,7 +44,7 @@
 - name: AWS_SECRET_ACCESS_KEY
   value: {{ (index .Values.minio.svcaccts 0).secretKey }}
 - name: AWS_S3_ENDPOINT
-  value: {{ printf "%s-%s" $.Release.Name "minio:9000" }}
+  value: {{ printf "http://%s-%s" $.Release.Name "minio:9000" }}
 - name: AWS_S3_BUCKET
   value: {{ .Values.filestore.bucket }}
 - name: AWS_S3_SECURE

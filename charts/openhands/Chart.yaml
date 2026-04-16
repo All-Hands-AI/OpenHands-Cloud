@@ -2,7 +2,7 @@ apiVersion: v2
 description: OpenHands is an AI-driven autonomous software engineer
 name: openhands
 appVersion: cloud-1.22.0
-version: 0.4.6
+version: 0.4.7
 maintainers:
   - name: rbren
   - name: xingyao
@@ -42,5 +42,5 @@ dependencies:
     condition: runtime-api.enabled
   - name: automation
     repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.3
+    version: 0.1.4
     condition: automation.enabled

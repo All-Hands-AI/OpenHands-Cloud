@@ -113,7 +113,7 @@ minio:
   # External minio configuration (used when enabled=false but filestore.ephemeral=true)
   # Configure this to point to an existing minio instance (e.g., parent chart's minio)
   external:
-    endpoint: "minio:9000"
+    endpoint: "http://minio:9000"
     accessKey: "default"
     secretKey: "notasecret"
 
