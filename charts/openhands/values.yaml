@@ -737,7 +737,7 @@ automation:
     enabled: false
     # External minio configuration (points to parent chart's minio)
     external:
-      endpoint: "minio:9000"
+      endpoint: "http://minio:9000"
       accessKey: "default"
       secretKey: "notasecret"
   
