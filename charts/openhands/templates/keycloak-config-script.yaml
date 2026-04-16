@@ -113,6 +113,10 @@ data:
              .requiredActions, .components, .defaultDefaultClientScopes,
              .defaultOptionalClientScopes, .clientProfiles, .clientPolicies,
              .keycloakVersion, .id)' $REALM_JSON > /tmp/realm-settings.json
+      if [ ! -s /tmp/realm-settings.json ]; then
+        echo "Error: Failed to generate realm settings JSON"
+        exit 1
+      fi
       keycloak_api_call "curl -s -X PUT \"$KC_REALM\" $AUTH $CT --data \"@/tmp/realm-settings.json\""
       echo "  Updated realm settings."
 
@@ -125,6 +129,10 @@ data:
       fi
       jq --arg cid "$KEYCLOAK_CLIENT_ID" '.clients[] | select(.clientId == $cid)' \
         $REALM_JSON > /tmp/allhands-client.json
+      if [ ! -s /tmp/allhands-client.json ]; then
+        echo "Error: Client $KEYCLOAK_CLIENT_ID not found in realm template"
+        exit 1
+      fi
       keycloak_api_call "curl -s -X PUT \"$KC_REALM/clients/$ALLHANDS_UUID\" $AUTH $CT --data \"@/tmp/allhands-client.json\""
       echo "  Updated client $KEYCLOAK_CLIENT_ID."
 
@@ -168,5 +176,8 @@ data:
         done
       done
 
+      # Each step above is idempotent — PUTs and POSTs can safely be rerun.
+      # If the script fails midway, the next pod restart will re-apply all steps
+      # from the beginning without side effects.
       echo "Updated allhands realm configuration."
     fi
