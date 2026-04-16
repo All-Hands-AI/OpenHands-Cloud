@@ -128,12 +128,19 @@ data:
       keycloak_api_call "curl -s -X PUT \"$KC_REALM/clients/$ALLHANDS_UUID\" $AUTH $CT --data \"@/tmp/allhands-client.json\""
       echo "  Updated client $KEYCLOAK_CLIENT_ID."
 
-      # 3. Update identity providers by alias.
+      # 3. Update or create identity providers by alias.
+      EXISTING_IDPS=$(curl -s "$KC_REALM/identity-provider/instances" \
+        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[].alias')
       for alias in $(jq -r '.identityProviders[].alias' $REALM_JSON); do
         jq --arg a "$alias" '.identityProviders[] | select(.alias == $a)' \
           $REALM_JSON > /tmp/idp-$alias.json
-        keycloak_api_call "curl -s -X PUT \"$KC_REALM/identity-provider/instances/$alias\" $AUTH $CT --data \"@/tmp/idp-$alias.json\""
-        echo "  Updated identity provider: $alias"
+        if echo "$EXISTING_IDPS" | grep -qx "$alias"; then
+          keycloak_api_call "curl -s -X PUT \"$KC_REALM/identity-provider/instances/$alias\" $AUTH $CT --data \"@/tmp/idp-$alias.json\""
+          echo "  Updated identity provider: $alias"
+        else
+          keycloak_api_call "curl -s -X POST \"$KC_REALM/identity-provider/instances\" $AUTH $CT --data \"@/tmp/idp-$alias.json\""
+          echo "  Created identity provider: $alias"
+        fi
       done
 
       # 4. Update identity provider mappers (PUT existing by ID, POST new).
