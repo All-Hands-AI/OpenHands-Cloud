@@ -2,7 +2,8 @@
 
 **Author:** Saurya Velagapudi  
 **Date:** 2026-04-14  
-**Status:** Draft  
+**Updated:** 2026-04-16  
+**Status:** In Progress  
 **Stakeholders:** Engineering, DevOps, QA
 
 ---
@@ -10,6 +11,87 @@
 ## Executive Summary
 
 We need staging environments that accurately replicate what enterprise customers experience when running OpenHands in production. This PRD defines a four-environment staging infrastructure that enables both automated CI testing and individual developer validation of customer-facing features.
+
+---
+
+## Current Progress (as of 2026-04-16)
+
+### ✅ Completed: Developer Testbed Infrastructure
+
+We have implemented a **developer testbed** in the Platform Team Sandbox GCP project that addresses Goal #3 (customer issue debugging) and provides a foundation for the full staging environment.
+
+**What's Deployed:**
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| GKE Cluster | ✅ Running | `openhands-testbed` in `platform-team-sandbox-62793` |
+| Traefik Ingress | ✅ Running | LoadBalancer IP: `34.28.75.102` |
+| cert-manager | ✅ Running | ClusterIssuer configured for Let's Encrypt |
+| DNS Zone | ✅ Created | `sandbox.all-hands.dev` (private, no NS delegation) |
+| Deployment Scripts | ✅ Committed | `scripts/testbed/deploy.sh` |
+| Documentation | ✅ Written | `scripts/testbed/README.md` |
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                Platform Team Sandbox GCP Project                 │
+│                (platform-team-sandbox-62793)                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                 GKE: openhands-testbed                      │ │
+│  │                                                              │ │
+│  │  ┌─────────────┐  ┌─────────────┐                          │ │
+│  │  │ traefik     │  │ cert-manager│     Shared Services      │ │
+│  │  │ (ingress)   │  │ (TLS certs) │                          │ │
+│  │  └─────────────┘  └─────────────┘                          │ │
+│  │                                                              │ │
+│  │  ┌──────────────────────────────────────────────────────┐  │ │
+│  │  │       Namespace: testbed-<developer-name>            │  │ │
+│  │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐    │  │ │
+│  │  │  │openhands│ │keycloak │ │litellm  │ │postgres │    │  │ │
+│  │  │  │         │ │ (auth)  │ │ (llm)   │ │ (db)    │    │  │ │
+│  │  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘    │  │ │
+│  │  └──────────────────────────────────────────────────────┘  │ │
+│  │                                                              │ │
+│  └────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Design Decisions:**
+
+1. **Private by design** - No public DNS; access via `/etc/hosts` only
+2. **Namespace isolation** - Each developer gets their own namespace
+3. **In-cluster databases** - PostgreSQL and Redis per namespace (simpler, disposable)
+4. **Keycloak auth** - No GitHub App required for testbed
+5. **Self-signed TLS** - Traefik default cert (no Let's Encrypt for private env)
+
+**Usage:**
+
+```bash
+# Deploy your instance
+export ANTHROPIC_API_KEY="sk-ant-..."
+./scripts/testbed/deploy.sh --name <yourname>
+
+# Add to /etc/hosts
+echo "34.28.75.102 testbed-<yourname>.sandbox.all-hands.dev auth-testbed-<yourname>.sandbox.all-hands.dev" | sudo tee -a /etc/hosts
+
+# Access
+https://testbed-<yourname>.sandbox.all-hands.dev
+```
+
+See [`scripts/testbed/README.md`](../scripts/testbed/README.md) for full documentation.
+
+### 🔄 Next Steps
+
+The testbed provides a foundation. To complete the full staging environment vision:
+
+1. **Add CI environments** - `staging-ci-pathroute` and `staging-ci-subdomain`
+2. **Enable public DNS** - For CI environments that need webhook testing
+3. **Add SAML/SSO** - Shared Keycloak with SAML realm
+4. **Add routing variations** - Path-based vs subdomain-based routing
+5. **CI integration** - GitHub Actions workflow for automated testing
 
 ---
 
@@ -496,10 +578,19 @@ spec:
 
 ## Implementation Plan
 
+### Phase 0: Developer Testbed (✅ COMPLETED 2026-04-16)
+- [x] Create GKE cluster (`openhands-testbed`) in Platform Team Sandbox
+- [x] Deploy cert-manager with ClusterIssuer
+- [x] Configure traefik ingress controller
+- [x] Create DNS zone (`sandbox.all-hands.dev`)
+- [x] Create deployment scripts (`scripts/testbed/deploy.sh`)
+- [x] Deploy test instance and validate OpenHands functionality
+- [x] Write documentation (`scripts/testbed/README.md`)
+
 ### Phase 1: Foundation (Week 1)
-- [ ] Deploy cert-manager with ClusterIssuer
+- [x] Deploy cert-manager with ClusterIssuer *(done in Phase 0)*
 - [ ] Deploy external-dns
-- [ ] Configure traefik ingress controller
+- [x] Configure traefik ingress controller *(done in Phase 0)*
 - [ ] Create 4 namespaces with base RBAC
 
 ### Phase 2: CI Environments (Week 2)
@@ -509,16 +600,17 @@ spec:
 - [ ] Integrate with GitHub Actions
 
 ### Phase 3: Authentication (Week 2-3)
-- [ ] Deploy shared Keycloak instance
-- [ ] Configure SAML realm and clients
+- [x] Deploy Keycloak instance *(per-namespace in testbed)*
+- [ ] Configure shared SAML realm and clients
 - [ ] Create test users
 - [ ] Validate SAML login flow
 
 ### Phase 4: Dev Environments (Week 3)
-- [ ] Deploy `staging-dev-pathroute` environment
-- [ ] Deploy `staging-dev-subdomain` environment
-- [ ] Create manual deployment workflow
-- [ ] Document feature branch deployment process
+- [x] Deploy developer testbed *(done in Phase 0)*
+- [ ] Deploy `staging-dev-pathroute` environment (routing variant)
+- [ ] Deploy `staging-dev-subdomain` environment (routing variant)
+- [x] Create manual deployment workflow *(done in Phase 0)*
+- [x] Document feature branch deployment process *(done in Phase 0)*
 
 ### Phase 5: Integration Tests (Week 3-4)
 - [ ] Set up test framework
@@ -573,6 +665,14 @@ spec:
 
 ### A. Environment URLs
 
+**Developer Testbed (✅ LIVE):**
+
+| Environment | Main URL | Access |
+|-------------|----------|--------|
+| testbed-{name} | https://testbed-{name}.sandbox.all-hands.dev | Private (`/etc/hosts` + GCP access) |
+
+**Planned CI/Staging Environments:**
+
 | Environment | Main URL | Automation URL |
 |-------------|----------|----------------|
 | staging-ci-pathroute | https://staging-ci-pathroute.all-hands.dev | https://staging-ci-pathroute.all-hands.dev/api/automation |
@@ -584,10 +684,25 @@ spec:
 
 - [PR #542: Staging Infrastructure](https://github.com/All-Hands-AI/OpenHands-Cloud/pull/542)
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [Testbed README](../scripts/testbed/README.md) - Developer testbed documentation
+- [Testbed Deploy Script](../scripts/testbed/deploy.sh) - One-command deployment
 
-### C. Glossary
+### C. Infrastructure Details
+
+**Developer Testbed (Platform Team Sandbox):**
+
+| Resource | Value |
+|----------|-------|
+| GCP Project | `platform-team-sandbox-62793` |
+| GKE Cluster | `openhands-testbed` |
+| Region | `us-central1` |
+| LoadBalancer IP | `34.28.75.102` |
+| DNS Zone | `sandbox.all-hands.dev` (private) |
+
+### D. Glossary
 
 - **Path-based routing**: All services accessed via paths on a single domain
 - **Subdomain-based routing**: Each service gets its own subdomain
 - **ClusterIssuer**: Cluster-wide certificate issuer (cert-manager)
 - **external-dns**: Kubernetes operator that creates DNS records from Ingress resources
+- **Testbed**: Developer sandbox environment for testing OpenHands deployments
