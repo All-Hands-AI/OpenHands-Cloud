@@ -158,6 +158,10 @@ lmnrApiKeyFromSecret:
   name: lmnr-api-key
   key: LMNR_PROJECT_API_KEY
 
+# Laminar API URL for monitoring/analytics
+# Example: https://app.lmnr.ai
+lmnrApiUrl: ""
+
 # Datadog configuration
 datadog:
   env: "dev"

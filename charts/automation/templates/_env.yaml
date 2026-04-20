@@ -96,6 +96,11 @@
       name: {{ .Values.lmnrApiKeyFromSecret.name }}
       key: {{ .Values.lmnrApiKeyFromSecret.key }}
 {{- end }}
+# Laminar API URL for monitoring/analytics
+{{- if .Values.lmnrApiUrl }}
+- name: LMNR_API_URL
+  value: {{ .Values.lmnrApiUrl | quote }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
