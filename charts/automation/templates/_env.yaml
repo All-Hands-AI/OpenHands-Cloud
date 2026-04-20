@@ -88,6 +88,14 @@
       name: {{ .Values.automationWebhookSecretFromSecret.name }}
       key: {{ .Values.automationWebhookSecretFromSecret.key }}
 {{- end }}
+# Laminar project API key for monitoring/analytics
+{{- if .Values.lmnrApiKeyFromSecret }}
+- name: LMNR_PROJECT_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.lmnrApiKeyFromSecret.name }}
+      key: {{ .Values.lmnrApiKeyFromSecret.key }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"

@@ -152,6 +152,12 @@ automationWebhookSecretFromSecret:
   name: automation-webhook-secret
   key: webhook-secret
 
+# Laminar project API key from K8s secret
+# Used for Laminar monitoring/analytics integration
+lmnrApiKeyFromSecret:
+  name: lmnr-api-key
+  key: LMNR_PROJECT_API_KEY
+
 # Datadog configuration
 datadog:
   env: "dev"
