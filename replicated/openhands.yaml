@@ -301,8 +301,8 @@ spec:
         githubApp:
           enabled: true
           appId: '{{repl ConfigOption "github_app_id"}}'
-          clientId: '{{repl ConfigOption "github_client_id"}}'
-          clientSecret: '{{repl ConfigOption "github_client_secret"}}'
+          clientId: '{{repl ConfigOption "github_oauth_client_id"}}'
+          clientSecret: '{{repl ConfigOption "github_oauth_client_secret"}}'
           webhookSecret: '{{repl ConfigOption "github_app_webhook_secret"}}'
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}

@@ -327,16 +327,16 @@ spec:
       items:
         - name: github_auth_enabled
           title: Enable GitHub Authentication
-          help_text: Enable GitHub OAuth for user authentication
+          help_text: Enable GitHub App authentication for user sign-in
           type: bool
           default: "0"
-        - name: github_client_id
+        - name: github_oauth_client_id
           title: GitHub App Client ID
           help_text: Client ID from your GitHub App
           type: text
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
-        - name: github_client_secret
+        - name: github_oauth_client_secret
           title: GitHub App Client Secret
           help_text: Client Secret from your GitHub App
           type: password
