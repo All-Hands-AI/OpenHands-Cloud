@@ -354,6 +354,17 @@ keycloak:
 laminar:
   # Enable this if you want to use laminar
   enabled: false
+
+  # Laminar project API key from K8s secret
+  # Used for Laminar monitoring/analytics
+  apiKeyFromSecret:
+    name: lmnr-api-key
+    key: LMNR_PROJECT_API_KEY
+
+  # Laminar API URL for monitoring/analytics
+  # Example: https://app.lmnr.ai
+  apiUrl: ""
+
   frontend:
     ingress:
       # Hostname for the frontend ingress
