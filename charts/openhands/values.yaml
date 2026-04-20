@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.21.0
+  tag: cloud-1.22.1
 
 ingress:
   enabled: false
@@ -211,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/runtime
-    tag: cloud-1.21.0-nikolaik
+    tag: cloud-1.22.1-nikolaik
   runAsRoot: true
 
 sandbox:
@@ -537,7 +537,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.21.0-nikolaik"
+        image: "ghcr.io/openhands/runtime:cloud-1.22.1-nikolaik"
         working_dir: "/openhands/code/"
         environment: {}
         command:
@@ -609,6 +609,19 @@ automationServiceKey:
   existingSecret: automation-service-key
   secretKey: automation-service-key
 
+# Automation service configuration for event forwarding
+automationService:
+  # URL of the automation service (e.g., https://staging.all-hands.dev/api/automation)
+  url: ""
+  # Enable forwarding events to the automation service
+  eventForwardingEnabled: false
+
+# Automation webhook secret for verifying webhook signatures
+automationWebhookSecret:
+  enabled: false
+  existingSecret: automation-webhook-secret
+  secretKey: webhook-secret
+
 # Automation subchart configuration
 # When enabled, deploys the automation service as a subchart
 # The automation service handles scheduled and event-driven automation execution
@@ -631,6 +644,22 @@ automation:
       limits:
         memory: 512Mi
         cpu: 500m
+  
+  # Separate deployment for handling webhook events
+  # Routes /v1/events/* traffic to dedicated pods for better isolation and scalability
+  events:
+    enabled: false
+    deployment:
+      replicas: 2
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 500m
+    uvicorn:
+      workers: 2
   
   securityContext:
     runAsUser: 42420
@@ -708,7 +737,7 @@ automation:
     enabled: false
     # External minio configuration (points to parent chart's minio)
     external:
-      endpoint: "minio:9000"
+      endpoint: "http://minio:9000"
       accessKey: "default"
       secretKey: "notasecret"
   

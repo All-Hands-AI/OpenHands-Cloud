@@ -44,7 +44,7 @@
 - name: AWS_SECRET_ACCESS_KEY
   value: {{ (index .Values.minio.svcaccts 0).secretKey }}
 - name: AWS_S3_ENDPOINT
-  value: {{ printf "%s-%s" $.Release.Name "minio:9000" }}
+  value: {{ printf "http://%s-minio:9000" $.Release.Name }}
 - name: AWS_S3_BUCKET
   value: {{ .Values.filestore.bucket }}
 - name: AWS_S3_SECURE
@@ -398,6 +398,23 @@
     secretKeyRef:
       name: {{ .Values.automationServiceKey.existingSecret }}
       key: {{ .Values.automationServiceKey.secretKey }}
+{{- end }}
+
+{{- if .Values.automationService.url }}
+- name: AUTOMATION_SERVICE_URL
+  value: {{ .Values.automationService.url | quote }}
+{{- end }}
+{{- if .Values.automationService.eventForwardingEnabled }}
+- name: AUTOMATION_EVENT_FORWARDING_ENABLED
+  value: "true"
+{{- end }}
+
+{{- if .Values.automationWebhookSecret.enabled }}
+- name: AUTOMATION_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationWebhookSecret.existingSecret }}
+      key: {{ .Values.automationWebhookSecret.secretKey }}
 {{- end }}
 
 {{- $providers := list }}
