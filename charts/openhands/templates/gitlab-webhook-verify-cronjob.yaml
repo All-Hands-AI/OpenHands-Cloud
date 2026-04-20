@@ -4,7 +4,8 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name }}-install-hooks
   labels:
-    app: {{ .Release.Name }}-install-hooks
+    {{- include "openhands.labels" . | nindent 4 }}
+    app.kubernetes.io/component: install-hooks
 spec:
   schedule: {{ .Values.gitlabWebhookInstallation.schedule | quote }}
   concurrencyPolicy: {{ .Values.gitlabWebhookInstallation.concurrencyPolicy }}
@@ -16,7 +17,8 @@ spec:
       template:
         metadata:
           labels:
-            app: {{ .Release.Name }}-install-hooks
+            {{- include "openhands.labels" . | nindent 12 }}
+            app.kubernetes.io/component: install-hooks
         spec:
           {{- with .Values.securityContext }}
           securityContext:

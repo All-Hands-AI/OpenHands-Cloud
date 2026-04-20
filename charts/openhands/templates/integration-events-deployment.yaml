@@ -3,16 +3,19 @@ kind: Deployment
 metadata:
   name: openhands-integrations
   labels:
-    app: openhands-integrations
+    {{- include "openhands.labels" . | nindent 4 }}
+    app.kubernetes.io/component: integrations
 spec:
   replicas: {{ .Values.integrationEvents.deployment.replicas | default 2 }}
   selector:
     matchLabels:
-      app: openhands-integrations
+      {{- include "openhands.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: integrations
   template:
     metadata:
       labels:
-        app: openhands-integrations
+        {{- include "openhands.labels" . | nindent 8 }}
+        app.kubernetes.io/component: integrations
       annotations:
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}

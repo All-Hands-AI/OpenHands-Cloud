@@ -5,7 +5,8 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
   labels:
-    app: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
+    {{- include "openhands.labels" . | nindent 4 }}
+    app.kubernetes.io/component: enrich-user-interaction
 spec:
   schedule: {{ .Values.enrichUserInteractionData.schedule | quote }}
   concurrencyPolicy: {{ .Values.enrichUserInteractionData.concurrencyPolicy }}
@@ -17,7 +18,8 @@ spec:
       template:
         metadata:
           labels:
-            app: {{ .Release.Name | trunc 27 }}-enrich-user-interaction
+            {{- include "openhands.labels" . | nindent 12 }}
+            app.kubernetes.io/component: enrich-user-interaction
         spec:
           {{- with .Values.securityContext }}
           securityContext:

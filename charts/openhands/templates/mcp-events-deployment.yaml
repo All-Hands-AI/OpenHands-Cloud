@@ -3,16 +3,19 @@ kind: Deployment
 metadata:
   name: openhands-mcp
   labels:
-    app: openhands-mcp
+    {{- include "openhands.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp
 spec:
   replicas: {{ .Values.mcpEvents.deployment.replicas | default 2 }}
   selector:
     matchLabels:
-      app: openhands-mcp
+      {{- include "openhands.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mcp
   template:
     metadata:
       labels:
-        app: openhands-mcp
+        {{- include "openhands.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mcp
       annotations:
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}

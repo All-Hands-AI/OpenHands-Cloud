@@ -4,7 +4,8 @@ kind: CronJob
 metadata:
   name: {{ .Release.Name }}-maintenance-tasks
   labels:
-    app: {{ .Release.Name }}-maintenance-tasks
+    {{- include "openhands.labels" . | nindent 4 }}
+    app.kubernetes.io/component: maintenance-tasks
 spec:
   schedule: {{ .Values.maintenanceTasks.schedule | quote }}
   concurrencyPolicy: {{ .Values.maintenanceTasks.concurrencyPolicy }}
@@ -18,7 +19,8 @@ spec:
         metadata:
           name: maintenance-tasks
           labels:
-            app: {{ .Release.Name }}-maintenance-tasks
+            {{- include "openhands.labels" . | nindent 12 }}
+            app.kubernetes.io/component: maintenance-tasks
         spec:
           {{- with .Values.securityContext }}
           securityContext:
