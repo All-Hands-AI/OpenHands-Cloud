@@ -652,10 +652,6 @@ plugin-directory:
     name: "plugindir"
     secretName: "postgres-password"
     secretKey: "password"
-    # Create database in shared PostgreSQL instance
-    createDatabase: false
-    superuserSecretName: "postgres-password"
-    superuserSecretKey: "password"
 
   # Authentication configuration
   auth:

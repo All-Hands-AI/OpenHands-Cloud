@@ -87,13 +87,6 @@ database:
   # Secret containing the database password
   secretName: "postgres-password"
   secretKey: "password"
-  # Create database in an existing PostgreSQL instance
-  # When true, runs an init container to create the database on startup
-  createDatabase: false
-  # Secret containing the postgres superuser password (for creating the database)
-  # Only used when createDatabase=true
-  superuserSecretName: "postgres-password"
-  superuserSecretKey: "password"
 
 # Authentication configuration
 auth:

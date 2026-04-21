@@ -518,7 +518,6 @@ spec:
             MARKETPLACE_SOURCE: '{{repl ConfigOption "plugin_directory_marketplace_source"}}'
           database:
             host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
-            createDatabase: true
           oidc:
             issuerUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
           client:

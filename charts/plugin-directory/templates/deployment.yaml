@@ -50,34 +50,6 @@ spec:
               secretKeyRef:
                 name: {{ .Values.database.secretName }}
                 key: {{ .Values.database.secretKey }}
-      {{- if .Values.database.createDatabase }}
-      # Create database if it doesn't exist
-      - name: create-db
-        image: "bitnamilegacy/postgresql:latest"
-        command: ['sh', '-c']
-        args:
-          - |
-            export PGPASSWORD=$SUPERUSER_PASS
-            PSQL="psql -h $DB_HOST -p $DB_PORT -U postgres"
-
-            echo "Ensuring database \"$DB_NAME\" exists..."
-            $PSQL -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
-            $PSQL -d postgres -c "CREATE DATABASE $DB_NAME;"
-
-            echo "Database ready."
-        env:
-          - name: DB_HOST
-            value: {{ .Values.database.host | quote }}
-          - name: DB_PORT
-            value: {{ .Values.database.port | quote }}
-          - name: DB_NAME
-            value: {{ .Values.database.name | quote }}
-          - name: SUPERUSER_PASS
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.database.superuserSecretName }}
-                key: {{ .Values.database.superuserSecretKey }}
-      {{- end }}
       # Run database migrations
       - name: migrate-db
         image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
