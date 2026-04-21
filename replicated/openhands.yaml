@@ -467,11 +467,14 @@ spec:
       values:
         laminar:
           enabled: true
+          appServer:
+            loadBalancer:
+              enabled: false
           global:
             cloudProvider: "aws"
           clickhouse:
             persistence:
-              storageClass: "openebs-hostpath"
+              storageClass: "openebs-hostpath" # default storage class for the k0s embededed cluster
             s3:
               enabled: false
           frontend:
@@ -489,15 +492,15 @@ spec:
               - name: AUTH_KEYCLOAK_ISSUER
                 value: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://auth.app.{{repl ConfigOption "base_domain"}}/realms/allhands{{repl else}}https://{{repl ConfigOption "auth_hostname"}}/realms/allhands{{repl end}}'
             ingress:
-              hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}analytics.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
               className: "traefik"
             tls:
               enabled: true
               secretName: "openhands-tls"
               clusterIssuer: ""  # leave empty — cert-manager not needed
             env:
-              nextauthUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
-              nextPublicUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              nextauthUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              nextPublicUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
           postgres:
             persistence:
               storageClass: "openebs-hostpath"
