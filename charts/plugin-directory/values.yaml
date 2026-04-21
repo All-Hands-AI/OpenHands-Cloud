@@ -15,7 +15,7 @@ databaseMigrations:
 client:
   image:
     repository: ghcr.io/openhands/plugin-directory-client
-    tag: "sha-4bcbc1f"
+    tag: "sha-ebf28f7"
   resources:
     requests:
       memory: 256Mi
@@ -27,7 +27,7 @@ client:
 server:
   image:
     repository: ghcr.io/openhands/plugin-directory-server
-    tag: "sha-4bcbc1f"
+    tag: "sha-ebf28f7"
   resources:
     requests:
       memory: 256Mi
