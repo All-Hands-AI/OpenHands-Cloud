@@ -463,9 +463,9 @@ spec:
             project: '{{repl ConfigOption "google_vertex_project_id"}}'
             location: '{{repl ConfigOption "google_vertex_location"}}'
     # Path-based sandbox routing: route every runtime at <base>/{id} through a
-    # shared Gateway instead of per-sandbox Ingresses at {id}.<base>. Requires
-    # Gateway API CRDs in the cluster; Traefik's kubernetesGateway provider is
-    # enabled in embedded-cluster.yaml.
+    # shared Gateway instead of per-sandbox Ingresses at {id}.<base>. Traefik's
+    # kubernetesGateway provider (enabled in embedded-cluster.yaml) installs
+    # the Gateway API CRDs and serves the Gateway.
     - when: '{{repl ConfigOptionEquals "runtime_routing_mode" "path" }}'
       recursiveMerge: true
       values:
