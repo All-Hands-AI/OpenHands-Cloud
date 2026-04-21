@@ -24,38 +24,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
-      # Wait for PostgreSQL to be ready
-      - name: wait-for-db
-        image: "bitnamilegacy/postgresql:latest"
-        command: ['sh', '-c']
-        args:
-          - |
-            echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
-            until PGPASSWORD=$DB_PASS pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME > /dev/null 2>&1; do
-              echo "PostgreSQL is unavailable - sleeping for 2 seconds"
-              sleep 2
-            done
-            echo "PostgreSQL is up and running!"
-        env:
-          - name: DB_HOST
-            value: {{ .Values.database.host | quote }}
-          - name: DB_PORT
-            value: {{ .Values.database.port | quote }}
-          - name: DB_USER
-            value: {{ .Values.database.user | quote }}
-          - name: DB_NAME
-            value: {{ .Values.database.name | quote }}
-          - name: DB_PASS
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.database.secretName }}
-                key: {{ .Values.database.secretKey }}
-      # Run database migrations
-      - name: migrate-db
-        image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
-        command: ["alembic", "upgrade", "head"]
-        env:
-        {{- include "plugin-directory.env.server" . | nindent 8 }}
+      {{- include "plugin-directory.dbInitContainers" . | nindent 6 }}
       containers:
       # Server container (FastAPI backend)
       - name: server

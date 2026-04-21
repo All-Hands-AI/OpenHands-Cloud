@@ -259,6 +259,9 @@ spec:
         runtime-api:
           databaseMigrations:
             createDatabases: true
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: true
         postgresql:
           enabled: true
           auth:
@@ -295,6 +298,9 @@ spec:
             createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
           env:
             DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:

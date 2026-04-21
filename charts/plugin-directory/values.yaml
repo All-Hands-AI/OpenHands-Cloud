@@ -2,6 +2,15 @@
 # This chart deploys the Plugin Directory marketplace using a sidecar pattern
 # (client + server containers in the same pod)
 
+# Database init container toggles (same pattern as runtime-api chart).
+# createDatabases issues CREATE DATABASE as the configured DB_USER, so the
+# user must have CREATEDB (or already be postgres). No separate superuser
+# secret is needed.
+databaseMigrations:
+  waitForDatabase: true
+  createDatabases: false
+  migrate: true
+
 # Client container configuration (React Router SSR)
 client:
   image:
