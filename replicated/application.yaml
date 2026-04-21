@@ -30,33 +30,32 @@ spec:
     - openhands/service/keycloak
 
     # laminar (for analytics)
-    - openhands/deployment/laminar-app-server
-    - openhands/deployment/laminar-app-server-consumer
-    - openhands/deployment/laminar-frontend
-    - openhands/deployment/laminar-query-engine
-    - openhands/deployment/laminar-quickwit-control-plane
-    - openhands/deployment/laminar-quickwit-janitor
-    - openhands/deployment/laminar-quickwit-metastore
-    - openhands/deployment/laminar-redis
-    - openhands/service/laminar-app-server-consumer-service
-    - openhands/service/laminar-app-server-load-balancer
-    - openhands/service/laminar-app-server-service
-    - openhands/service/laminar-clickhouse-headless
-    - openhands/service/laminar-clickhouse-service
-    - openhands/service/laminar-frontend-service
-    - openhands/service/laminar-postgres-headless
-    - openhands/service/laminar-postgres-service
-    - openhands/service/laminar-query-engine-service
-    - openhands/service/laminar-quickwit-control-plane
-    - openhands/service/laminar-quickwit-headless
-    - openhands/service/laminar-quickwit-indexer
-    - openhands/service/laminar-quickwit-janitor
-    - openhands/service/laminar-quickwit-metastore
-    - openhands/service/laminar-quickwit-searcher
-    - openhands/service/laminar-rabbitmq-headless
-    - openhands/service/laminar-rabbitmq-service
-    - openhands/service/laminar-redis-service
-    - openhands/ingress/laminar-frontend-alb
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-app-server{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-app-server-consumer{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-frontend{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-query-engine{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-quickwit-control-plane{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-quickwit-janitor{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-quickwit-metastore{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/deployment/laminar-redis{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-app-server-consumer-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-app-server-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-clickhouse-headless{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-clickhouse-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-frontend-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-postgres-headless{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-postgres-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-query-engine-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-quickwit-control-plane{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-quickwit-headless{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-quickwit-indexer{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-quickwit-janitor{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-quickwit-metastore{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-quickwit-searcher{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-rabbitmq-headless{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-rabbitmq-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/service/laminar-redis-service{{repl end}}'
+    - '{{repl ConfigOptionEquals "analytics_enabled" "1" }}openhands/ingress/laminar-frontend-alb{{repl end}}'
 
     # postgres
     - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/statefulset/openhands-postgresql{{repl end}}'
