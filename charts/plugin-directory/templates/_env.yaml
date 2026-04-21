@@ -33,11 +33,16 @@
     secretKeyRef:
       name: {{ .Values.auth.existingSecret }}
       key: {{ .Values.auth.identitySharedSecretKey }}
+- name: SESSION_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.auth.existingSecret }}
+      key: {{ .Values.auth.sessionSecretKey }}
 
-# Base URL for path-based routing (e.g., https://app.example.com/plugins)
-{{- if .Values.pluginDirectoryBaseUrl }}
-- name: PLUGIN_DIRECTORY_BASE_URL
-  value: {{ .Values.pluginDirectoryBaseUrl | quote }}
+# Base path for path-based routing (e.g., /plugins)
+{{- if .Values.pluginDirectoryBasePath }}
+- name: PLUGIN_DIRECTORY_BASE_PATH
+  value: {{ .Values.pluginDirectoryBasePath | quote }}
 {{- end }}
 
 {{- if .Values.datadog.enabled }}
@@ -80,11 +85,11 @@
 - name: APP_URL
   value: {{ .Values.appUrl | quote }}
 
-# Base URL for path-based routing (e.g., https://app.example.com/plugins)
-{{- if .Values.pluginDirectoryBaseUrl }}
-- name: PLUGIN_DIRECTORY_BASE_URL
-  value: {{ .Values.pluginDirectoryBaseUrl | quote }}
-{{- end }}
+# SSR axios base URL (Node.js can't resolve relative URLs). Points at the
+# same public URL the browser uses, so server and browser take the same
+# path through the ingress.
+- name: API_BASE_URL
+  value: "{{ .Values.appUrl }}/api"
 
 # Authentication - shared secret for server communication
 - name: IDENTITY_SHARED_SECRET

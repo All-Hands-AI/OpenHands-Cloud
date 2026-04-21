@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.22.1
+  tag: sha-178f4f8
 
 ingress:
   enabled: false
@@ -635,9 +635,12 @@ plugin-directory:
   # App URL - set by parent chart based on ingress configuration
   appUrl: ""
 
-  # Base URL for path-based routing - set based on ingress host
-  # e.g., https://app.example.com/plugins
-  pluginDirectoryBaseUrl: ""
+  # URL path prefix for path-based routing (e.g., /plugins).
+  # Must match the path segment baked into the client image via
+  # PLUGIN_DIRECTORY_BASE_PATH at build time. The upstream image defaults
+  # to /plugins; set this to "" only when using an image built without a
+  # base path.
+  pluginDirectoryBasePath: "/plugins"
 
   # PostgreSQL database configuration
   database:

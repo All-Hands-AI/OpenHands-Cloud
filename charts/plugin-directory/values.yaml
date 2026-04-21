@@ -69,11 +69,13 @@ appEnv:
 # App URL for the client (e.g., https://plugins.example.com or https://example.com/plugins)
 appUrl: ""
 
-# Base URL for path-based routing when served under a subpath
-# (e.g., https://app.example.com/plugins)
-# The path segment is extracted and used as Vite base, React Router basename,
-# and FastAPI router prefix
-pluginDirectoryBaseUrl: ""
+# URL path where the app is served (e.g., /plugins). Used as the FastAPI
+# router prefix at runtime, and used to derive the client health-probe paths.
+# Client-side Vite base / React Router basename are baked at image build time
+# via the PLUGIN_DIRECTORY_BASE_PATH docker build arg — this runtime value
+# must match what the image was built with. The upstream image defaults to
+# /plugins; set this to "" only when using an image built without a base path.
+pluginDirectoryBasePath: "/plugins"
 
 # PostgreSQL database configuration
 database:

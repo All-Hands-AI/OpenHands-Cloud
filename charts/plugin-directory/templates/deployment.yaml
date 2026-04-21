@@ -119,10 +119,7 @@ spec:
           failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
 
       # Client container (React Router SSR)
-      {{- $clientBasePath := "" }}
-      {{- if .Values.pluginDirectoryBaseUrl }}
-      {{- $clientBasePath = trimSuffix "/" (get (urlParse .Values.pluginDirectoryBaseUrl) "path") }}
-      {{- end }}
+      {{- $clientBasePath := trimSuffix "/" (default "" .Values.pluginDirectoryBasePath) }}
       - name: client
         image: "{{ .Values.client.image.repository }}:{{ .Values.client.image.tag }}"
         imagePullPolicy: Always
