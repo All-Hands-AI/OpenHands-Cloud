@@ -78,14 +78,6 @@ appEnv:
 # App URL for the client (e.g., https://plugins.example.com or https://example.com/plugins)
 appUrl: ""
 
-# UI path where the client is served (e.g., /plugins). Used to derive the
-# client health-probe paths in this chart. The client's Vite base and
-# React Router basename are baked at image build time via the
-# PLUGIN_DIRECTORY_BASE_PATH docker build arg — this runtime value must
-# match what the image was built with. The server's API is fixed at
-# /api/plugins on the ingress and does not read this value.
-pluginDirectoryBasePath: "/plugins"
-
 # PostgreSQL database configuration
 database:
   # Full hostname of the PostgreSQL server

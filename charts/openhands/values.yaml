@@ -640,13 +640,6 @@ plugin-directory:
   # App URL - set by parent chart based on ingress configuration
   appUrl: ""
 
-  # URL path prefix for path-based routing (e.g., /plugins).
-  # Must match the path segment baked into the client image via
-  # PLUGIN_DIRECTORY_BASE_PATH at build time. The upstream image defaults
-  # to /plugins; set this to "" only when using an image built without a
-  # base path.
-  pluginDirectoryBasePath: "/plugins"
-
   # PostgreSQL database configuration
   database:
     # Full hostname of the PostgreSQL server
