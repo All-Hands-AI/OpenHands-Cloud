@@ -21,7 +21,6 @@ resource "acme_certificate" "cert" {
   common_name     = var.base_domain
 
   subject_alternative_names = [
-    "analytics.${var.base_domain}",
     "app.${var.base_domain}",
     "analytics.app.${var.base_domain}",
     "auth.app.${var.base_domain}",
