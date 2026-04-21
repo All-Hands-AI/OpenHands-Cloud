@@ -39,12 +39,6 @@
       name: {{ .Values.auth.existingSecret }}
       key: {{ .Values.auth.sessionSecretKey }}
 
-# Base path for path-based routing (e.g., /plugins)
-{{- if .Values.pluginDirectoryBasePath }}
-- name: PLUGIN_DIRECTORY_BASE_PATH
-  value: {{ .Values.pluginDirectoryBasePath | quote }}
-{{- end }}
-
 {{- if .Values.datadog.enabled }}
 # Datadog configuration
 - name: DD_ENV
@@ -86,10 +80,10 @@
   value: {{ .Values.appUrl | quote }}
 
 # SSR axios base URL (Node.js can't resolve relative URLs). Points at the
-# same public URL the browser uses, so server and browser take the same
-# path through the ingress.
+# sidecar server over the shared pod network — avoids a wasteful round-trip
+# through the ingress for in-pod SSR fetches.
 - name: API_BASE_URL
-  value: "{{ .Values.appUrl }}/api"
+  value: "http://localhost:8000/api/plugins"
 
 # Authentication - shared secret for server communication
 - name: IDENTITY_SHARED_SECRET

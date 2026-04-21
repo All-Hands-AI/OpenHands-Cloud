@@ -29,7 +29,7 @@ spec:
   {{- end }}
     http:
       paths:
-      - path: /plugins/api
+      - path: /api/plugins
         pathType: Prefix
         backend:
           service:

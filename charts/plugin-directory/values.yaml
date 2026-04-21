@@ -15,7 +15,7 @@ databaseMigrations:
 client:
   image:
     repository: ghcr.io/openhands/plugin-directory-client
-    tag: "sha-616b211"
+    tag: "sha-4bcbc1f"
   resources:
     requests:
       memory: 256Mi
@@ -27,7 +27,7 @@ client:
 server:
   image:
     repository: ghcr.io/openhands/plugin-directory-server
-    tag: "sha-616b211"
+    tag: "sha-4bcbc1f"
   resources:
     requests:
       memory: 256Mi
@@ -78,12 +78,12 @@ appEnv:
 # App URL for the client (e.g., https://plugins.example.com or https://example.com/plugins)
 appUrl: ""
 
-# URL path where the app is served (e.g., /plugins). Used as the FastAPI
-# router prefix at runtime, and used to derive the client health-probe paths.
-# Client-side Vite base / React Router basename are baked at image build time
-# via the PLUGIN_DIRECTORY_BASE_PATH docker build arg — this runtime value
-# must match what the image was built with. The upstream image defaults to
-# /plugins; set this to "" only when using an image built without a base path.
+# UI path where the client is served (e.g., /plugins). Used to derive the
+# client health-probe paths in this chart. The client's Vite base and
+# React Router basename are baked at image build time via the
+# PLUGIN_DIRECTORY_BASE_PATH docker build arg — this runtime value must
+# match what the image was built with. The server's API is fixed at
+# /api/plugins on the ingress and does not read this value.
 pluginDirectoryBasePath: "/plugins"
 
 # PostgreSQL database configuration
