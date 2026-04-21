@@ -8,6 +8,12 @@ spec:
   {{- if and (not .Values.autoscaling.enabled) .Values.replicaCount }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  minReadySeconds: {{ .Values.deployment.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.deployment.strategy.maxUnavailable }}
+      maxSurge: {{ .Values.deployment.strategy.maxSurge }}
   selector:
     matchLabels:
       {{- include "runtime-api.selectorLabels" . | nindent 6 }}
@@ -69,18 +75,34 @@ spec:
                   key: admin-password
             
 
-          livenessProbe:
+          {{- if .Values.probes.startup.enabled }}
+          startupProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.probes.startup.path }}
               port: http
-            initialDelaySeconds: 15
-            periodSeconds: 20
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.probes.readiness.path }}
               port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}

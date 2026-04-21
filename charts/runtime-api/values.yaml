@@ -49,6 +49,33 @@ resources:
     cpu: 100m
     memory: 100Mi
 
+deployment:
+  minReadySeconds: 10
+  strategy:
+    maxUnavailable: 0
+    maxSurge: 1
+
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /health
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  startup:
+    enabled: true
+    path: /health
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 12
+
 # Unified job settings for both jobs and cronjobs
 jobSettings:
   # Resource configuration

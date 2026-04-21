@@ -449,8 +449,8 @@ class TestMainInteractiveFlow:
 
         captured = capsys.readouterr()
         # Verify labels
-        assert "GitHub OAuth Client ID: Iv1.abc123" in captured.out
-        assert "GitHub OAuth Client Secret: secret456" in captured.out
+        assert "GitHub App Client ID: Iv1.abc123" in captured.out
+        assert "GitHub App Client Secret: secret456" in captured.out
         assert "GitHub App ID: 123" in captured.out
         assert "GitHub App Webhook Secret: whsec789" in captured.out
 
