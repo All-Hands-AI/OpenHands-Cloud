@@ -5,6 +5,7 @@
 locals {
   dns_records = {
     base         = var.base_domain
+    analytics    = "analytics.${var.base_domain}"
     app          = "app.${var.base_domain}"
     auth         = "auth.app.${var.base_domain}"
     llm_proxy    = "llm-proxy.${var.base_domain}"

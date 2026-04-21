@@ -29,6 +29,35 @@ spec:
     - openhands/statefulset/keycloak
     - openhands/service/keycloak
 
+    # laminar (for analytics)
+    - openhands/deployment/laminar-app-server
+    - openhands/deployment/laminar-app-server-consumer
+    - openhands/deployment/laminar-frontend
+    - openhands/deployment/laminar-query-engine
+    - openhands/deployment/laminar-quickwit-control-plane
+    - openhands/deployment/laminar-quickwit-janitor
+    - openhands/deployment/laminar-quickwit-metastore
+    - openhands/deployment/laminar-redis
+    - openhands/service/laminar-app-server-consumer-service
+    - openhands/service/laminar-app-server-load-balancer
+    - openhands/service/laminar-app-server-service
+    - openhands/service/laminar-clickhouse-headless
+    - openhands/service/laminar-clickhouse-service
+    - openhands/service/laminar-frontend-service
+    - openhands/service/laminar-postgres-headless
+    - openhands/service/laminar-postgres-service
+    - openhands/service/laminar-query-engine-service
+    - openhands/service/laminar-quickwit-control-plane
+    - openhands/service/laminar-quickwit-headless
+    - openhands/service/laminar-quickwit-indexer
+    - openhands/service/laminar-quickwit-janitor
+    - openhands/service/laminar-quickwit-metastore
+    - openhands/service/laminar-quickwit-searcher
+    - openhands/service/laminar-rabbitmq-headless
+    - openhands/service/laminar-rabbitmq-service
+    - openhands/service/laminar-redis-service
+    - openhands/ingress/laminar-frontend-alb
+
     # postgres
     - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/statefulset/openhands-postgresql{{repl end}}'
     - '{{repl if ConfigOptionEquals "postgres_type" "embedded_postgres"}}openhands/service/openhands-postgresql{{repl end}}'
