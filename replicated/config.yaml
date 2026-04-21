@@ -59,6 +59,19 @@ spec:
           type: text
           default: "runtime.example.com"
           when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+        - name: runtime_routing_mode
+          title: Sandbox Routing Mode
+          help_text: |
+            How sandbox URLs are constructed.
+            "Subdomain" routes each sandbox at {id}.<runtime base> and requires a wildcard TLS cert for *.<runtime base>.
+            "Path" routes every sandbox at <runtime base>/{id} via the Kubernetes Gateway API — the uploaded TLS cert only needs a SAN for <runtime base> (no wildcard). Requires the Gateway API CRDs to be installed in the cluster.
+          type: select_one
+          default: "subdomain"
+          items:
+            - name: "subdomain"
+              title: "Subdomain routing (wildcard cert required)"
+            - name: "path"
+              title: "Path-based routing (no wildcard cert)"
 
     - name: tls_configuration
       title: Certificate Configuration

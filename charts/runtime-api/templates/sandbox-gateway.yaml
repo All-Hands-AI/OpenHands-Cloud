@@ -1,0 +1,24 @@
+{{- if .Values.sandboxGateway.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.sandboxGateway.name | default "sandbox-gateway" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "runtime-api.labels" . | nindent 4 }}
+spec:
+  gatewayClassName: {{ .Values.sandboxGateway.gatewayClassName | default "traefik" }}
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: {{ .Values.sandboxGateway.listenerPort | default 8443 }}
+      hostname: {{ required "sandboxGateway.hostname is required when sandboxGateway.enabled is true" .Values.sandboxGateway.hostname | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ .Values.sandboxGateway.tlsSecretName | default "openhands-tls" }}
+      allowedRoutes:
+        namespaces:
+          from: All
+{{- end }}
