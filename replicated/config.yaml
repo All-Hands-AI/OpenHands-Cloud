@@ -466,15 +466,15 @@ spec:
           title: Sandbox Routing Mode
           help_text: |
             How sandbox URLs are constructed.
-            "Subdomain" routes each sandbox at {id}.<runtime base> and requires a wildcard TLS cert for *.<runtime base>.
-            "Path" routes every sandbox at <runtime base>/{id} via the Kubernetes Gateway API — the uploaded TLS cert only needs a SAN for <runtime base> (no wildcard).
+            Subdomain routes each sandbox at {id}.<runtime base>. The uploaded TLS cert must have a SAN for *.<runtime base>.
+            Path-based routes every sandbox at <runtime base>/{id}. The uploaded TLS cert must have a SAN for <runtime base>.
           type: select_one
           default: "subdomain"
           items:
             - name: "subdomain"
-              title: "Subdomain routing (wildcard cert required)"
+              title: "Subdomain"
             - name: "path"
-              title: "Path-based routing (no wildcard cert)"
+              title: "Path-based"
         - name: sandbox_idle_seconds
           title: Idle Time (seconds)
           help_text: How long (in seconds) before idle conversations are paused. Pausing a conversation frees up memory and CPU resources.
