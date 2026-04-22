@@ -85,7 +85,7 @@ database:
 # Laminar (Laminar) configuration for monitoring/analytics
 # Set your Laminar project API key via secret
 lmnrApiKeyFromSecret:
-  name: lmnr-api-key
+  name: lmnr-project-api-key
   key: LMNR_PROJECT_API_KEY
 
 # Laminar base URL from K8s secret
@@ -166,7 +166,7 @@ automationWebhookSecretFromSecret:
 # Laminar project API key from K8s secret
 # Used for Laminar monitoring/analytics integration
 lmnrApiKeyFromSecret:
-  name: lmnr-api-key
+  name: lmnr-project-api-key
   key: LMNR_PROJECT_API_KEY
 
 # Laminar base URL from K8s secret

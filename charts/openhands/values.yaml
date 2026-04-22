@@ -358,7 +358,7 @@ laminar:
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
   apiKeyFromSecret:
-    name: lmnr-api-key
+    name: lmnr-project-api-key
     key: LMNR_PROJECT_API_KEY
 
   # Laminar base URL from K8s secret
