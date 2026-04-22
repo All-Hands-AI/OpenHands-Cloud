@@ -47,7 +47,7 @@ spec:
             name: automation
             port:
               number: 80
-      - path: /automation
+      - path: /automations
         pathType: Prefix
         backend:
           service:
