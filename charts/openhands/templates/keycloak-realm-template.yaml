@@ -1,0 +1,9 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-template
+data:
+  allhands-realm-github-provider.json.tmpl: |-
+{{ .Files.Get "files/allhands-realm-github-provider.json.tmpl" | indent 4 }}
+{{- end }}
