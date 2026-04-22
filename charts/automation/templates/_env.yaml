@@ -88,7 +88,7 @@
       name: {{ .Values.automationWebhookSecretFromSecret.name }}
       key: {{ .Values.automationWebhookSecretFromSecret.key }}
 {{- end }}
-# Laminar project API key for monitoring/analytics
+# Laminar (Laminar) monitoring/analytics
 {{- if .Values.lmnrApiKeyFromSecret }}
 - name: LMNR_PROJECT_API_KEY
   valueFrom:
@@ -96,7 +96,6 @@
       name: {{ .Values.lmnrApiKeyFromSecret.name }}
       key: {{ .Values.lmnrApiKeyFromSecret.key }}
 {{- end }}
-# Laminar API URL for monitoring/analytics
 {{- if .Values.lmnrApiUrl }}
 - name: LMNR_API_URL
   value: {{ .Values.lmnrApiUrl | quote }}

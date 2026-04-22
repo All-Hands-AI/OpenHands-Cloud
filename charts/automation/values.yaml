@@ -82,6 +82,16 @@ database:
   superuserSecretName: "postgres-password"
   superuserSecretKey: "password"
 
+# Laminar (Laminar) configuration for monitoring/analytics
+# Set your Laminar project API key via secret
+lmnrApiKeyFromSecret:
+  name: lmnr-api-key
+  key: LMNR_PROJECT_API_KEY
+
+# Laminar API URL
+# Example: https://laminar.staging.all-hands.dev
+lmnrApiUrl: ""
+
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:
   dbInstance: ""
