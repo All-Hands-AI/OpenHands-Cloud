@@ -528,11 +528,11 @@ spec:
           client:
             image:
               repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-client'
-              tag: 'sha-616b211'
+              tag: 'sha-5f44c9d'
           server:
             image:
               repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-server'
-              tag: 'sha-616b211'
+              tag: 'sha-5f44c9d'
           imagePullSecrets:
             - name: '{{repl ImagePullSecretName }}'
 
