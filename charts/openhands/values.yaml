@@ -361,9 +361,11 @@ laminar:
     name: lmnr-api-key
     key: LMNR_PROJECT_API_KEY
 
-  # Laminar API URL for monitoring/analytics
-  # Example: https://laminar.staging.all-hands.dev
-  apiUrl: ""
+  # Laminar base URL from K8s secret
+  # Used for Laminar monitoring/analytics
+  baseUrlFromSecret:
+    name: lmnr-base-url
+    key: LMNR_BASE_URL
 
   frontend:
     ingress:

@@ -88,9 +88,10 @@ lmnrApiKeyFromSecret:
   name: lmnr-api-key
   key: LMNR_PROJECT_API_KEY
 
-# Laminar API URL
-# Example: https://laminar.staging.all-hands.dev
-lmnrApiUrl: ""
+# Laminar base URL from K8s secret
+lmnrBaseUrlFromSecret:
+  name: lmnr-base-url
+  key: LMNR_BASE_URL
 
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:
@@ -168,9 +169,11 @@ lmnrApiKeyFromSecret:
   name: lmnr-api-key
   key: LMNR_PROJECT_API_KEY
 
-# Laminar API URL for monitoring/analytics
-# Example: https://laminar.staging.all-hands.dev
-lmnrApiUrl: ""
+# Laminar base URL from K8s secret
+# Used for Laminar monitoring/analytics integration
+lmnrBaseUrlFromSecret:
+  name: lmnr-base-url
+  key: LMNR_BASE_URL
 
 # Datadog configuration
 datadog:

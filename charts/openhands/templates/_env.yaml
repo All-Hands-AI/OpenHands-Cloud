@@ -345,9 +345,12 @@
       name: {{ .Values.laminar.apiKeyFromSecret.name }}
       key: {{ .Values.laminar.apiKeyFromSecret.key }}
 {{- end }}
-{{- if .Values.laminar.apiUrl }}
-- name: LMNR_API_URL
-  value: {{ .Values.laminar.apiUrl | quote }}
+{{- if .Values.laminar.baseUrlFromSecret }}
+- name: LMNR_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.laminar.baseUrlFromSecret.name }}
+      key: {{ .Values.laminar.baseUrlFromSecret.key }}
 {{- end }}
 {{- end }}
 - name: DB_PASS

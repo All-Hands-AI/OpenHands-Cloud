@@ -96,9 +96,12 @@
       name: {{ .Values.lmnrApiKeyFromSecret.name }}
       key: {{ .Values.lmnrApiKeyFromSecret.key }}
 {{- end }}
-{{- if .Values.lmnrApiUrl }}
-- name: LMNR_API_URL
-  value: {{ .Values.lmnrApiUrl | quote }}
+{{- if .Values.lmnrBaseUrlFromSecret }}
+- name: LMNR_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.lmnrBaseUrlFromSecret.name }}
+      key: {{ .Values.lmnrBaseUrlFromSecret.key }}
 {{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
