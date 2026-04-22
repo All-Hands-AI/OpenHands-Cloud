@@ -159,7 +159,7 @@ lmnrApiKeyFromSecret:
   key: LMNR_PROJECT_API_KEY
 
 # Laminar API URL for monitoring/analytics
-# Example: https://app.lmnr.ai
+# Example: https://laminar.staging.all-hands.dev
 lmnrApiUrl: ""
 
 # Datadog configuration

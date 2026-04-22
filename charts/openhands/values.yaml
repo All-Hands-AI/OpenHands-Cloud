@@ -353,7 +353,7 @@ keycloak:
 
 laminar:
   # Enable this if you want to use laminar
-  enabled: false
+  enabled: true
 
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
@@ -362,7 +362,7 @@ laminar:
     key: LMNR_PROJECT_API_KEY
 
   # Laminar API URL for monitoring/analytics
-  # Example: https://app.lmnr.ai
+  # Example: https://laminar.staging.all-hands.dev
   apiUrl: ""
 
   frontend:
