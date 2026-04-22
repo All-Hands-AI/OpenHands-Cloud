@@ -14,7 +14,9 @@ spec:
       labels:
         app: openhands
       annotations:
+        {{- if .Values.keycloak.enabled }}
         checksum/keycloak-config: {{ include (print $.Template.BasePath "/keycloak-config-script.yaml") . | sha256sum }}
+        {{- end }}
         checksum/litellm-config: {{ include (print $.Template.BasePath "/litellm-config-script.yaml") . | sha256sum }}
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}
@@ -36,16 +38,19 @@ spec:
           configMap:
             name: user-waitlist
         {{- end }}
+        {{- if .Values.keycloak.enabled }}
         - name: keycloak-config-script
           configMap:
             name: keycloak-config-script
             defaultMode: 0755
+        {{- end }}
         - name: litellm-config-script
           configMap:
             name: litellm-config-script
             defaultMode: 0755
       initContainers:
       {{- include "openhands.dbInitContainers" . | nindent 6 }}
+      {{- if .Values.keycloak.enabled }}
       - name: keycloak-config
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
@@ -57,6 +62,7 @@ spec:
         command:
           - sh
           - /scripts/keycloak-config.sh
+      {{- end }}
       - name: litellm-config
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
