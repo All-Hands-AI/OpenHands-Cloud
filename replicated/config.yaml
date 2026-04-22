@@ -309,11 +309,6 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
-        - name: plugin_directory_oidc_client_secret
-          title: Plugin Directory OIDC Client Secret
-          type: password
-          hidden: true
-          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication

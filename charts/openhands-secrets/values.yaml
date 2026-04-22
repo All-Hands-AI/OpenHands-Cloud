@@ -53,7 +53,6 @@ config:
   # Plugin Directory secrets
   plugin_directory_identity_shared_secret: ""
   plugin_directory_session_secret: ""
-  plugin_directory_oidc_client_secret: ""
 
   # TLS certificates
   tls_certificate: ""

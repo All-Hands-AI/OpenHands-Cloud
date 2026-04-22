@@ -93,7 +93,9 @@
       name: {{ .Values.auth.existingSecret }}
       key: {{ .Values.auth.sessionSecretKey }}
 
-# OIDC configuration
+# OIDC configuration — reuse the existing allhands Keycloak client
+# (same client the main openhands app uses) rather than registering
+# a dedicated plugin-directory client. Matches the laminar pattern.
 - name: AUTH_PROTOCOL
   value: "oidc"
 - name: KEYCLOAK_REALM_NAME
@@ -104,12 +106,15 @@
 - name: OIDC_ISSUER_URL
   value: "{{ .Values.oidc.issuerUrl }}/realms/$(KEYCLOAK_REALM_NAME)"
 - name: OIDC_CLIENT_ID
-  value: {{ .Values.oidc.clientId | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.oidc.realmSecretName }}
+      key: {{ .Values.oidc.clientIdKey }}
 - name: OIDC_CLIENT_SECRET
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.auth.existingSecret }}
-      key: {{ .Values.auth.oidcClientSecretKey }}
+      name: {{ .Values.oidc.realmSecretName }}
+      key: {{ .Values.oidc.clientSecretKey }}
 
 {{- if .Values.datadog.enabled }}
 # Datadog configuration

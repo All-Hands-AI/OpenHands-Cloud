@@ -656,14 +656,15 @@ plugin-directory:
     existingSecret: plugin-directory-secrets
     identitySharedSecretKey: identity-shared-secret
     sessionSecretKey: session-secret
-    oidcClientSecretKey: oidc-client-secret
 
-  # OIDC configuration - set by parent chart
+  # OIDC configuration — reuses the allhands Keycloak client via the
+  # shared keycloak-realm secret (same client the main app uses).
   oidc:
     issuerUrl: ""
-    clientId: "plugin-directory"
     realmSecretName: "keycloak-realm"
     realmSecretKey: "realm-name"
+    clientIdKey: "client-id"
+    clientSecretKey: "client-secret"
 
   # Datadog configuration
   datadog:

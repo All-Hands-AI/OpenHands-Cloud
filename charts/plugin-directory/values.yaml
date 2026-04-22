@@ -91,21 +91,25 @@ database:
 
 # Authentication configuration
 auth:
-  # Secret containing authentication credentials
+  # Secret containing plugin-directory-specific auth credentials
+  # (internal identity + session signing keys).
   existingSecret: plugin-directory-secrets
-  # Keys in the secret
   identitySharedSecretKey: identity-shared-secret
   sessionSecretKey: session-secret
-  oidcClientSecretKey: oidc-client-secret
 
 # Keycloak/OIDC configuration
+# Reuses the existing allhands Keycloak client (same one the main
+# openhands app uses) via the shared keycloak-realm secret. No dedicated
+# plugin-directory client is registered. Matches the laminar pattern.
 oidc:
   # Keycloak server URL (e.g., https://auth.example.com)
   issuerUrl: ""
-  clientId: "plugin-directory"
-  # Realm name secret reference
+  # Shared keycloak-realm secret: provides realm name + allhands client
+  # credentials (client-id, client-secret).
   realmSecretName: "keycloak-realm"
   realmSecretKey: "realm-name"
+  clientIdKey: "client-id"
+  clientSecretKey: "client-secret"
 
 # Datadog configuration
 datadog:

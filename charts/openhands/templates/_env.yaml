@@ -449,8 +449,8 @@
 - name: PLUGIN_DIRECTORY_CLIENT_SECRET
   valueFrom:
     secretKeyRef:
-      name: {{ (index .Values "plugin-directory").auth.existingSecret }}
-      key: {{ (index .Values "plugin-directory").auth.oidcClientSecretKey }}
+      name: {{ (index .Values "plugin-directory").oidc.realmSecretName }}
+      key: {{ (index .Values "plugin-directory").oidc.clientSecretKey }}
 {{- else }}
 # Empty values for Keycloak envsubst when plugin-directory is disabled
 - name: PLUGIN_DIRECTORY_HOST
