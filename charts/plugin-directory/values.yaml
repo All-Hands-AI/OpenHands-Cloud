@@ -15,7 +15,7 @@ databaseMigrations:
 client:
   image:
     repository: ghcr.io/openhands/plugin-directory-client
-    tag: "sha-81732cf"
+    tag: "sha-fa0e6ed"
   resources:
     requests:
       memory: 256Mi
@@ -27,7 +27,7 @@ client:
 server:
   image:
     repository: ghcr.io/openhands/plugin-directory-server
-    tag: "sha-81732cf"
+    tag: "sha-fa0e6ed"
   resources:
     requests:
       memory: 256Mi
@@ -90,6 +90,11 @@ apiUrl: "http://localhost:8000/api"
 # Override with an absolute URL (https://openhands.example.com) when the
 # conversation host is different. Empty string hides the button.
 conversationUrl: "/"
+
+# Base URL shown inside the curl command example on plugin detail pages.
+# Typically the same OpenHands API host the conversation button points at.
+# Empty string hides the curl command block.
+curlApiUrl: ""
 
 # PostgreSQL database configuration
 database:

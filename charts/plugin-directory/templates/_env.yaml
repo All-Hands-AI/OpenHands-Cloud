@@ -92,6 +92,11 @@
 - name: CONVERSATION_URL
   value: {{ .Values.conversationUrl | quote }}
 
+# Base URL shown inside the curl command example on plugin detail pages.
+# Empty hides the block.
+- name: CURL_API_URL
+  value: {{ .Values.curlApiUrl | quote }}
+
 # Authentication - shared secret for server communication
 - name: IDENTITY_SHARED_SECRET
   valueFrom:
