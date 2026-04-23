@@ -765,4 +765,32 @@ global:
 vertexAI:
   enabled: false
   project: ""
+
+# Pre-install/pre-upgrade hook that waits for required CRDs to be Established
+# before the openhands chart renders its own traefik/cert-manager resources.
+# Protects against a race where the chart tries to apply IngressRoutes,
+# TLSStores, or Certificates before the CRDs are ready.
+crdCheck:
+  enabled: true
+  timeout: 120s
+  backoffLimit: 6
+  crds:
+    - certificates.cert-manager.io
+    - issuers.cert-manager.io
+    - clusterissuers.cert-manager.io
+    - bundles.trust.cert-manager.io
+    - ingressroutes.traefik.io
+    - middlewares.traefik.io
+    - tlsstores.traefik.io
+  image:
+    repository: docker.io/bitnamilegacy/kubectl
+    tag: latest
+    pullPolicy: IfNotPresent
+  imagePullSecrets: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
   location: ""

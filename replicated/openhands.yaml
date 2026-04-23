@@ -248,6 +248,13 @@ spec:
         registry: images.r9.all-hands.dev
         repository: library/replicated-sdk-image
 
+    crdCheck:
+      enabled: true
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/kubectl'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+
   optionalValues:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
@@ -380,6 +387,9 @@ spec:
           image:
             registry: '{{repl LocalRegistryHost }}'
             repository: '{{repl LocalRegistryNamespace }}/replicated-sdk-image'
+        crdCheck:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/kubectl'
     # Compute NO_PROXY variable, then evaluate proxy_enabled gate.
     # Assignments produce no output; the when value resolves to just the boolean.
     - when: >-

@@ -1,0 +1,56 @@
+cert-manager:
+  enabled: true
+  # cert-manager installs its own CRDs when this is true. Required for the
+  # openhands chart pre-install CRD check to succeed.
+  crds:
+    enabled: true
+    keep: true
+  # cert-manager is cluster-scoped; leaderElection must live in a namespace
+  # accessible to all cert-manager pods. The chart default (kube-system) is
+  # fine for most installs but is set here explicitly for clarity.
+  global:
+    leaderElection:
+      namespace: kube-system
+  # Pod resources are intentionally conservative — cert-manager is idle most
+  # of the time for our use case (no ACME solver activity).
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  webhook:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+  cainjector:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+  startupapicheck:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+
+trust-manager:
+  enabled: true
+  # Trust-manager needs to know which namespace its default CA trust bundle
+  # will live in. cert-manager is the standard location.
+  app:
+    trust:
+      namespace: cert-manager
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
