@@ -15,7 +15,7 @@ databaseMigrations:
 client:
   image:
     repository: ghcr.io/openhands/plugin-directory-client
-    tag: "sha-a0fd8eb"
+    tag: "sha-81732cf"
   resources:
     requests:
       memory: 256Mi
@@ -27,7 +27,7 @@ client:
 server:
   image:
     repository: ghcr.io/openhands/plugin-directory-server
-    tag: "sha-a0fd8eb"
+    tag: "sha-81732cf"
   resources:
     requests:
       memory: 256Mi
@@ -77,6 +77,19 @@ appEnv:
 # URL configuration
 # App URL for the client (e.g., https://plugins.example.com or https://example.com/plugins)
 appUrl: ""
+
+# Base URL the SSR loader uses to reach the FastAPI server. Must include
+# the /api path. Defaults to the sidecar server on the shared pod network.
+# Override when the server is reachable under a different in-cluster DNS
+# name or port (e.g. http://plugin-directory-server.ns.svc.cluster.local:8000/api).
+apiUrl: "http://localhost:8000/api"
+
+# Base URL for the "Create New Conversation" button.
+# Default assumes OpenHands is served at the same origin as the plugin
+# directory (e.g. /launch alongside /plugins), so a relative value is fine.
+# Override with an absolute URL (https://openhands.example.com) when the
+# conversation host is different. Empty string hides the button.
+conversationUrl: "/"
 
 # PostgreSQL database configuration
 database:

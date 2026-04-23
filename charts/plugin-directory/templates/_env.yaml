@@ -79,6 +79,19 @@
 - name: APP_URL
   value: {{ .Values.appUrl | quote }}
 
+# Base URL the SSR loader uses to reach FastAPI. Defaults to the sidecar
+# server at localhost:8000 (shared pod network); override via
+# .Values.apiUrl when the server runs under a different in-cluster DNS
+# name or port.
+- name: API_URL
+  value: {{ .Values.apiUrl | quote }}
+
+# Base URL for the "Create New Conversation" button. Defaults to "/" in
+# values.yaml (same origin as the plugin directory); set an absolute URL
+# to point at a different OpenHands host, or "" to hide the button.
+- name: CONVERSATION_URL
+  value: {{ .Values.conversationUrl | quote }}
+
 # Authentication - shared secret for server communication
 - name: IDENTITY_SHARED_SECRET
   valueFrom:
