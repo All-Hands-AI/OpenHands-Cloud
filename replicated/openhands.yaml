@@ -112,9 +112,7 @@ spec:
         enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
-        # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
-        # see PR https://github.com/OpenHands/OpenHands/pull/12250 for more info
-        tag: "main-v1.79.1-stable"
+        tag: "v1.82.3-stable.patch.3"
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
