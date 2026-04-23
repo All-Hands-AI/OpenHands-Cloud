@@ -28,7 +28,6 @@ spec:
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
       LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
-      RUNTIME_URL_PATTERN: 'https://{runtime_id}.{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
 
     ingress:
       enabled: true
