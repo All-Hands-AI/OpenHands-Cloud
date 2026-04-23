@@ -184,7 +184,20 @@ spec:
           required: true
         - name: azure_endpoint
           title: Azure OpenAI Endpoint
-          help_text: Your Azure OpenAI endpoint URL
+          help_text: Your Azure OpenAI endpoint URL (e.g., https://eastus2.api.cognitive.microsoft.com or https://my-resource.openai.azure.com)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_api_version
+          title: Azure OpenAI API Version
+          help_text: The API version for your Azure OpenAI deployment
+          type: text
+          default: "2024-10-21"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_deployment_name
+          title: Azure OpenAI Deployment Name
+          help_text: The name of your Azure OpenAI model deployment (set when you deployed the model in Azure)
           type: text
           when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
           required: true

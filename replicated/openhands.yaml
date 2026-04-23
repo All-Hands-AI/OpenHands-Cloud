@@ -428,6 +428,22 @@ spec:
             HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
             NO_PROXY: '{{repl $computedNoProxy}}'
             SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
+    - when: '{{repl ConfigOptionEquals "llm_provider" "azure" }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/azure-{{repl ConfigOption "azure_deployment_name"}}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"AZURE_API_KEY\": \"%s\", \"AZURE_API_BASE\": \"%s\", \"AZURE_API_VERSION\": \"%s\"}" (ConfigOption "azure_api_key") (ConfigOption "azure_endpoint") (ConfigOption "azure_api_version") }}'
+        litellm-helm:
+          proxy_config:
+            model_list:
+              - model_name: 'azure-{{repl ConfigOption "azure_deployment_name"}}'
+                litellm_params:
+                  model: 'azure/{{repl ConfigOption "azure_deployment_name"}}'
+                  api_key: os.environ/AZURE_API_KEY
+                  api_base: os.environ/AZURE_API_BASE
+                  api_version: os.environ/AZURE_API_VERSION
+
     - when: '{{repl ConfigOptionEquals "google_api_type" "vertex" }}'
       recursiveMerge: true
       values:
