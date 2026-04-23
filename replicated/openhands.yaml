@@ -306,7 +306,18 @@ spec:
           webhookSecret: '{{repl ConfigOption "github_app_webhook_secret"}}'
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
-
+    - when: '{{repl ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        gitlabWebhookInstallation:
+          enabled: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
