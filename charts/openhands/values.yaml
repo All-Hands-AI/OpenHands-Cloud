@@ -783,8 +783,8 @@ crdCheck:
     - middlewares.traefik.io
     - tlsstores.traefik.io
   image:
-    repository: docker.io/bitnamilegacy/kubectl
-    tag: latest
+    repository: docker.io/rancher/kubectl
+    tag: v1.33.0
     pullPolicy: IfNotPresent
   imagePullSecrets: []
   resources:

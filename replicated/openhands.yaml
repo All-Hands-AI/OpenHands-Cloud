@@ -251,7 +251,7 @@ spec:
     crdCheck:
       enabled: true
       image:
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/kubectl'
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rancher/kubectl'
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
 
