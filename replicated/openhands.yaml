@@ -312,7 +312,6 @@ spec:
       values:
         env:
           ENABLE_V1_GITLAB_RESOLVER: "true"
-          OPENHANDS_RESOLVER_TEMPLATES_DIR: "openhands/integrations/templates/resolver/"
         gitlabWebhookInstallation:
           enabled: true
           resources:
