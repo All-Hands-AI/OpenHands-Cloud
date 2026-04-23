@@ -112,7 +112,7 @@ spec:
         enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
-        tag: "v1.82.3-stable.patch.2"
+        tag: "v1.82.3-stable.patch.3"
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
