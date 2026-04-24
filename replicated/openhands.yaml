@@ -296,6 +296,8 @@ spec:
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
+        env:
+          ENABLE_V1_GITHUB_RESOLVER: "true"
         githubApp:
           enabled: true
           appId: '{{repl ConfigOption "github_app_id"}}'
