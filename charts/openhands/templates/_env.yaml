@@ -338,6 +338,24 @@
   value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
 {{- end }}
 {{- if .Values.laminar.enabled }}
+{{- $lmnrOverridden := false }}
+{{- if .Values.env }}
+{{- if or (hasKey .Values.env "LMNR_PROJECT_API_KEY") (hasKey .Values.env "LMNR_BASE_URL") }}
+{{- $lmnrOverridden = true }}
+{{- end }}
+{{- end }}
+{{- if and (not $lmnrOverridden) (or .Values.laminar.apiKeyFromSecret .Values.laminar.baseUrlFromSecret) }}
+{{- $lmnrEnv := dict }}
+{{- if .Values.laminar.apiKeyFromSecret }}
+{{- $_ := set $lmnrEnv "LMNR_PROJECT_API_KEY" (printf "$(LMNR_PROJECT_API_KEY)") }}
+{{- end }}
+{{- if .Values.laminar.baseUrlFromSecret }}
+{{- $_ := set $lmnrEnv "LMNR_BASE_URL" (printf "$(LMNR_BASE_URL)") }}
+{{- end }}
+- name: OH_AGENT_SERVER_ENV
+  value: {{ $lmnrEnv | toJson }}
+{{- end }}
+{{- end }}
 {{- if .Values.laminar.apiKeyFromSecret }}
 - name: LMNR_PROJECT_API_KEY
   valueFrom:
