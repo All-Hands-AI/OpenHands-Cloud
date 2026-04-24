@@ -89,24 +89,6 @@
       key: {{ .Values.automationWebhookSecretFromSecret.key }}
 {{- end }}
 # Laminar (Laminar) monitoring/analytics
-# Only set OH_AGENT_SERVER_ENV if LMNR vars are NOT being overridden in .Values.env
-{{- $lmnrOverridden := false }}
-{{- if .Values.env }}
-{{- if or (hasKey .Values.env "LMNR_PROJECT_API_KEY") (hasKey .Values.env "LMNR_BASE_URL") }}
-{{- $lmnrOverridden = true }}
-{{- end }}
-{{- end }}
-{{- if and (not $lmnrOverridden) (or .Values.lmnrApiKeyFromSecret .Values.lmnrBaseUrlFromSecret) }}
-{{- $lmnrEnv := dict }}
-{{- if .Values.lmnrApiKeyFromSecret }}
-{{- $_ := set $lmnrEnv "LMNR_PROJECT_API_KEY" (printf "$(LMNR_PROJECT_API_KEY)") }}
-{{- end }}
-{{- if .Values.lmnrBaseUrlFromSecret }}
-{{- $_ := set $lmnrEnv "LMNR_BASE_URL" (printf "$(LMNR_BASE_URL)") }}
-{{- end }}
-- name: OH_AGENT_SERVER_ENV
-  value: {{ $lmnrEnv | toJson }}
-{{- end }}
 {{- if .Values.lmnrApiKeyFromSecret }}
 - name: LMNR_PROJECT_API_KEY
   valueFrom:
