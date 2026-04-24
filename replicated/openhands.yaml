@@ -28,7 +28,6 @@ spec:
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
       LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
-      RUNTIME_URL_PATTERN: 'https://{runtime_id}.{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
 
     ingress:
       enabled: true
@@ -307,20 +306,7 @@ spec:
           webhookSecret: '{{repl ConfigOption "github_app_webhook_secret"}}'
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
-    - when: '{{repl ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
-      recursiveMerge: true
-      values:
-        env:
-          ENABLE_V1_GITLAB_RESOLVER: "true"
-        gitlabWebhookInstallation:
-          enabled: true
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "200m"
-            limits:
-              memory: "512Mi"
-              cpu: "200m"
+
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
