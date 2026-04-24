@@ -17,6 +17,9 @@ spec:
       enabled: false
     cert-manager:
       enabled: true
+      global:
+        imagePullSecrets:
+          - name: '{{repl ImagePullSecretName }}'
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-controller'
       webhook:

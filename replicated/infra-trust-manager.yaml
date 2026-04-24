@@ -16,6 +16,8 @@ spec:
       enabled: false
     trust-manager:
       enabled: true
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-manager'
       defaultPackageImage:
