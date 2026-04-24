@@ -745,6 +745,11 @@ automation:
   serviceKeyFromSecret:
     name: automation-service-key
     key: automation-service-key
+
+  # KV store secret from K8s secret (reuses jwt-secret)
+  kvSecretFromSecret:
+    name: jwt-secret
+    key: jwt-secret
   
   # Datadog configuration
   datadog:

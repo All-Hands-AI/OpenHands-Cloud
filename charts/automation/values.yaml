@@ -152,6 +152,13 @@ automationWebhookSecretFromSecret:
   name: automation-webhook-secret
   key: webhook-secret
 
+# KV store secret from K8s secret
+# Used for signing KV store JWT tokens and encrypting stored values
+# Reuses the existing jwt-secret by default (shared with main openhands app)
+kvSecretFromSecret:
+  name: jwt-secret
+  key: jwt-secret
+
 # Datadog configuration
 datadog:
   env: "dev"
