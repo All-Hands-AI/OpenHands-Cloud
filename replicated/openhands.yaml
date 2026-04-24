@@ -257,7 +257,7 @@ spec:
 
     caBundle:
       userCA: |
-        {{repl ConfigOptionData "tls_ca_certificate" }}
+        {{repl ConfigOptionData "tls_ca_certificate" | nindent 8 }}
 
   optionalValues:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
