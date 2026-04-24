@@ -102,11 +102,11 @@ def temporary_pem_file(pem_path: Path):
 
 
 @contextmanager
-def mock_main_dependencies(response_data: dict, code: str = "test-code"):
+def mock_main_dependencies(response_data: dict, code: str = "test-code", installation_found: bool = True):
     """Context manager that mocks all external dependencies for main().
 
-    Mocks: start_callback_server, open_manifest_in_browser,
-           stop_callback_server, and requests.post.
+    Mocks: start_callback_server, open_manifest_in_browser, stop_callback_server,
+           requests.post, wait_for_app_installation, and webbrowser.open.
 
     Yields a dict with references to all mocks for inspection.
     """
@@ -118,15 +118,19 @@ def mock_main_dependencies(response_data: dict, code: str = "test-code"):
         with patch("create_github_app.open_manifest_in_browser") as mock_browser:
             with patch("create_github_app.stop_callback_server") as mock_stop:
                 with patch("create_github_app.requests.post", return_value=mock_response) as mock_post:
-                    yield {
-                        "start_server": mock_start,
-                        "open_browser": mock_browser,
-                        "stop_server": mock_stop,
-                        "post": mock_post,
-                        "code_holder": code_holder,
-                        "server_handle": server_handle,
-                        "response": mock_response,
-                    }
+                    with patch("create_github_app.wait_for_app_installation", return_value=installation_found) as mock_wait:
+                        with patch("create_github_app.webbrowser.open") as mock_wb:
+                            yield {
+                                "start_server": mock_start,
+                                "open_browser": mock_browser,
+                                "stop_server": mock_stop,
+                                "post": mock_post,
+                                "wait_for_installation": mock_wait,
+                                "webbrowser": mock_wb,
+                                "code_holder": code_holder,
+                                "server_handle": server_handle,
+                                "response": mock_response,
+                            }
 
 
 class TestNoChangesOutsideScriptFolder:
@@ -234,10 +238,16 @@ class TestBuildAppManifest:
         assert "redirect_url" in manifest
         assert manifest["redirect_url"] == "http://localhost:9876/callback"
 
-    def test_manifest_requests_oauth_on_install(self):
-        """Test that manifest requests OAuth authorization during installation."""
+    def test_manifest_does_not_request_oauth_on_install(self):
+        """Test that OAuth on install is disabled; Keycloak handles user OAuth at login time."""
         manifest = build_app_manifest(base_domain="example.com")
-        assert manifest["request_oauth_on_install"] is True
+        assert manifest["request_oauth_on_install"] is False
+
+    def test_manifest_callback_urls_has_no_localhost(self):
+        """Test that callback_urls never contains localhost so no temporary URL persists in app settings."""
+        manifest = build_app_manifest(base_domain="example.com")
+        for url in manifest["callback_urls"]:
+            assert "localhost" not in url
 
 
 class TestGenerateManifestHtml:
@@ -603,7 +613,9 @@ class TestMainWithCallbackServer:
             with patch("create_github_app.open_manifest_in_browser", side_effect=track_open_browser):
                 with patch("create_github_app.stop_callback_server"):
                     with patch("create_github_app.requests.post", return_value=mock_response):
-                        main(base_domain="example.com", dry_run=False, app_name="my-app")
+                        with patch("create_github_app.wait_for_app_installation", return_value=True):
+                            with patch("create_github_app.webbrowser.open"):
+                                main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         assert call_order == ["start_server", "open_browser"]
 
@@ -635,6 +647,72 @@ class TestMainWithCallbackServer:
 
         # input() should never be called
         mock_input.assert_not_called()
+
+
+class TestMainInstallationFlow:
+    """Tests for main() guiding the user to install the app and detecting completion via API polling."""
+
+    def test_main_opens_browser_to_installation_url_from_slug(self):
+        """Test that main() opens the browser to the installation URL derived from the app slug."""
+        with mock_main_dependencies({"id": 123, "slug": "openhands-abc123"}) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        mocks["webbrowser"].assert_any_call(
+            "https://github.com/apps/openhands-abc123/installations/new"
+        )
+
+    def test_main_does_not_open_install_browser_when_slug_absent(self):
+        """Test that main() skips the install browser open when credentials have no slug."""
+        with mock_main_dependencies({"id": 123}) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        install_calls = [c for c in mocks["webbrowser"].call_args_list if "installations/new" in str(c)]
+        assert install_calls == []
+
+    def test_main_polls_for_installation_when_pem_present(self):
+        """Test that main() calls wait_for_app_installation() when credentials include pem."""
+        with mock_main_dependencies({"id": 123, "slug": "my-slug", "pem": "fake-pem"}) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        mocks["wait_for_installation"].assert_called_once_with(
+            app_id=123, private_key="fake-pem"
+        )
+
+    def test_main_skips_polling_when_no_pem(self):
+        """Test that main() skips wait_for_app_installation() when credentials have no pem."""
+        with mock_main_dependencies({"id": 123, "slug": "my-slug"}) as mocks:
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        mocks["wait_for_installation"].assert_not_called()
+
+    def test_main_prints_success_when_installation_detected(self, capsys):
+        """Test that main() prints a success message when installation is detected."""
+        with mock_main_dependencies({"id": 123, "slug": "s", "pem": "p"}, installation_found=True):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "install" in captured.out.lower()
+
+    def test_main_prints_warning_when_installation_times_out(self, capsys):
+        """Test that main() prints a warning when installation polling times out."""
+        with mock_main_dependencies({"id": 123, "slug": "s", "pem": "p"}, installation_found=False):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "timed out" in captured.out.lower() or "warning" in captured.out.lower()
+
+    def test_main_prints_credentials_regardless_of_installation_outcome(self, capsys):
+        """Test that main() prints credentials even if installation polling times out."""
+        with mock_main_dependencies({
+            "id": 123,
+            "client_id": "Iv1.abc",
+            "slug": "s",
+            "pem": "p",
+        }, installation_found=False):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "GitHub OAuth Client ID: Iv1.abc" in captured.out
 
 
 if __name__ == "__main__":

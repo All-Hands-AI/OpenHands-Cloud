@@ -11,6 +11,7 @@ import json
 import secrets
 import tempfile
 import threading
+import time
 import webbrowser
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,6 +21,7 @@ import requests
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from github import Auth, GithubIntegration
 
 SCRIPT_DIR = Path(__file__).parent
 
@@ -79,7 +81,7 @@ def build_app_manifest(
         "redirect_url": f"http://localhost:{callback_port}/callback",
         "callback_urls": [f"https://auth.app.{base_domain}/realms/allhands/broker/github/endpoint"],
         "public": False,
-        "request_oauth_on_install": True,
+        "request_oauth_on_install": False,
         "default_permissions": {
             "actions": "write",
             "contents": "write",
@@ -204,6 +206,23 @@ def exchange_code_for_credentials(code: str) -> dict:
     return response.json()
 
 
+def wait_for_app_installation(
+    app_id: int,
+    private_key: str,
+    timeout: float = 300,
+    poll_interval: float = 5.0,
+) -> bool:
+    """Poll GitHub API until the app has at least one installation or timeout."""
+    auth = Auth.AppAuth(app_id, private_key)
+    gi = GithubIntegration(auth=auth)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if list(gi.get_installations()):
+            return True
+        time.sleep(poll_interval)
+    return False
+
+
 def create_github_app(
     base_domain: str,
     github_client: GithubClient,
@@ -254,6 +273,20 @@ def main(
 
     credentials = exchange_code_for_credentials(code)
     print(f"\nGitHub App created successfully!")
+
+    if "slug" in credentials:
+        install_url = f"https://github.com/apps/{credentials['slug']}/installations/new"
+        print(f"\nOpening browser to install the app on your organization...")
+        print(f"Install URL: {install_url}")
+        webbrowser.open(install_url)
+
+    if "pem" in credentials:
+        print("\nWaiting for app installation...")
+        installed = wait_for_app_installation(app_id=credentials["id"], private_key=credentials["pem"])
+        if installed:
+            print("GitHub App installed successfully!")
+        else:
+            print("Warning: Timed out waiting for app installation.")
 
     # Save pem to keys/ directory relative to script location
     pem_path = None
