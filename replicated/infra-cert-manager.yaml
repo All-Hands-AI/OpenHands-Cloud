@@ -1,18 +1,22 @@
 apiVersion: kots.io/v1beta2
 kind: HelmChart
 metadata:
-  name: infra
+  name: infra-cert-manager
 spec:
   chart:
     name: infra
-  releaseName: infra
+  releaseName: infra-cert-manager
   namespace: cert-manager
-  # Weight 5 places infra between openhands-secrets (1) and openhands (10)
-  # so cert-manager and trust-manager CRDs exist before openhands installs.
+  # Weight 5 installs cert-manager and its CRDs before trust-manager (weight 6)
+  # can reference them, and before openhands (weight 10) installs resources that
+  # depend on them (Bundle, certs).
   weight: 5
   helmUpgradeFlags: ["--wait", "--timeout", "600s"]
   values:
+    trust-manager:
+      enabled: false
     cert-manager:
+      enabled: true
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-controller'
       webhook:
@@ -27,11 +31,6 @@ spec:
       startupapicheck:
         image:
           repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-startupapicheck'
-    trust-manager:
-      image:
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-manager'
-      defaultPackageImage:
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-manager-package-debian'
 
   optionalValues:
     - when: '{{repl HasLocalRegistry }}'
@@ -52,14 +51,9 @@ spec:
           startupapicheck:
             image:
               repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cert-manager-startupapicheck'
-        trust-manager:
-          image:
-            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-manager'
-          defaultPackageImage:
-            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-manager-package-debian'
 
   builder:
     cert-manager:
       enabled: true
     trust-manager:
-      enabled: true
+      enabled: false
