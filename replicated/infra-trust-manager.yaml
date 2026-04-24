@@ -21,7 +21,7 @@ spec:
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-manager'
       defaultPackageImage:
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-manager-package-debian'
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-pkg-debian-bookworm'
 
   optionalValues:
     - when: '{{repl HasLocalRegistry }}'
@@ -31,7 +31,7 @@ spec:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-manager'
           defaultPackageImage:
-            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-manager-package-debian'
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-pkg-debian-bookworm'
 
   builder:
     cert-manager:
