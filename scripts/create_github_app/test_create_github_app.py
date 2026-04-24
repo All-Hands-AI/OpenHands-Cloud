@@ -239,6 +239,22 @@ class TestBuildAppManifest:
         manifest = build_app_manifest(base_domain="example.com")
         assert manifest["request_oauth_on_install"] is True
 
+    @pytest.mark.parametrize("event", [
+        "issue_comment",
+        "pull_request",
+        "pull_request_review_comment",
+    ])
+    def test_manifest_subscribes_to_event(self, event):
+        """Test that manifest subscribes to required GitHub events."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert event in manifest["default_events"]
+
+    def test_manifest_has_only_expected_events(self):
+        """Test that manifest subscribes to exactly the expected events, no more."""
+        manifest = build_app_manifest(base_domain="example.com")
+        expected = {"issue_comment", "pull_request", "pull_request_review_comment"}
+        assert set(manifest["default_events"]) == expected
+
 
 class TestGenerateManifestHtml:
     """Tests for generate_manifest_html function."""
