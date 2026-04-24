@@ -69,18 +69,13 @@ spec:
           image: "{{ .Values.crdCheck.image.repository }}:{{ .Values.crdCheck.image.tag }}"
           imagePullPolicy: {{ .Values.crdCheck.image.pullPolicy }}
           command:
-            - /bin/sh
-            - -c
-            - |
-              set -eu
-              timeout="{{ .Values.crdCheck.timeout }}"
-              crds="{{ join " " .Values.crdCheck.crds }}"
-              echo "Waiting up to ${timeout} for required CRDs: ${crds}"
-              for crd in ${crds}; do
-                echo "==> ${crd}"
-                kubectl wait --for=condition=Established --timeout="${timeout}" "crd/${crd}"
-              done
-              echo "All required CRDs are Established."
+            - kubectl
+            - wait
+            - --for=condition=Established
+            - --timeout={{ .Values.crdCheck.timeout }}
+            {{- range .Values.crdCheck.crds }}
+            - crd/{{ . }}
+            {{- end }}
           resources:
             {{- toYaml .Values.crdCheck.resources | nindent 12 }}
 {{- end }}
