@@ -92,6 +92,11 @@ def build_app_manifest(
             "statuses": "write",
             "workflows": "write",
         },
+        "default_events": [
+            "issue_comment",
+            "pull_request",
+            "pull_request_review_comment",
+        ],
         "hook_attributes": {
             "url": f"https://app.{base_domain}/integration/github/events",
         },
