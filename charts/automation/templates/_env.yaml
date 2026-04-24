@@ -88,6 +88,14 @@
       name: {{ .Values.automationWebhookSecretFromSecret.name }}
       key: {{ .Values.automationWebhookSecretFromSecret.key }}
 {{- end }}
+# KV store secret for JWT signing and value encryption
+{{- if .Values.kvSecretFromSecret }}
+- name: AUTOMATION_KV_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.kvSecretFromSecret.name }}
+      key: {{ .Values.kvSecretFromSecret.key }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
