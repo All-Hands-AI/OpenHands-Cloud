@@ -299,6 +299,16 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
+        - name: plugin_directory_identity_shared_secret
+          title: Plugin Directory Identity Shared Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: plugin_directory_session_secret
+          title: Plugin Directory Session Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication
@@ -578,6 +588,22 @@ spec:
               title: "Info (default)"
             - name: "DEBUG"
               title: "Debug"
+
+    - name: experimental
+      title: Experimental
+      description: Preview features that are still in development. Enable at your own risk.
+      items:
+        - name: plugin_directory_enabled
+          title: Enable Plugin Directory
+          help_text: Deploy the Plugin Directory marketplace, accessible at /plugins on your application hostname.
+          type: bool
+          default: "0"
+        - name: plugin_directory_marketplace_source
+          title: Marketplace Source
+          help_text: "URI of the plugin catalog to load. Supports github://owner/repo[@ref], https:// URLs to a catalog JSON file, or file:// paths."
+          type: text
+          when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+          required: true
 
     - name: advanced_options
       title: Advanced Options

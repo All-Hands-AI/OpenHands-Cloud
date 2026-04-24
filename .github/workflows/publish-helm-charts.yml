@@ -33,11 +33,13 @@ jobs:
             path: charts/image-loader
           - name: automation
             path: charts/automation
+          - name: plugin-directory
+            path: charts/plugin-directory
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
             path: charts/openhands-secrets
-      # because openhands depends on runtime-api
+      # because openhands depends on runtime-api, automation, and plugin-directory
       max-parallel: 1
     steps:
       - name: Checkout

@@ -257,6 +257,9 @@ spec:
         runtime-api:
           databaseMigrations:
             createDatabases: true
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: true
         postgresql:
           enabled: true
           auth:
@@ -293,6 +296,9 @@ spec:
             createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
           env:
             DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -507,6 +513,31 @@ spec:
           rabbitmq:
             persistence:
               storageClass: "openebs-hostpath"
+    - when: '{{repl ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        plugin-directory:
+          enabled: true
+          appUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/plugins'
+          # OpenHands API host (same host as appUrl, without the /plugins path).
+          # The curl template appends /api/v1/app-conversations to this base.
+          curlApiUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          appEnv:
+            MARKETPLACE_SOURCE: '{{repl ConfigOption "plugin_directory_marketplace_source"}}'
+          database:
+            host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+          oidc:
+            issuerUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
+          client:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-client'
+              tag: 'sha-fa0e6ed'
+          server:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-server'
+              tag: 'sha-fa0e6ed'
+          imagePullSecrets:
+            - name: '{{repl ImagePullSecretName }}'
 
   builder:
     keycloak:
