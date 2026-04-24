@@ -1,0 +1,18 @@
+{{- $userCA := .Values.caBundle.userCA | trim -}}
+{{- if $userCA }}
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: {{ .Values.caBundle.name }}
+spec:
+  sources:
+    - useDefaultCAs: {{ .Values.caBundle.includeDefaultCAs }}
+    - inLine: |-
+{{ $userCA | indent 8 }}
+  target:
+    configMap:
+      key: {{ .Values.caBundle.key }}
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: {{ .Release.Namespace }}
+{{- end }}

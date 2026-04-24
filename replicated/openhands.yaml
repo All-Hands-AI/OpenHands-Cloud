@@ -255,6 +255,10 @@ spec:
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
 
+    caBundle:
+      userCA: |
+        {{repl ConfigOptionData "tls_ca_certificate" }}
+
   optionalValues:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true

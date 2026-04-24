@@ -766,6 +766,17 @@ vertexAI:
   enabled: false
   project: ""
 
+# Trust-manager Bundle that fans a CA bundle (public CAs + a customer-supplied
+# CA certificate) out as a ConfigMap into the release namespace. Consumers
+# mount this ConfigMap to trust the customer's internal CAs. The Bundle is
+# only rendered when userCA is non-empty.
+caBundle:
+  name: openhands-ca-bundle
+  key: ca-bundle.crt
+  includeDefaultCAs: true
+  # Populated from the replicated TLS CA certificate config option.
+  userCA: ""
+
 # Pre-install/pre-upgrade hook that waits for required CRDs to be Established
 # before the openhands chart renders its own traefik/cert-manager resources.
 # Protects against a race where the chart tries to apply IngressRoutes,
