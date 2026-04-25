@@ -1,0 +1,26 @@
+{{/*
+  Service for exposing Laminar app-server with both HTTP and gRPC ports.
+  This service aggregates both ports since the laminar subchart only exposes HTTP.
+*/}}
+{{- if and .Values.laminar.enabled (eq .Values.laminar.global.cloudProvider "gcp") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: laminar-app-server-service
+  labels:
+    app.kubernetes.io/name: app-server
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: app-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.laminar.appServer.service.port | default 8000 }}
+      targetPort: {{ .Values.laminar.appServer.service.targetPort | default 8000 }}
+    - name: grpc
+      port: {{ .Values.laminar.appServer.service.grpcPort | default 8001 }}
+      targetPort: {{ .Values.laminar.appServer.service.grpcTargetPort | default 8001 }}
+  selector:
+    app: laminar-app-server
+{{- end }}

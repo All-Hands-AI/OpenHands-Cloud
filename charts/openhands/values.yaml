@@ -384,8 +384,10 @@ laminar:
     service:
       # HTTP port for the app-server service
       port: 8000
-      # gRPC port for trace ingestion
+      targetPort: 8000
+      # gRPC port for trace ingestion - expose both ports
       grpcPort: 8001
+      grpcTargetPort: 8001
     ingress:
       # Hostname for the app-server API ingress
       # When set, creates an Ingress with TLS via cert-manager
