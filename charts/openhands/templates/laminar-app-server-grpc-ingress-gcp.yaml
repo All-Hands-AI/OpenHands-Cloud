@@ -1,17 +1,18 @@
 {{/*
   For exposing the Laminar app server gRPC externally on GCP.
-  gRPC requires HTTP/2 and uses the same hostname as HTTP but different port.
-  Uses ALPN-based routing via traefik backend configuration.
+  gRPC requires HTTP/2 and uses a separate subdomain (grpc.*) on port 443.
+  Uses h2c backend protocol via traefik.
 */}}
 {{- if and .Values.laminar.enabled (and (eq .Values.laminar.global.cloudProvider "gcp") .Values.laminar.appServer.ingress.hostname) }}
 {{- $hostname := .Values.laminar.appServer.ingress.hostname }}
+{{- $grpcHostname := printf "grpc.%s" $hostname }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: laminar-app-server-grpc-ingress
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
-    external-dns.alpha.kubernetes.io/hostname: {{ $hostname }}
+    external-dns.alpha.kubernetes.io/hostname: {{ $grpcHostname }}
     traefik.ingress.kubernetes.io/backend-protocol: h2c
     {{- with .Values.laminar.appServer.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
@@ -20,13 +21,13 @@ spec:
   ingressClassName: {{ .Values.laminar.appServer.ingress.className | default "traefik" }}
   tls:
     - hosts:
-        - {{ $hostname }}
-      secretName: laminar-app-server-tls
+        - {{ $grpcHostname }}
+      secretName: laminar-app-server-grpc-tls
   rules:
-    - host: {{ $hostname }}
+    - host: {{ $grpcHostname }}
       http:
         paths:
-          - path: /opentelemetry.
+          - path: /
             pathType: Prefix
             backend:
               service:
