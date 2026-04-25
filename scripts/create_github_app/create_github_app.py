@@ -161,7 +161,7 @@ def create_callback_app() -> tuple[FastAPI, CodeHolder]:
 <html>
 <head><title>GitHub App Created</title></head>
 <body>
-<p>Created app! Installing...</p>
+<p>Created app! Navigating to install page...</p>
 <script>
 function checkInstallUrl() {
   fetch('/installation-url')

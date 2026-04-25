@@ -531,7 +531,7 @@ class TestCallbackServer:
 
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        assert "Created app! Installing..." in response.text
+        assert "Created app! Navigating to install page..." in response.text
 
     def test_callback_endpoint_polls_installation_url_endpoint(self):
         """Test that /callback HTML polls /installation-url to get the install URL."""
