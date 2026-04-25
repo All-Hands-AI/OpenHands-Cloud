@@ -26,7 +26,7 @@ spec:
     - host: {{ $hostname }}
       http:
         paths:
-          - path: /
+          - path: /opentelemetry.
             pathType: Prefix
             backend:
               service:
