@@ -44,6 +44,7 @@ def make_mock_code_holder(code: str = "test-code") -> MagicMock:
     code_holder.code = code
     code_holder.code_received = threading.Event()
     code_holder.code_received.set()
+    code_holder.installation_url = None
     return code_holder
 
 
@@ -521,8 +522,8 @@ class TestCallbackServer:
         assert response.status_code == 200
         assert code_holder.code == "test-auth-code-123"
 
-    def test_callback_endpoint_returns_success_html(self):
-        """Test that /callback returns a user-friendly success HTML page."""
+    def test_callback_endpoint_guides_user_to_install(self):
+        """Test that /callback tells the user to continue to install, not to close the window."""
         app, _ = create_callback_app()
         client = TestClient(app)
 
@@ -530,7 +531,48 @@ class TestCallbackServer:
 
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        assert "success" in response.text.lower()
+        assert "Continue to install your app" in response.text
+        assert "return to the terminal" in response.text.lower()
+        assert "close this window" not in response.text.lower()
+
+    def test_callback_endpoint_polls_installation_url_endpoint(self):
+        """Test that /callback HTML polls /installation-url to get the install URL."""
+        app, _ = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback?code=some-code")
+
+        assert "/installation-url" in response.text
+
+    def test_callback_endpoint_redirects_same_tab(self):
+        """Test that /callback redirects in the same tab (window.location.href) not a new window."""
+        app, _ = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback?code=some-code")
+
+        assert "window.location.href" in response.text
+        assert "window.open" not in response.text
+
+    def test_installation_url_endpoint_returns_null_when_not_set(self):
+        """Test that /installation-url returns null before the slug is known from credentials."""
+        app, _ = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/installation-url")
+
+        assert response.status_code == 200
+        assert response.json() == {"url": None}
+
+    def test_installation_url_endpoint_returns_url_when_set(self):
+        """Test that /installation-url returns the URL once main() sets it from the credentials slug."""
+        app, code_holder = create_callback_app()
+        client = TestClient(app)
+
+        code_holder.installation_url = "https://github.com/apps/real-slug/installations/new"
+        response = client.get("/installation-url")
+
+        assert response.json() == {"url": "https://github.com/apps/real-slug/installations/new"}
 
     def test_callback_endpoint_handles_missing_code(self):
         """Test that /callback handles missing code parameter gracefully."""
@@ -652,22 +694,19 @@ class TestMainWithCallbackServer:
 class TestMainInstallationFlow:
     """Tests for main() guiding the user to install the app and detecting completion via API polling."""
 
-    def test_main_opens_browser_to_installation_url_from_slug(self):
-        """Test that main() opens the browser to the installation URL derived from the app slug."""
+    def test_main_sets_installation_url_on_code_holder_from_slug(self):
+        """Test that main() sets code_holder.installation_url so the browser can redirect to it."""
         with mock_main_dependencies({"id": 123, "slug": "openhands-abc123"}) as mocks:
             main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-        mocks["webbrowser"].assert_any_call(
-            "https://github.com/apps/openhands-abc123/installations/new"
-        )
+        assert mocks["code_holder"].installation_url == "https://github.com/apps/openhands-abc123/installations/new"
 
-    def test_main_does_not_open_install_browser_when_slug_absent(self):
-        """Test that main() skips the install browser open when credentials have no slug."""
+    def test_main_does_not_set_installation_url_when_slug_absent(self):
+        """Test that main() leaves installation_url unset when credentials have no slug."""
         with mock_main_dependencies({"id": 123}) as mocks:
             main(base_domain="example.com", dry_run=False, app_name="my-app")
 
-        install_calls = [c for c in mocks["webbrowser"].call_args_list if "installations/new" in str(c)]
-        assert install_calls == []
+        assert mocks["code_holder"].installation_url is None
 
     def test_main_polls_for_installation_when_pem_present(self):
         """Test that main() calls wait_for_app_installation() when credentials include pem."""
