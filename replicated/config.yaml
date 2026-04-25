@@ -394,6 +394,34 @@ spec:
           when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
           required: true
 
+    - name: slack_configuration
+      title: Enable Slack
+      description: Enable Slack
+      items:
+        - name: slack_enabled
+          title: Enable Slack Integration
+          help_text: Enable Slack App integration
+          type: bool
+          default: "0"
+        - name: slack_client_id
+          title: Slack Client ID
+          help_text: Client ID from your Slack App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+        - name: slack_client_secret
+          title: Slack Client Secret
+          help_text: Client Secret from your Slack App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+        - name: slack_signing_secret
+          title: Slack Signing Secret
+          help_text: Signing Secret from your Slack App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+
     - name: database_configuration
       title: Database Configuration
       description: Configure PostgreSQL database settings

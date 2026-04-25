@@ -228,6 +228,7 @@ sessions:
 
 slack:
   enabled: false
+  clientId: ""
 
 stripe:
   enabled: false
