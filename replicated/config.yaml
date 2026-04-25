@@ -365,6 +365,12 @@ spec:
           type: password
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
+        - name: github_app_slug
+          title: GitHub App Slug
+          help_text: Slug of your GitHub App (the human-readable identifier in the app's URL)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
         - name: github_app_private_key
           title: GitHub App Private Key
           help_text: Upload the private key file (.pem) from your GitHub App
