@@ -3,7 +3,8 @@ kind: Service
 metadata:
   name: openhands-service
   labels:
-    app: openhands
+    {{- include "openhands.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
 spec:
   ports:
   - name: openhands
@@ -11,7 +12,8 @@ spec:
     protocol: TCP
     targetPort: 3000
   selector:
-    app: openhands
+    {{- include "openhands.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: server
   type: ClusterIP
 {{- if and (index .Values "runtime-api") (index .Values "runtime-api" "enabled") }}
 ---
