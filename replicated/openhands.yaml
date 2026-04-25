@@ -112,9 +112,7 @@ spec:
         enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
-        # need to use a version of liteLLM prior to 1.80+ due to a breaking change where the /user/info endpoint returns a 404 for new users
-        # see PR https://github.com/OpenHands/OpenHands/pull/12250 for more info
-        tag: "main-v1.79.1-stable"
+        tag: "v1.82.3-stable.patch.3"
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
@@ -298,6 +296,8 @@ spec:
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
+        env:
+          ENABLE_V1_GITHUB_RESOLVER: "true"
         githubApp:
           enabled: true
           appId: '{{repl ConfigOption "github_app_id"}}'
@@ -462,6 +462,51 @@ spec:
             enabled: true
             project: '{{repl ConfigOption "google_vertex_project_id"}}'
             location: '{{repl ConfigOption "google_vertex_location"}}'
+    - when: '{{repl ConfigOptionEquals "analytics_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        laminar:
+          enabled: true
+          appServer:
+            loadBalancer:
+              enabled: false
+          global:
+            cloudProvider: "aws"
+          clickhouse:
+            persistence:
+              storageClass: "openebs-hostpath" # default storage class for the k0s embededed cluster
+            s3:
+              enabled: false
+          frontend:
+            extraEnv:
+              - name: AUTH_KEYCLOAK_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: keycloak-realm
+                    key: client-id
+              - name: AUTH_KEYCLOAK_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: keycloak-realm
+                    key: client-secret
+              - name: AUTH_KEYCLOAK_ISSUER
+                value: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://auth.app.{{repl ConfigOption "base_domain"}}/realms/allhands{{repl else}}https://{{repl ConfigOption "auth_hostname"}}/realms/allhands{{repl end}}'
+            ingress:
+              hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              className: "traefik"
+            tls:
+              enabled: true
+              secretName: "openhands-tls"
+              clusterIssuer: ""  # leave empty — cert-manager not needed
+            env:
+              nextauthUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              nextPublicUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+          postgres:
+            persistence:
+              storageClass: "openebs-hostpath"
+          rabbitmq:
+            persistence:
+              storageClass: "openebs-hostpath"
 
   builder:
     keycloak:

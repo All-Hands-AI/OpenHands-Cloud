@@ -92,6 +92,11 @@ def build_app_manifest(
             "statuses": "write",
             "workflows": "write",
         },
+        "default_events": [
+            "issue_comment",
+            "pull_request",
+            "pull_request_review_comment",
+        ],
         "hook_attributes": {
             "url": f"https://app.{base_domain}/integration/github/events",
         },
@@ -267,8 +272,8 @@ def main(
     print(f"\nCredentials:")
     display_names = {
         "id": "GitHub App ID",
-        "client_id": "GitHub OAuth Client ID",
-        "client_secret": "GitHub OAuth Client Secret",
+        "client_id": "GitHub App Client ID",
+        "client_secret": "GitHub App Client Secret",
         "webhook_secret": "GitHub App Webhook Secret",
     }
     for key in ["client_id", "client_secret", "id", "webhook_secret"]:

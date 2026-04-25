@@ -33,6 +33,13 @@ spec:
           default: "app.example.com"
           when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
           required: true
+        - name: analytics_hostname
+          title: Analytics Hostname
+          help_text: The hostname for the Analytics service
+          type: text
+          default: "analytics.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
         - name: auth_hostname
           title: Authentication Hostname
           help_text: The hostname for Keycloak authentication service
@@ -323,22 +330,22 @@ spec:
 
     - name: github_authentication
       title: GitHub Authentication
-      description: Configure GitHub OAuth and App integration for user authentication
+      description: Configure GitHub App integration for user authentication. Note that this is a GitHub App and NOT a GitHub OAuth app.
       items:
         - name: github_auth_enabled
           title: Enable GitHub Authentication
-          help_text: Enable GitHub OAuth for user authentication
+          help_text: Enable GitHub App authentication for user sign-in
           type: bool
           default: "0"
         - name: github_oauth_client_id
-          title: GitHub OAuth Client ID
-          help_text: Client ID from your GitHub OAuth App
+          title: GitHub App Client ID
+          help_text: Client ID from your GitHub App
           type: text
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
         - name: github_oauth_client_secret
-          title: GitHub OAuth Client Secret
-          help_text: Client Secret from your GitHub OAuth App
+          title: GitHub App Client Secret
+          help_text: Client Secret from your GitHub App
           type: password
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
@@ -575,5 +582,9 @@ spec:
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
-      when: false
       items:
+        - name: analytics_enabled
+          title: Enable Analytics
+          help_text: Enable analytics for LLM observability and tracing
+          type: bool
+          default: "0"
