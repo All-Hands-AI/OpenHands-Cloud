@@ -352,27 +352,43 @@ keycloak:
               key: password
 
 laminar:
-  # Enable this if you want to use laminar
   enabled: false
+  global:
+    cloudProvider: ""        # set to "gcp" or "aws" at deploy time
+
   frontend:
     ingress:
-      # Hostname for the frontend ingress
-      # When set, creates an Ingress with TLS via cert-manager
+      enabled: false         # required gate in 0.1.8; must be true for any frontend ingress to render
       hostname: ""
-      # Ingress class name (defaults to "traefik")
-      className: ""
-      # Additional annotations for the ingress
+      className: ""          # set explicitly; cloudProvider=gcp does not auto-set this
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-frontend-tls"
+        clusterIssuer: "letsencrypt"
       annotations: {}
+
   appServer:
-    ingress:
-      # Hostname for the app-server API ingress
-      # When set, creates an Ingress with TLS via cert-manager
-      # Used for trace ingestion from external services (e.g., runtime pods)
-      hostname: ""
-      # Ingress class name (defaults to "traefik")
-      className: ""
-      # Additional annotations for the ingress
+    loadBalancer:
+      enabled: false         # enable per environment for external gRPC via GCP NLB (port 8443, plaintext h2c)
+      hostname: ""           # set to enable external-dns DNS record for the NLB
       annotations: {}
+    ingress:
+      hostname: ""
+      className: ""
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-app-server-tls"
+        clusterIssuer: "letsencrypt"
+      annotations: {}
+      grpc:
+        enabled: false
+        entrypoint: "websecure"               # port 443; change to "grpc" if port 8443 is open
+        tls:
+          secretName: "laminar-app-server-tls"  # reuse the HTTP ingress TLS secret
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
