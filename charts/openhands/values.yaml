@@ -766,33 +766,52 @@ vertexAI:
   enabled: false
   project: ""
 
-# Trust-manager Bundle that fans a CA bundle (public CAs + a customer-supplied
-# CA certificate) out as a ConfigMap into the release namespace. Consumers
-# mount this ConfigMap to trust the customer's internal CAs. The Bundle is
-# only rendered when userCA is non-empty.
+# Trust-manager Bundle that fans a CA bundle (public CAs + an optional
+# operator-supplied CA certificate) out as a ConfigMap into the release
+# namespace. Consumers (openhands deployments + outbound-HTTPS cronjobs,
+# litellm, keycloak) mount this ConfigMap to trust the operator's internal
+# CAs.
+#
+# REQUIRES trust-manager (https://cert-manager.io/docs/projects/trust-manager/)
+# to be installed in the cluster. Disabled by default; set enabled: true only
+# if you have trust-manager. When enabling, you must also pass these subchart
+# overrides (the parent chart can't template them through subchart values):
+#
+#   keycloak:
+#     extraEnvVars:
+#       - { name: KC_TRUSTSTORE_PATHS, value: /etc/openhands/ca-bundle/ca-bundle.crt }
+#     extraVolumes:
+#       - { name: openhands-ca-bundle, configMap: { name: openhands-ca-bundle } }
+#     extraVolumeMounts:
+#       - { name: openhands-ca-bundle, mountPath: /etc/openhands/ca-bundle, readOnly: true }
+#   litellm-helm:
+#     envVars:
+#       SSL_CERT_FILE:      /etc/openhands/ca-bundle/ca-bundle.crt
+#       REQUESTS_CA_BUNDLE: /etc/openhands/ca-bundle/ca-bundle.crt
+#     volumes:
+#       - { name: openhands-ca-bundle, configMap: { name: openhands-ca-bundle } }
+#     volumeMounts:
+#       - { name: openhands-ca-bundle, mountPath: /etc/openhands/ca-bundle, readOnly: true }
 caBundle:
+  enabled: false
   name: openhands-ca-bundle
   key: ca-bundle.crt
+  mountPath: /etc/openhands/ca-bundle
   includeDefaultCAs: true
-  # Populated from the replicated TLS CA certificate config option.
+  # Populated from the Replicated TLS CA certificate config option when
+  # running under Replicated. Optional otherwise.
   userCA: ""
 
 # Pre-install/pre-upgrade hook that waits for required CRDs to be Established
 # before the openhands chart renders its own traefik/cert-manager resources.
-# Protects against a race where the chart tries to apply IngressRoutes,
-# TLSStores, or Certificates before the CRDs are ready.
+# Disabled by default — enable only if you've installed cert-manager,
+# trust-manager, traefik, etc. in the cluster, and supply the CRD list to
+# wait on. The Replicated layer enables this and supplies the list.
 crdCheck:
-  enabled: true
+  enabled: false
   timeout: 120s
   backoffLimit: 6
-  crds:
-    - certificates.cert-manager.io
-    - issuers.cert-manager.io
-    - clusterissuers.cert-manager.io
-    - bundles.trust.cert-manager.io
-    - ingressroutes.traefik.io
-    - middlewares.traefik.io
-    - tlsstores.traefik.io
+  crds: []
   image:
     repository: docker.io/rancher/kubectl
     tag: v1.33.0

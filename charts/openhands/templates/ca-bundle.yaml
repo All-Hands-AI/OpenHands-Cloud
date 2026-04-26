@@ -1,5 +1,5 @@
-{{- $userCA := .Values.caBundle.userCA | trim -}}
-{{- if $userCA }}
+{{- if .Values.caBundle.enabled }}
+{{- $userCA := .Values.caBundle.userCA | trim }}
 apiVersion: trust.cert-manager.io/v1alpha1
 kind: Bundle
 metadata:
@@ -7,8 +7,10 @@ metadata:
 spec:
   sources:
     - useDefaultCAs: {{ .Values.caBundle.includeDefaultCAs }}
+    {{- if $userCA }}
     - inLine: |-
 {{ $userCA | indent 8 }}
+    {{- end }}
   target:
     configMap:
       key: {{ .Values.caBundle.key }}

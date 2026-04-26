@@ -94,6 +94,29 @@ spec:
           repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak-config-cli'
       waitForDb:
         image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
+      # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
+      # Keycloak's truststore at the merged PEM. Repeats the chart's default
+      # KC_* env vars because helm value merging replaces arrays — adding
+      # only KC_TRUSTSTORE_PATHS here would drop the others.
+      extraEnvVars:
+        - name: KC_FEATURES
+          value: token-exchange,admin-fine-grained-authz
+        - name: KC_HTTP_ENABLED
+          value: "true"
+        - name: KC_PROXY_HEADERS
+          value: "xforwarded"
+        - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+          value: "true"
+        - name: KC_TRUSTSTORE_PATHS
+          value: /etc/openhands/ca-bundle/ca-bundle.crt
+      extraVolumes:
+        - name: openhands-ca-bundle
+          configMap:
+            name: openhands-ca-bundle
+      extraVolumeMounts:
+        - name: openhands-ca-bundle
+          mountPath: /etc/openhands/ca-bundle
+          readOnly: true
 
     litellm:
       url: 'http://openhands-litellm:4000'
@@ -117,6 +140,23 @@ spec:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
         - litellm-env-secrets
+      # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
+      # the Python SSL stack (httpx + requests) at the merged PEM. envVars
+      # is a map (merges with proxy/vertex blocks), but volumes/volumeMounts
+      # are arrays — the vertex optionalValues block below repeats the
+      # ca-bundle entry alongside the google-credentials entry so its array
+      # replacement preserves both.
+      envVars:
+        SSL_CERT_FILE: /etc/openhands/ca-bundle/ca-bundle.crt
+        REQUESTS_CA_BUNDLE: /etc/openhands/ca-bundle/ca-bundle.crt
+      volumes:
+        - name: openhands-ca-bundle
+          configMap:
+            name: openhands-ca-bundle
+      volumeMounts:
+        - name: openhands-ca-bundle
+          mountPath: /etc/openhands/ca-bundle
+          readOnly: true
       ingress:
         enabled: true
         className: traefik
@@ -250,12 +290,21 @@ spec:
 
     crdCheck:
       enabled: true
+      crds:
+        - certificates.cert-manager.io
+        - issuers.cert-manager.io
+        - clusterissuers.cert-manager.io
+        - bundles.trust.cert-manager.io
+        - ingressroutes.traefik.io
+        - middlewares.traefik.io
+        - tlsstores.traefik.io
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rancher/kubectl'
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
 
     caBundle:
+      enabled: true
       userCA: |
         {{repl ConfigOptionData "tls_ca_certificate" | nindent 8 }}
 
@@ -432,6 +481,8 @@ spec:
               value: "xforwarded"
             - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
               value: "true"
+            - name: KC_TRUSTSTORE_PATHS
+              value: /etc/openhands/ca-bundle/ca-bundle.crt
             # Proxy env vars
             - name: HTTP_PROXY
               value: '{{repl ConfigOption "http_proxy"}}'
@@ -452,7 +503,13 @@ spec:
           LITELLM_DEFAULT_MODEL: 'litellm_proxy/gemini-2.5-flash'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
         litellm-helm:
+          # volumes / volumeMounts are arrays — recursiveMerge replaces them,
+          # so the ca-bundle entry from spec.values.litellm-helm above must
+          # be repeated here alongside the google-credentials entry.
           volumes:
+            - name: openhands-ca-bundle
+              configMap:
+                name: openhands-ca-bundle
             - name: google-application-credentials
               secret:
                 secretName: litellm-env-secrets
@@ -460,6 +517,9 @@ spec:
                   - key: "GOOGLE_APPLICATION_CREDENTIALS_JSON"
                     path: "vertex_credentials.json"
           volumeMounts:
+            - name: openhands-ca-bundle
+              mountPath: /etc/openhands/ca-bundle
+              readOnly: true
             - name: google-application-credentials
               mountPath: /etc/gcloud/vertex_credentials.json
               subPath: vertex_credentials.json
