@@ -470,6 +470,11 @@ spec:
           appServer:
             loadBalancer:
               enabled: false
+            ingress:
+              hostname: "laminar-app-server-service"
+              className: ""
+              tls:
+                enabled: false
           global:
             cloudProvider: "aws"
           clickhouse:
@@ -492,12 +497,13 @@ spec:
               - name: AUTH_KEYCLOAK_ISSUER
                 value: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://auth.app.{{repl ConfigOption "base_domain"}}/realms/allhands{{repl else}}https://{{repl ConfigOption "auth_hostname"}}/realms/allhands{{repl end}}'
             ingress:
+              enabled: true
               hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
               className: "traefik"
-            tls:
-              enabled: true
-              secretName: "openhands-tls"
-              clusterIssuer: ""  # leave empty — cert-manager not needed
+              tls:
+                enabled: true
+                secretName: "openhands-tls"
+                clusterIssuer: ""  # leave empty — cert-manager not needed
             env:
               nextauthUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
               nextPublicUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'

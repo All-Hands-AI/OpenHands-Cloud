@@ -2,6 +2,9 @@ dependencies:
 - name: keycloak
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 24.7.5
+- name: laminar
+  repository: https://lmnr-ai.github.io/lmnr-helm
+  version: 0.1.8
 - name: litellm-helm
   repository: oci://ghcr.io/berriai
   version: 0.1.831
@@ -19,6 +22,9 @@ dependencies:
   version: 1.9.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.24
-digest: sha256:bca3722cdd4840a4557955ea2b80e38991cc2d0a0211855a791cf98e37410e45
-generated: "2026-03-18T00:28:58.972983917-04:00"
+  version: 0.2.11
+- name: automation
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  version: 0.1.4
+digest: sha256:321dd64b981597dc1450788fa646abd4f0afbf9d18c3f7c0670e97a1aa0ad536
+generated: "2026-04-25T15:19:52.681645-05:00"
