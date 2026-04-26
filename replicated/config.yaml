@@ -359,16 +359,16 @@ spec:
             regex:
               pattern: ^[0-9]+$
               message: Must be a numeric value
-        - name: github_app_webhook_secret
-          title: GitHub App Webhook Secret
-          help_text: Webhook secret from your GitHub App
-          type: password
-          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
-          required: true
         - name: github_app_slug
           title: GitHub App Slug
           help_text: Slug of your GitHub App (the human-readable identifier in the app's URL)
           type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
+        - name: github_app_webhook_secret
+          title: GitHub App Webhook Secret
+          help_text: Webhook secret from your GitHub App
+          type: password
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
         - name: github_app_private_key
