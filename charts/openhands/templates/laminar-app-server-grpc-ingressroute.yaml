@@ -1,0 +1,26 @@
+{{/*
+  Traefik IngressRoute for gRPC on the websecure entrypoint (port 443).
+  Traefik terminates TLS and forwards plaintext HTTP/2 (h2c) to port 8001.
+  Matches only gRPC requests via Content-Type header so HTTP traffic continues
+  to the upstream app-server Ingress on the same host.
+  The TLS certificate is managed by the HTTP Ingress — no cert-manager annotation
+  needed here since both share the same secretName.
+*/}}
+{{- if and .Values.laminar.enabled .Values.laminar.appServer.ingress.hostname .Values.laminar.appServer.ingress.grpc.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: laminar-app-server-grpc
+spec:
+  entryPoints:
+    - {{ .Values.laminar.appServer.ingress.grpc.entrypoint | default "websecure" }}
+  routes:
+    - match: Host(`{{ .Values.laminar.appServer.ingress.hostname }}`) && HeadersRegexp(`Content-Type`, `application/grpc.*`)
+      kind: Rule
+      services:
+        - name: laminar-app-server-service
+          port: 8001
+          scheme: h2c
+  tls:
+    secretName: {{ .Values.laminar.appServer.ingress.grpc.tls.secretName }}
+{{- end }}

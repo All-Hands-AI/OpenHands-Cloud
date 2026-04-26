@@ -384,6 +384,11 @@ laminar:
         secretName: "laminar-app-server-tls"
         clusterIssuer: "letsencrypt"
       annotations: {}
+      grpc:
+        enabled: false
+        entrypoint: "websecure"               # port 443; change to "grpc" if port 8443 is open
+        tls:
+          secretName: "laminar-app-server-tls"  # reuse the HTTP ingress TLS secret
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
