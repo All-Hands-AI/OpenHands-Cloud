@@ -288,7 +288,7 @@
       name: slack-auth
       key: signing-secret
 - name: SLACK_WEBHOOKS_ENABLED
-  value: "1"
+  value: "true"
 {{- end }}
 
 {{- if .Values.githubProxy.enabled }}
