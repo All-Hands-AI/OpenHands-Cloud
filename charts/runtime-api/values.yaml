@@ -207,31 +207,28 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.22.1-nikolaik"
-      working_dir: "/openhands/code/"
-      environment: {}
+      image: "ghcr.io/openhands/agent-server:1.16.1-python"
+      working_dir: "/workspace"
+      environment:
+        LOG_JSON: "1"
+        LOG_JSON_LEVEL_KEY: "severity"
+        OH_ALLOW_CORS_ORIGINS_0: ""
+        OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+        OH_CONVERSATIONS_PATH: "/workspace/conversations"
+        OH_ENABLE_VNC: "0"
+        OH_VSCODE_PORT: "60001"
+        OH_WEBHOOKS_0_BASE_URL: ""
+        OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+        VSCODE_PORT: "60001"
+        WORKER_1: "12000"
+        WORKER_2: "12001"
       command:
-        - /openhands/micromamba/bin/micromamba
-        - run
-        - -n
-        - openhands
-        - poetry
-        - run
-        - python
-        - -u
-        - -m
-        - openhands.runtime.action_execution_server
+        - /usr/local/bin/openhands-agent-server
+        - "--port"
         - "60000"
-        - --working-dir
-        - /workspace
-        - --plugins
-        - agent_skills
-        - jupyter
-        - vscode
-        - --username
-        - root
-        - --user-id
-        - "0"
+      run_as_user: 10001
+      run_as_group: 10001
+      fs_group: 10001
 
 # Database cleanup CronJob configuration
 dbCleanup:
