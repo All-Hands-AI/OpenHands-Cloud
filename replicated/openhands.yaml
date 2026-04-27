@@ -177,7 +177,7 @@ spec:
         LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
       warmRuntimes:
         enabled: true
-        count: 1
+        count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
         configs:
           - name: default
             image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.17.0-python'

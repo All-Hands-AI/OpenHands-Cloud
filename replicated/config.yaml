@@ -545,6 +545,15 @@ spec:
             regex:
               pattern: ^[1-9][0-9]*m$
               message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+        - name: sandbox_warm_runtime_count
+          title: Warm Runtime Count
+          help_text: Number of warm runtime pods to keep ready so new conversations start instantly. Set to 0 to disable and cold-start each sandbox.
+          type: text
+          default: "1"
+          validation:
+            regex:
+              pattern: ^(0|[1-9][0-9]*)$
+              message: Must be a non-negative integer
 
     - name: proxy_configuration
       title: Proxy Configuration
