@@ -485,6 +485,51 @@ spec:
             enabled: true
             hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
             tlsSecretName: openhands-tls
+    - when: '{{repl ConfigOptionEquals "analytics_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        laminar:
+          enabled: true
+          appServer:
+            loadBalancer:
+              enabled: false
+          global:
+            cloudProvider: "aws"
+          clickhouse:
+            persistence:
+              storageClass: "openebs-hostpath" # default storage class for the k0s embededed cluster
+            s3:
+              enabled: false
+          frontend:
+            extraEnv:
+              - name: AUTH_KEYCLOAK_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: keycloak-realm
+                    key: client-id
+              - name: AUTH_KEYCLOAK_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: keycloak-realm
+                    key: client-secret
+              - name: AUTH_KEYCLOAK_ISSUER
+                value: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://auth.app.{{repl ConfigOption "base_domain"}}/realms/allhands{{repl else}}https://{{repl ConfigOption "auth_hostname"}}/realms/allhands{{repl end}}'
+            ingress:
+              hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              className: "traefik"
+            tls:
+              enabled: true
+              secretName: "openhands-tls"
+              clusterIssuer: ""  # leave empty — cert-manager not needed
+            env:
+              nextauthUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+              nextPublicUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
+          postgres:
+            persistence:
+              storageClass: "openebs-hostpath"
+          rabbitmq:
+            persistence:
+              storageClass: "openebs-hostpath"
 
   builder:
     keycloak:
