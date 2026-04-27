@@ -24,7 +24,6 @@ spec:
       LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
       REQUIRE_PAYMENT: 0
       ENABLE_BILLING: false
-      ENABLE_ONBOARDING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
       LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
