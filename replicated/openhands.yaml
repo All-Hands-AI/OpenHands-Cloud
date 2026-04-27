@@ -22,7 +22,6 @@ spec:
 
     env:
       LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
-      LLM_BASE_URL: "http://openhands-litellm:4000"
       REQUIRE_PAYMENT: 0
       ENABLE_BILLING: false
       ENABLE_ONBOARDING: false
