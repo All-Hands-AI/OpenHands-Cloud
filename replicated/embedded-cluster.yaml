@@ -27,3 +27,6 @@ spec:
               websecure:
                 exposedPort: 443
                 nodePort: 443
+            providers:
+              kubernetesGateway:
+                enabled: true

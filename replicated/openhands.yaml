@@ -22,7 +22,6 @@ spec:
 
     env:
       LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
-      LLM_BASE_URL: "http://openhands-litellm:4000"
       REQUIRE_PAYMENT: 0
       ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
@@ -52,8 +51,9 @@ spec:
     runtime:
       image:
         # this is what we need to use for real deployments
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime'
-        # repository: 'ghcr.io/openhands/runtime'
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
+        # repository: 'ghcr.io/openhands/agent-server'
+        tag: '1.16.1-python'
 
     keycloak:
       enabled: true
@@ -176,10 +176,10 @@ spec:
         LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
       warmRuntimes:
         enabled: true
-        count: 1
+        count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
         configs:
           - name: default
-            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.12.0-python'
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.16.1-python'
             working_dir: "/workspace"
             environment:
               LOG_JSON: "1"
@@ -336,11 +336,12 @@ spec:
           repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/deploy'
         runtime:
           image:
-            repository: '{{repl LocalRegistryNamespace }}/runtime'
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
+            tag: '1.16.1-python'
           warmRuntimes:
             configs:
               - name: default
-                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.12.0-python'
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.16.1-python'
                 working_dir: "/workspace"
                 environment:
                   LOG_JSON: "1"
@@ -472,6 +473,29 @@ spec:
             enabled: true
             project: '{{repl ConfigOption "google_vertex_project_id"}}'
             location: '{{repl ConfigOption "google_vertex_location"}}'
+    # Path-based sandbox routing: route every runtime at <base>/{id} through a
+    # shared Gateway instead of per-sandbox Ingresses at {id}.<base>. Traefik's
+    # kubernetesGateway provider (enabled in embedded-cluster.yaml) installs
+    # the Gateway API CRDs and serves the Gateway.
+    - when: '{{repl ConfigOptionEquals "runtime_routing_mode" "path" }}'
+      recursiveMerge: true
+      values:
+        env:
+          RUNTIME_ROUTING_MODE: "path"
+          RUNTIME_URL_PATTERN: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}/{runtime_id}'
+        runtime-api:
+          env:
+            RUNTIME_ROUTING_MODE: "path"
+            RUNTIME_URL_SEPARATOR: "/"
+            USE_GATEWAY_API: "true"
+            GATEWAY_NAME: "sandbox-gateway"
+            RUNTIME_CERT_SECRET: "openhands-tls"
+          ingressBase:
+            enabled: false
+          sandboxGateway:
+            enabled: true
+            hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
+            tlsSecretName: openhands-tls
     - when: '{{repl ConfigOptionEquals "analytics_enabled" "1" }}'
       recursiveMerge: true
       values:
