@@ -41,6 +41,28 @@ infrastructure/
 - `gcloud` CLI configured
 - `kubectl` configured
 
+## Configuration Variables
+
+Some manifest files use shell-style variable placeholders that must be substituted before applying:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `${ACME_EMAIL}` | Email for Let's Encrypt certificate notifications | `admin@example.com` |
+| `${GCP_PROJECT_ID}` | GCP project ID for Cloud DNS | `staging-092324` |
+
+**Substitute variables using `envsubst`:**
+
+```bash
+# Set environment variables
+export ACME_EMAIL="your-email@example.com"
+export GCP_PROJECT_ID="staging-092324"
+
+# Apply with substitution
+envsubst < helm/cert-manager/cluster-issuer.yaml | kubectl apply -f -
+```
+
+Or manually edit the files before applying.
+
 ## Deployment
 
 ### 1. Terraform Infrastructure
