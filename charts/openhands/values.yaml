@@ -355,10 +355,6 @@ laminar:
   # Enable this if you want to use laminar
   enabled: true
 
-  # Cloud provider setting (used for GCP-specific ingress configuration)
-  global:
-    cloudProvider: "gcp"
-
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
   apiKeyFromSecret:
@@ -381,13 +377,6 @@ laminar:
       # Additional annotations for the ingress
       annotations: {}
   appServer:
-    service:
-      # HTTP port for the app-server service
-      port: 8000
-      targetPort: 8000
-      # gRPC port for trace ingestion - expose both ports
-      grpcPort: 8001
-      grpcTargetPort: 8001
     ingress:
       # Hostname for the app-server API ingress
       # When set, creates an Ingress with TLS via cert-manager
