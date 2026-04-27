@@ -173,6 +173,22 @@ ingressBase:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
 
+# Shared Gateway API Gateway for path-based sandbox routing.
+# When enabled, renders a gateway.networking.k8s.io/v1 Gateway that the
+# runtime-api attaches HTTPRoutes to (one per sandbox). The name must match
+# the GATEWAY_NAME env var passed to the runtime-api container.
+sandboxGateway:
+  enabled: false
+  name: sandbox-gateway
+  gatewayClassName: traefik
+  hostname: ""
+  # Internal port the Gateway listener binds to. Must match the gateway
+  # controller's entrypoint port — NOT the external port clients dial.
+  # Traefik's websecure entrypoint listens on 8443 by default (NodePort/
+  # Service 443 maps to container 8443), so 8443 is the right default here.
+  listenerPort: 8443
+  tlsSecretName: openhands-tls
+
 autoscaling:
   enabled: true
   minReplicas: 3
