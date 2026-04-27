@@ -1,5 +1,17 @@
 # ClusterIssuer configurations for Let's Encrypt
-# Apply after cert-manager is installed: kubectl apply -f cluster-issuer.yaml
+#
+# IMPORTANT: This file contains variable placeholders that must be substituted before applying.
+# Required variables:
+#   - ${ACME_EMAIL}: Email for certificate expiration notifications
+#   - ${GCP_PROJECT_ID}: GCP project ID (only needed for DNS-01 solver)
+#
+# Apply with variable substitution:
+#   export ACME_EMAIL="your-email@example.com"
+#   export GCP_PROJECT_ID="staging-092324"
+#   envsubst < cluster-issuer.yaml | kubectl apply -f -
+#
+# Or manually replace the variables before applying:
+#   kubectl apply -f cluster-issuer.yaml
 
 ---
 # Let's Encrypt Staging (for testing - higher rate limits)
