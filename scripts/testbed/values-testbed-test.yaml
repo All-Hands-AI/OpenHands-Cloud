@@ -1,0 +1,125 @@
+# Auto-generated testbed values for testbed-test
+# Generated: Thu Apr 16 16:35:44 PDT 2026
+
+# Use in-cluster databases (no external dependencies)
+postgresql:
+  enabled: true
+  auth:
+    username: postgres
+    database: openhands
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+redis:
+  enabled: true
+
+# Keycloak for authentication (no GitHub App required)
+# Using internal URL for init container to work without DNS
+# For production with DNS, change url to https://auth-testbed-test.sandbox.all-hands.dev
+keycloak:
+  enabled: true
+  url: "http://keycloak"
+  ingress:
+    enabled: true
+    hostname: "auth-testbed-test.sandbox.all-hands.dev"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+
+# Disable GitHub auth (use Keycloak email auth instead)
+github:
+  enabled: false
+
+gitlab:
+  enabled: false
+
+bitbucket:
+  enabled: false
+
+# Main application ingress
+ingress:
+  enabled: true
+  host: "testbed-test.sandbox.all-hands.dev"
+  class: traefik
+  root:
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+
+tls:
+  enabled: true
+
+# Runtime API (for sandbox execution)
+runtime-api:
+  enabled: true
+  runtimeInSameCluster: true
+  ingress:
+    enabled: true
+    host: "runtime-testbed-test.sandbox.all-hands.dev"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+  env:
+    RUNTIME_BASE_URL: "testbed-test.sandbox.all-hands.dev"
+    STORAGE_CLASS: "standard-rwo"
+    GCP_PROJECT: "platform-team-sandbox-62793"
+    GCP_REGION: "us-central1"
+
+sandbox:
+  apiHostname: "https://runtime-testbed-test.sandbox.all-hands.dev"
+
+# LiteLLM proxy for LLM access
+litellm:
+  enabled: true
+  url: "http://litellm:4000"
+
+litellm-helm:
+  enabled: true
+  ingress:
+    enabled: false  # Internal only for testbed
+  proxy_config:
+    environment_variables:
+      OR_APP_NAME: "OpenHands Testbed"
+    model_list:
+      - model_name: "anthropic/claude-sonnet-4-20250514"
+        litellm_params:
+          model: "anthropic/claude-sonnet-4-20250514"
+          api_key: "os.environ/ANTHROPIC_API_KEY"
+
+# Simplified environment for testbed
+env:
+  OH_APP_MODE: "saas"
+  LITELLM_DEFAULT_MODEL: "litellm_proxy/anthropic/claude-sonnet-4-20250514"
+  HIDE_LLM_SETTINGS: "false"
+  GCP_PROJECT: "platform-team-sandbox-62793"
+  GCP_REGION: "us-central1"
+
+# Filestore - use ephemeral for testbed (simpler)
+filestore:
+  ephemeral: true
+
+# Minimal resources for testbed
+deployment:
+  replicas: 1
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+
+# Disable production features
+datadog:
+  enabled: false
+
+stripe:
+  enabled: false
+
+resend:
+  enabled: false
+
+automation:
+  enabled: false
+
+laminar:
+  enabled: false
