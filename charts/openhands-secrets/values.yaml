@@ -47,6 +47,7 @@ config:
   github_oauth_client_id: ""
   github_oauth_client_secret: ""
   github_app_id: ""
+  github_app_slug: ""
   github_app_webhook_secret: ""
   github_app_private_key: ""
   
