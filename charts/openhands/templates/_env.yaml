@@ -337,6 +337,22 @@
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
 {{- end }}
+{{- if .Values.laminar.enabled }}
+{{- if .Values.laminar.apiKeyFromSecret }}
+- name: LMNR_PROJECT_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.laminar.apiKeyFromSecret.name }}
+      key: {{ .Values.laminar.apiKeyFromSecret.key }}
+{{- end }}
+{{- if .Values.laminar.baseUrlFromSecret }}
+- name: LMNR_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.laminar.baseUrlFromSecret.name }}
+      key: {{ .Values.laminar.baseUrlFromSecret.key }}
+{{- end }}
+{{- end }}
 - name: DB_PASS
   valueFrom:
     secretKeyRef:

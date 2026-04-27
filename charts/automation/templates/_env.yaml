@@ -88,6 +88,21 @@
       name: {{ .Values.automationWebhookSecretFromSecret.name }}
       key: {{ .Values.automationWebhookSecretFromSecret.key }}
 {{- end }}
+# Laminar (Laminar) monitoring/analytics
+{{- if .Values.lmnrApiKeyFromSecret }}
+- name: LMNR_PROJECT_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.lmnrApiKeyFromSecret.name }}
+      key: {{ .Values.lmnrApiKeyFromSecret.key }}
+{{- end }}
+{{- if .Values.lmnrBaseUrlFromSecret }}
+- name: LMNR_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.lmnrBaseUrlFromSecret.name }}
+      key: {{ .Values.lmnrBaseUrlFromSecret.key }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
