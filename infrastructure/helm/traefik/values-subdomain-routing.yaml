@@ -16,13 +16,15 @@
 ports:
   websecure:
     port: 8443
-    expose: true
+    expose:
+      default: true
     exposedPort: 443
     protocol: TCP
-    tls:
-      enabled: true
-      # Use default certificate store that will have wildcard cert
-      # certResolver: letsencrypt-dns
+    http:
+      tls:
+        enabled: true
+        # Use default certificate store that will have wildcard cert
+        # certResolver: letsencrypt-dns
 
 # Additional arguments for subdomain routing
 additionalArguments:
