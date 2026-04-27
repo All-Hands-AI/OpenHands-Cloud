@@ -473,8 +473,8 @@ spec:
           title: Sandbox Routing Mode
           help_text: |
             How sandbox URLs are constructed.
-            Subdomain routes each sandbox at {id}.<runtime base>. The uploaded TLS cert must have a SAN for *.<runtime base>.
-            Path-based routes every sandbox at <runtime base>/{id}. The uploaded TLS cert must have a SAN for <runtime base>.
+            Subdomain routes each sandbox at `{id}.{runtime_base}`. The uploaded TLS cert must have a SAN for `*.{runtime_base}`.
+            Path-based routes every sandbox at `{runtime_base}/{id}`. The uploaded TLS cert must have a SAN for `{runtime_base}`.
           type: select_one
           default: "subdomain"
           items:
