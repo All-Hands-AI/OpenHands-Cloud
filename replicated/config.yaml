@@ -33,6 +33,13 @@ spec:
           default: "app.example.com"
           when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
           required: true
+        - name: analytics_hostname
+          title: Analytics Hostname
+          help_text: The hostname for the Analytics service
+          type: text
+          default: "analytics.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
         - name: auth_hostname
           title: Authentication Hostname
           help_text: The hostname for Keycloak authentication service
@@ -588,5 +595,9 @@ spec:
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
-      when: false
       items:
+        - name: analytics_enabled
+          title: Enable Analytics
+          help_text: Enable analytics for LLM observability and tracing
+          type: bool
+          default: "0"
