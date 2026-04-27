@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.22.1
+  tag: sha-36c6d55
 
 ingress:
   enabled: false
@@ -227,6 +227,7 @@ sessions:
 
 slack:
   enabled: false
+  clientId: ""
 
 stripe:
   enabled: false

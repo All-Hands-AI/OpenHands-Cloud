@@ -237,6 +237,8 @@ spec:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
     gitlab:
       enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
+    slack:
+      enabled: repl{{ ConfigOptionEquals "slack_enabled" "1" }}
 
     automation:
       image:
@@ -306,6 +308,14 @@ spec:
           webhookSecret: '{{repl ConfigOption "github_app_webhook_secret"}}'
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
+
+    - when: '{{repl ConfigOptionEquals "slack_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        env:
+          ENABLE_V1_SLACK_RESOLVER: "true"
+        slack:
+          clientId: 'repl{{ ConfigOption "slack_client_id" }}'
 
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true

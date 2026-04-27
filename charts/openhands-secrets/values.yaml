@@ -50,6 +50,11 @@ config:
   github_app_webhook_secret: ""
   github_app_private_key: ""
   
+  # Slack credentials
+  slack_client_id: ""
+  slack_client_secret: ""
+  slack_signing_secret: ""
+
   # TLS certificates
   tls_certificate: ""
   tls_private_key: ""
