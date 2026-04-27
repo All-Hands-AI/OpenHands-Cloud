@@ -400,7 +400,7 @@ spec:
       items:
         - name: slack_enabled
           title: Enable Slack Integration
-          help_text: Enable Slack App integration
+          help_text: Configure to allow the use of @OpenHands in Slack
           type: bool
           default: "0"
         - name: slack_client_id
