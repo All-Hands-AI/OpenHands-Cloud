@@ -289,8 +289,6 @@
       key: signing-secret
 - name: SLACK_WEBHOOKS_ENABLED
   value: "true"
-- name: ENABLE_V1_SLACK_RESOLVER
-  value: "true"
 {{- end }}
 
 {{- if .Values.githubProxy.enabled }}
