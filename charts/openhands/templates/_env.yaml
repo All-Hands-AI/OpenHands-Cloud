@@ -344,6 +344,7 @@
     secretKeyRef:
       name: {{ .Values.laminar.apiKeyFromSecret.name }}
       key: {{ .Values.laminar.apiKeyFromSecret.key }}
+      optional: true
 {{- end }}
 {{- if .Values.laminar.baseUrlFromSecret }}
 - name: LMNR_BASE_URL
@@ -351,6 +352,7 @@
     secretKeyRef:
       name: {{ .Values.laminar.baseUrlFromSecret.name }}
       key: {{ .Values.laminar.baseUrlFromSecret.key }}
+      optional: true
 {{- end }}
 {{- end }}
 - name: DB_PASS
