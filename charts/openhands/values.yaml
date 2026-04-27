@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.23.0
+  tag: cloud-1.22.1
 
 ingress:
   enabled: false
@@ -211,7 +211,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: 1.17.0-python
+    tag: 1.16.1-python
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -536,7 +536,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:1.17.0-python"
+        image: "ghcr.io/openhands/agent-server:1.16.1-python"
         working_dir: "/workspace"
         environment:
           LOG_JSON: "1"

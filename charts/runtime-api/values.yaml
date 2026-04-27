@@ -207,7 +207,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/agent-server:1.17.0-python"
+      image: "ghcr.io/openhands/agent-server:1.16.1-python"
       working_dir: "/workspace"
       environment:
         LOG_JSON: "1"

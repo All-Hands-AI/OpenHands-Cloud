@@ -547,7 +547,7 @@ spec:
               message: Must be a CPU value in millicores (e.g., 500m, 1000m)
         - name: sandbox_warm_runtime_count
           title: Warm Runtime Count
-          help_text: Number of warm runtime pods to keep ready so new conversations start instantly. Set to 0 to disable and cold-start each sandbox.
+          help_text: Number of warm runtime sandboxes to keep ready so new conversations start instantly. Set to 0 to disable and cold-start each sandbox.
           type: text
           default: "1"
           validation:
