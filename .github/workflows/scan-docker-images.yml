@@ -33,7 +33,7 @@ jobs:
           IMAGES=$(jq -n -c \
             --arg runtime_api "openhands/runtime-api:${RUNTIME_API_TAG}" \
             --arg enterprise "openhands/enterprise-server:${ENTERPRISE_TAG}" \
-            --arg runtime "openhands/runtime:${RUNTIME_TAG}" \
+            --arg runtime "openhands/agent-server:${RUNTIME_TAG}" \
             '[$runtime_api, $enterprise, $runtime]')
 
           echo "images=${IMAGES}" >> $GITHUB_OUTPUT
