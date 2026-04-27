@@ -62,7 +62,3 @@ jobs:
           output: 'trivy-results.sarif'
           timeout: '10m'
           scanners: 'vuln'  # Only scan vulnerabilities, not secrets/config
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
