@@ -52,8 +52,9 @@ spec:
     runtime:
       image:
         # this is what we need to use for real deployments
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime'
-        # repository: 'ghcr.io/openhands/runtime'
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
+        # repository: 'ghcr.io/openhands/agent-server'
+        tag: '1.12.0-python'
 
     keycloak:
       enabled: true
@@ -326,7 +327,8 @@ spec:
           repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/deploy'
         runtime:
           image:
-            repository: '{{repl LocalRegistryNamespace }}/runtime'
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
+            tag: '1.12.0-python'
           warmRuntimes:
             configs:
               - name: default
