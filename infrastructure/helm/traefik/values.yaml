@@ -21,19 +21,26 @@ service:
 ports:
   web:
     port: 8000
-    expose: true
+    expose:
+      default: true
     exposedPort: 80
     protocol: TCP
     # Redirect HTTP to HTTPS
-    redirectTo:
-      port: websecure
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
   websecure:
     port: 8443
-    expose: true
+    expose:
+      default: true
     exposedPort: 443
     protocol: TCP
-    tls:
-      enabled: true
+    http:
+      tls:
+        enabled: true
 
 # IngressClass configuration
 ingressClass:
