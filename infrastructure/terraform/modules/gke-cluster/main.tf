@@ -13,28 +13,12 @@ resource "google_container_cluster" "cluster" {
   network    = var.network_name
   subnetwork = var.subnet_name
 
-  # Enable Autopilot or use standard mode
-  dynamic "cluster_autoscaling" {
-    for_each = var.enable_autopilot ? [] : [1]
-    content {
-      enabled = var.enable_cluster_autoscaling
-      dynamic "resource_limits" {
-        for_each = var.enable_cluster_autoscaling ? var.autoscaling_resource_limits : []
-        content {
-          resource_type = resource_limits.value.resource_type
-          minimum       = resource_limits.value.minimum
-          maximum       = resource_limits.value.maximum
-        }
-      }
-    }
-  }
+  # Enable Autopilot mode if specified (only set if true to avoid conflicts)
+  enable_autopilot = var.enable_autopilot ? true : null
 
-  # We manage node pools separately
-  remove_default_node_pool = !var.enable_autopilot
+  # For standard (non-Autopilot) clusters: manage node pools separately
+  remove_default_node_pool = var.enable_autopilot ? null : true
   initial_node_count       = var.enable_autopilot ? null : 1
-
-  # Enable Autopilot mode if specified
-  enable_autopilot = var.enable_autopilot
 
   # IP allocation policy for VPC-native cluster
   ip_allocation_policy {
@@ -43,10 +27,13 @@ resource "google_container_cluster" "cluster" {
   }
 
   # Private cluster configuration
-  private_cluster_config {
-    enable_private_nodes    = var.enable_private_nodes
-    enable_private_endpoint = var.enable_private_endpoint
-    master_ipv4_cidr_block  = var.enable_private_nodes ? var.master_ipv4_cidr_block : null
+  dynamic "private_cluster_config" {
+    for_each = var.enable_private_nodes ? [1] : []
+    content {
+      enable_private_nodes    = true
+      enable_private_endpoint = var.enable_private_endpoint
+      master_ipv4_cidr_block  = var.master_ipv4_cidr_block
+    }
   }
 
   # Master authorized networks
@@ -73,20 +60,20 @@ resource "google_container_cluster" "cluster" {
     channel = var.release_channel
   }
 
-  # Addons
-  addons_config {
-    http_load_balancing {
-      disabled = !var.enable_http_load_balancing
-    }
-    horizontal_pod_autoscaling {
-      disabled = false
-    }
-    network_policy_config {
-      disabled = !var.enable_network_policy
+  # Addons - only for standard clusters (Autopilot manages these automatically)
+  dynamic "addons_config" {
+    for_each = var.enable_autopilot ? [] : [1]
+    content {
+      http_load_balancing {
+        disabled = !var.enable_http_load_balancing
+      }
+      horizontal_pod_autoscaling {
+        disabled = false
+      }
     }
   }
 
-  # Network policy
+  # Network policy - only for standard clusters
   dynamic "network_policy" {
     for_each = var.enable_network_policy && !var.enable_autopilot ? [1] : []
     content {
