@@ -114,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: d21b04affeb0e106c26388785f8b726c40f03054
+  tag: cloud-1.23.1
 
 ingress:
   enabled: false
