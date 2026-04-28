@@ -27,6 +27,7 @@ spec:
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
       LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
+      OH_AGENT_SERVER_ENV: '{"SSL_CERT_FILE": "/etc/openhands/ca-bundle/ca-bundle.crt", "REQUESTS_CA_BUNDLE": "/etc/openhands/ca-bundle/ca-bundle.crt", "GIT_SSL_CAINFO": "/etc/openhands/ca-bundle/ca-bundle.crt", "CURL_CA_BUNDLE": "/etc/openhands/ca-bundle/ca-bundle.crt", "NODE_EXTRA_CA_CERTS": "/etc/openhands/ca-bundle/ca-bundle.crt"}'
 
     ingress:
       enabled: true
@@ -186,6 +187,7 @@ spec:
         enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
+        tag: sha-ef9bb23
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       ingress:
@@ -214,6 +216,7 @@ spec:
         CPU_REQUEST: 'repl{{ ConfigOption "sandbox_cpu_request" }}'
         CPU_LIMIT: 'repl{{ ConfigOption "sandbox_cpu_limit" }}'
         LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
+        ADDITIONAL_CONFIGMAP: "openhands-ca-bundle:/etc/openhands/ca-bundle"
       warmRuntimes:
         enabled: true
         count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
@@ -234,6 +237,11 @@ spec:
               VSCODE_PORT: "60001"
               WORKER_1: "12000"
               WORKER_2: "12001"
+              CURL_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              GIT_SSL_CAINFO: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
             command:
               - /usr/local/bin/openhands-agent-server
               - "--port"
@@ -406,6 +414,11 @@ spec:
                   VSCODE_PORT: "60001"
                   WORKER_1: "12000"
                   WORKER_2: "12001"
+                  CURL_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  GIT_SSL_CAINFO: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
                 command:
                   - /usr/local/bin/openhands-agent-server
                   - "--port"
@@ -469,7 +482,7 @@ spec:
           HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
           NO_PROXY: '{{repl $computedNoProxy}}'
           SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
-          OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
         keycloak:
           extraEnvVars:
             # Existing KC env vars (must be repeated because recursiveMerge replaces arrays)
@@ -501,7 +514,7 @@ spec:
       values:
         env:
           LITELLM_DEFAULT_MODEL: 'litellm_proxy/gemini-2.5-flash'
-          OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
         litellm-helm:
           # volumes / volumeMounts are arrays — recursiveMerge replaces them,
           # so the ca-bundle entry from spec.values.litellm-helm above must
