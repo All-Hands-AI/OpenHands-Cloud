@@ -22,9 +22,9 @@ dependencies:
   version: 1.9.0
 - name: runtime-api
   repository: file://../runtime-api
-  version: 0.2.11
+  version: 0.2.13
 - name: automation
   repository: file://../automation
   version: 0.1.4
-digest: sha256:4ed8822f6fe01b37f21aa712966896c5045aa12f4e05251a924546e92d081f3a
-generated: "2026-04-23T11:40:33.952501-04:00"
+digest: sha256:3e8891bca7a8fd0d76a9f26c2dee5076a38fc15337facfc68c7203512d704099
+generated: "2026-04-27T20:30:38.320085-04:00"
