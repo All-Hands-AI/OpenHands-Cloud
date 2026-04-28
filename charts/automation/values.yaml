@@ -82,7 +82,6 @@ database:
   superuserSecretName: "postgres-password"
   superuserSecretKey: "password"
 
-
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:
   dbInstance: ""
