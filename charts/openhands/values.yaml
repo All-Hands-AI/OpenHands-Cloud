@@ -84,8 +84,6 @@ githubProxy:
 
 gitlab:
   enabled: false
-  # Host for self-hosted GitLab (e.g. gitlab.example.com). Defaults to gitlab.com.
-  host: ""
 
 bitbucket:
   enabled: false
@@ -116,7 +114,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-03f49a40a0593fbad1632e05b057268498fc606a
+  tag: cloud-1.22.1
 
 ingress:
   enabled: false
