@@ -202,13 +202,17 @@ jobs:
           fi
           echo "Helm lint test passed for ${{ matrix.chart.name }}"
 
-          echo "Running helm template for ${{ matrix.chart.name }}"
-          helm template ${{ matrix.chart.path }} --debug
-          if [ $? -ne 0 ]; then
-            echo "Helm template test failed for ${{ matrix.chart.name }}"
-            exit 1
+          if grep -q '^type: library' ${{ matrix.chart.path }}/Chart.yaml; then
+            echo "Skipping helm template for library chart ${{ matrix.chart.name }}"
+          else
+            echo "Running helm template for ${{ matrix.chart.name }}"
+            helm template ${{ matrix.chart.path }} --debug
+            if [ $? -ne 0 ]; then
+              echo "Helm template test failed for ${{ matrix.chart.name }}"
+              exit 1
+            fi
+            echo "Helm template test passed for ${{ matrix.chart.name }}"
           fi
-          echo "Helm template test passed for ${{ matrix.chart.name }}"
 
       - name: Extract chart version and prepare repository
         if: steps.check.outputs.should_publish == 'true'
@@ -316,6 +320,10 @@ jobs:
 
       - name: Template ${{ matrix.chart.name }} chart
         run: |
+          if grep -q '^type: library' ${{ matrix.chart.path }}/Chart.yaml; then
+            echo "Skipping helm template for library chart ${{ matrix.chart.name }}"
+            exit 0
+          fi
           echo "Running helm template for ${{ matrix.chart.name }}"
           helm template ${{ matrix.chart.path }} --debug
           if [ $? -ne 0 ]; then
