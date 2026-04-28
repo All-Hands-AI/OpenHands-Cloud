@@ -23,6 +23,22 @@ spec:
       defaultPackageImage:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-pkg-debian-bookworm'
 
+    # Wait for cert-manager CRDs to be Established before this release applies
+    # trust-manager's webhook Certificate/Issuer resources. The cert-manager
+    # release (weight 5) runs first, but `helm install --wait` only waits for
+    # pods — CRD `Established` registration with the apiserver can lag, so a
+    # fast follow-on apply here can race.
+    crdCheck:
+      enabled: true
+      crds:
+        - certificates.cert-manager.io
+        - issuers.cert-manager.io
+        - clusterissuers.cert-manager.io
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rancher/kubectl'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+
   optionalValues:
     - when: '{{repl HasLocalRegistry }}'
       recursiveMerge: true
@@ -32,6 +48,9 @@ spec:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-manager'
           defaultPackageImage:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-pkg-debian-bookworm'
+        crdCheck:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/kubectl'
 
   builder:
     cert-manager:

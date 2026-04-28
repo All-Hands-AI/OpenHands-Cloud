@@ -14,6 +14,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
+      crd-check: ${{ steps.changes.outputs.crd-check }}
       runtime-api: ${{ steps.changes.outputs.runtime-api }}
       image-loader: ${{ steps.changes.outputs.image-loader }}
       automation: ${{ steps.changes.outputs.automation }}
@@ -37,7 +38,7 @@ jobs:
           echo "$CHANGED_FILES"
 
           # Check each chart for changes
-          for chart in runtime-api image-loader automation openhands openhands-secrets; do
+          for chart in crd-check runtime-api image-loader automation openhands openhands-secrets; do
             if echo "$CHANGED_FILES" | grep -q "^charts/${chart}/"; then
               echo "${chart}=true" >> $GITHUB_OUTPUT
               echo "Changes detected in charts/${chart}"
@@ -60,7 +61,10 @@ jobs:
       matrix:
         chart:
           # Order matters! Charts that are dependencies must be published first.
-          # automation and runtime-api are dependencies of openhands
+          # crd-check is depended on by openhands; automation and runtime-api are
+          # also dependencies of openhands.
+          - name: crd-check
+            path: charts/crd-check
           - name: automation
             path: charts/automation
           - name: runtime-api
@@ -77,11 +81,13 @@ jobs:
       - name: Check if chart should be published
         id: check
         env:
+          HAS_CHANGES_CRD_CHECK: ${{ needs.detect-changes.outputs.crd-check }}
           HAS_CHANGES_RUNTIME_API: ${{ needs.detect-changes.outputs.runtime-api }}
           HAS_CHANGES_IMAGE_LOADER: ${{ needs.detect-changes.outputs.image-loader }}
           HAS_CHANGES_AUTOMATION: ${{ needs.detect-changes.outputs.automation }}
           HAS_CHANGES_OPENHANDS: ${{ needs.detect-changes.outputs.openhands }}
           HAS_CHANGES_OPENHANDS_SECRETS: ${{ needs.detect-changes.outputs.openhands-secrets }}
+          IS_PUBLISHABLE_CRD_CHECK: ${{ needs.validate-chart-versions.outputs.crd-check-publishable }}
           IS_PUBLISHABLE_RUNTIME_API: ${{ needs.validate-chart-versions.outputs.runtime-api-publishable }}
           IS_PUBLISHABLE_IMAGE_LOADER: ${{ needs.validate-chart-versions.outputs.image-loader-publishable }}
           IS_PUBLISHABLE_AUTOMATION: ${{ needs.validate-chart-versions.outputs.automation-publishable }}
@@ -90,6 +96,10 @@ jobs:
         run: |
           CHART_NAME="${{ matrix.chart.name }}"
           case "$CHART_NAME" in
+            crd-check)
+              HAS_CHANGES="$HAS_CHANGES_CRD_CHECK"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_CRD_CHECK"
+              ;;
             runtime-api)
               HAS_CHANGES="$HAS_CHANGES_RUNTIME_API"
               IS_PUBLISHABLE="$IS_PUBLISHABLE_RUNTIME_API"
@@ -158,7 +168,7 @@ jobs:
         run: |
           RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
           RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
-          
+
           yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
 
       - name: Update automation dependency version
@@ -166,8 +176,16 @@ jobs:
         run: |
           AUTOMATION_VERSION=$(yq '.version' charts/automation/Chart.yaml)
           AUTOMATION_PREVIEW="${AUTOMATION_VERSION}-alpha.${{ github.event.pull_request.number }}"
-          
+
           yq -i "(.dependencies[] | select(.name == \"automation\")).version = \"${AUTOMATION_PREVIEW}\"" charts/openhands/Chart.yaml
+
+      - name: Update crd-check dependency version
+        if: steps.check.outputs.should_publish == 'true' && matrix.chart.name == 'openhands' && needs.detect-changes.outputs.crd-check == 'true'
+        run: |
+          CRD_CHECK_VERSION=$(yq '.version' charts/crd-check/Chart.yaml)
+          CRD_CHECK_PREVIEW="${CRD_CHECK_VERSION}-alpha.${{ github.event.pull_request.number }}"
+
+          yq -i "(.dependencies[] | select(.name == \"crd-check\")).version = \"${CRD_CHECK_PREVIEW}\"" charts/openhands/Chart.yaml
 
       - name: Test ${{ matrix.chart.name }} chart with default values
         if: steps.check.outputs.should_publish == 'true'
@@ -231,6 +249,8 @@ jobs:
     strategy:
       matrix:
         chart:
+          - name: crd-check
+            path: charts/crd-check
           - name: runtime-api
             path: charts/runtime-api
           - name: image-loader
@@ -270,6 +290,15 @@ jobs:
 
           echo "Updating openhands automation dependency to ${AUTOMATION_PREVIEW}"
           yq -i "(.dependencies[] | select(.name == \"automation\")).version = \"${AUTOMATION_PREVIEW}\"" charts/openhands/Chart.yaml
+
+      - name: Update crd-check dependency version for openhands
+        if: matrix.chart.name == 'openhands' && needs.detect-changes.outputs.crd-check == 'true'
+        run: |
+          CRD_CHECK_VERSION=$(yq '.version' charts/crd-check/Chart.yaml)
+          CRD_CHECK_PREVIEW="${CRD_CHECK_VERSION}-alpha.${{ github.event.pull_request.number }}"
+
+          echo "Updating openhands crd-check dependency to ${CRD_CHECK_PREVIEW}"
+          yq -i "(.dependencies[] | select(.name == \"crd-check\")).version = \"${CRD_CHECK_PREVIEW}\"" charts/openhands/Chart.yaml
 
       - name: Lint ${{ matrix.chart.name }} chart
         run: |

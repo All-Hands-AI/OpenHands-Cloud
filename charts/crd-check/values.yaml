@@ -1,0 +1,3 @@
+# Library charts do not contribute values to the parent. Consumers must
+# define their own `crdCheck` block in their values.yaml. See templates/_hook.tpl
+# for the expected shape.

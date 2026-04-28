@@ -15,3 +15,6 @@ dependencies:
     version: 0.22.1
     repository: oci://quay.io/jetstack/charts
     condition: trust-manager.enabled
+  - name: crd-check
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.0
