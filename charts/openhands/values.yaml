@@ -576,6 +576,8 @@ runtime-api:
     # REQUIRED: Update to a hostname in a DNS domain you own
     # host: runtime-api.example.com
     className: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-production
     tls: true
   env:
     DB_HOST: oh-main-postgresql

@@ -161,6 +161,8 @@ ingress:
   enabled: false
   host: chart-example.local
   className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
   path: /
   pathType: Prefix
   tls: true

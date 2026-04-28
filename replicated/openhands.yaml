@@ -187,7 +187,7 @@ spec:
         enabled: false
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
-        tag: sha-ef9bb23
+        tag: sha-6bd7a0f
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       ingress:
@@ -196,6 +196,12 @@ spec:
         host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime-api.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_api_hostname"}}{{repl end}}'
         tls: true
         tlsSecretName: openhands-tls
+        # Suppress the chart's default letsencrypt annotation: Replicated
+        # installs use a manually-uploaded TLS cert (openhands-tls), and the
+        # cluster-issuer annotation triggers cert-manager to take SSA
+        # ownership of the Secret, blocking subsequent updates to it.
+        annotations:
+          cert-manager.io/cluster-issuer: null
       # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
       # the Python TLS stack (httpx + requests) at the merged PEM. Required
       # so runtimes.check_alive_with_ingress can verify the runtime ingress
@@ -223,7 +229,7 @@ spec:
         CPU_REQUEST: 'repl{{ ConfigOption "sandbox_cpu_request" }}'
         CPU_LIMIT: 'repl{{ ConfigOption "sandbox_cpu_limit" }}'
         LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
-        ADDITIONAL_CONFIGMAP: "openhands-ca-bundle:/etc/openhands/ca-bundle"
+        ADDITIONAL_CONFIGMAPS: "openhands-ca-bundle:/etc/openhands/ca-bundle"
       warmRuntimes:
         enabled: true
         count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
