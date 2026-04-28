@@ -353,7 +353,7 @@ keycloak:
 
 laminar:
   # Enable this if you want to use laminar
-  enabled: true
+  enabled: false
 
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
