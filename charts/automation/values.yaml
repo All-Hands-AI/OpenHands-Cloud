@@ -95,7 +95,7 @@ lmnrBaseUrlFromSecret:
 
 # Force HTTP instead of HTTPS for Laminar connections
 # Useful for development/test environments without TLS
-lmnrForceHttp: false
+lmnrForceHttp: true
 
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:
@@ -181,7 +181,7 @@ lmnrBaseUrlFromSecret:
 
 # Force HTTP instead of HTTPS for Laminar connections
 # Useful for development/test environments without TLS
-lmnrForceHttp: false
+lmnrForceHttp: true
 
 # Datadog configuration
 datadog:

@@ -369,7 +369,7 @@ laminar:
 
   # Force HTTP instead of HTTPS for Laminar connections
   # Useful for development/test environments without TLS
-  forceHttp: false
+  forceHttp: true
 
   frontend:
     ingress:
