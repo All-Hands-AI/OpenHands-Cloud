@@ -12,6 +12,7 @@ spec:
 
   additionalNamespaces:
     - openhands
+    - cert-manager
 
   statusInformers:
     # openhands
