@@ -367,6 +367,10 @@ laminar:
     name: lmnr-base-url
     key: LMNR_BASE_URL
 
+  # Force HTTP instead of HTTPS for Laminar connections
+  # Useful for development/test environments without TLS
+  forceHttp: false
+
   frontend:
     ingress:
       # Hostname for the frontend ingress

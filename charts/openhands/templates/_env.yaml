@@ -354,6 +354,10 @@
       key: {{ .Values.laminar.baseUrlFromSecret.key }}
       optional: true
 {{- end }}
+{{- if .Values.laminar.forceHttp }}
+- name: LMNR_FORCE_HTTP
+  value: {{ .Values.laminar.forceHttp | quote }}
+{{- end }}
 {{- end }}
 - name: DB_PASS
   valueFrom:

@@ -105,6 +105,10 @@
       key: {{ .Values.lmnrBaseUrlFromSecret.key }}
       optional: true
 {{- end }}
+{{- if .Values.lmnrForceHttp }}
+- name: LMNR_FORCE_HTTP
+  value: {{ .Values.lmnrForceHttp | quote }}
+{{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"

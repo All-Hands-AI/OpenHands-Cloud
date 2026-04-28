@@ -93,6 +93,10 @@ lmnrBaseUrlFromSecret:
   name: lmnr-base-url
   key: LMNR_BASE_URL
 
+# Force HTTP instead of HTTPS for Laminar connections
+# Useful for development/test environments without TLS
+lmnrForceHttp: false
+
 # GCP Cloud SQL (leave empty for non-GCP)
 gcp:
   dbInstance: ""
@@ -174,6 +178,10 @@ lmnrApiKeyFromSecret:
 lmnrBaseUrlFromSecret:
   name: lmnr-base-url
   key: LMNR_BASE_URL
+
+# Force HTTP instead of HTTPS for Laminar connections
+# Useful for development/test environments without TLS
+lmnrForceHttp: false
 
 # Datadog configuration
 datadog:
