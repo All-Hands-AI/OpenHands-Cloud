@@ -47,7 +47,13 @@
 {{- end }}
 
 {{/*
-  plugin-directory.env.server — Deduplicated environment variable list for server
+  plugin-directory.env.server — Deduplicated environment variable list for server.
+
+  Merges defaults with .Values.env so user-supplied entries take precedence:
+    1. Build a set of names provided in .Values.env.
+    2. Drop any default whose name is in that set.
+    3. Append the .Values.env entries.
+  Result: each name appears once, with the user's value if provided.
 */}}
 {{- define "plugin-directory.env.server" }}
 {{- $defaults := include "plugin-directory.env.server.defaults" . | fromYamlArray }}
@@ -142,7 +148,9 @@
 {{- end }}
 
 {{/*
-  plugin-directory.env.client — Deduplicated environment variable list for client
+  plugin-directory.env.client — Deduplicated environment variable list for client.
+  Same merge semantics as plugin-directory.env.server above: .Values.env wins
+  on name collisions, defaults fill in the rest.
 */}}
 {{- define "plugin-directory.env.client" }}
 {{- $defaults := include "plugin-directory.env.client.defaults" . | fromYamlArray }}
