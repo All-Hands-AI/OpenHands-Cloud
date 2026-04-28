@@ -354,8 +354,9 @@ keycloak:
               key: password
 
 laminar:
-  # Enable this if you want to use laminar
   enabled: false
+  global:
+    cloudProvider: ""        # set to "gcp" or "aws" at deploy time
 
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
@@ -375,22 +376,31 @@ laminar:
 
   frontend:
     ingress:
-      # Hostname for the frontend ingress
-      # When set, creates an Ingress with TLS via cert-manager
+      enabled: false         # required gate in 0.1.8; must be true for any frontend ingress to render
       hostname: ""
-      # Ingress class name (defaults to "traefik")
-      className: ""
-      # Additional annotations for the ingress
+      className: ""          # set explicitly; cloudProvider=gcp does not auto-set this
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-frontend-tls"
+        clusterIssuer: "letsencrypt"
       annotations: {}
+
   appServer:
-    ingress:
-      # Hostname for the app-server API ingress
-      # When set, creates an Ingress with TLS via cert-manager
-      # Used for trace ingestion from external services (e.g., runtime pods)
+    loadBalancer:
+      enabled: false
       hostname: ""
-      # Ingress class name (defaults to "traefik")
+      annotations: {}
+    ingress:
+      hostname: ""
       className: ""
-      # Additional annotations for the ingress
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-app-server-tls"
+        clusterIssuer: "letsencrypt"
       annotations: {}
 
 litellm-helm:
