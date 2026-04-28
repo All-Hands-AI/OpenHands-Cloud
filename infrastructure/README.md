@@ -4,14 +4,12 @@ This directory contains Terraform modules and Helm configurations for deploying 
 
 ## Overview
 
-Four independent deployment environments are supported:
+Two independent deployment environments are supported:
 
-| Environment | Clusters | Routing | Use Case |
-|------------|----------|---------|----------|
-| `single-cluster-path` | 1 | Path-based (`domain.com/api/`, `/runtime/`) | Simple deployments |
-| `single-cluster-subdomain` | 1 | Subdomain-based (`api.domain.com`, `runtime.domain.com`) | Branch deployments |
-| `multi-cluster-path` | 2 (core + runtime) | Path-based | Production-like isolation |
-| `multi-cluster-subdomain` | 2 (core + runtime) | Subdomain-based | Full production parity |
+| Environment | Routing | Use Case |
+|------------|---------|----------|
+| `single-cluster-path` | Path-based (`domain.com/api/`, `/runtime/`) | Simple deployments |
+| `single-cluster-subdomain` | Subdomain-based (`api.domain.com`, `runtime.domain.com`) | Branch deployments |
 
 ## Directory Structure
 
@@ -23,9 +21,7 @@ infrastructure/
 │   │   └── vpc-network/      # VPC network module
 │   └── environments/
 │       ├── single-cluster-path/
-│       ├── single-cluster-subdomain/
-│       ├── multi-cluster-path/
-│       └── multi-cluster-subdomain/
+│       └── single-cluster-subdomain/
 ├── helm/
 │   ├── cert-manager/         # TLS certificate management
 │   ├── external-dns/         # DNS record automation
@@ -168,19 +164,6 @@ https://branch.domain.com        # Branch deployments
 - Wildcard TLS certificate (DNS-01 challenge)
 - Cloud DNS zone for external-dns
 - Wildcard DNS record
-
-## Multi-Cluster Environments
-
-Multi-cluster setups separate the core OpenHands services from runtime pods:
-
-- **Core Cluster**: OpenHands UI, API, Keycloak, LiteLLM, databases
-- **Runtime Cluster**: Runtime API, runtime pods, warm pool
-
-This provides:
-- Resource isolation
-- Independent scaling
-- Security boundaries
-- Production parity
 
 ## Existing Staging Environment
 
