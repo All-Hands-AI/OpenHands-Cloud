@@ -196,6 +196,13 @@ spec:
         host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime-api.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_api_hostname"}}{{repl end}}'
         tls: true
         tlsSecretName: openhands-tls
+      # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
+      # the Python TLS stack (httpx + requests) at the merged PEM. Required
+      # so runtimes.check_alive_with_ingress can verify the runtime ingress
+      # cert when the user uploads a custom CA — otherwise it silently fails
+      # TLS and runtimes get stuck in `starting`.
+      caBundle:
+        enabled: true
       runtimeInSameCluster: true
       cleanup:
         idle_seconds: repl{{ ConfigOption "sandbox_idle_seconds" }}
