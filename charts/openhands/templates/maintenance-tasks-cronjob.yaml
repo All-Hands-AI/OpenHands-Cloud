@@ -30,6 +30,10 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.caBundle.enabled }}
+          volumes:
+            {{- include "openhands.caBundle.volume" . | nindent 12 }}
+          {{- end }}
           containers:
             - name: maintenance-tasks
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -39,8 +43,13 @@ spec:
                 - |
                   echo "Running maintenance tasks..."
                   python -m run_maintenance_tasks
+              {{- if .Values.caBundle.enabled }}
+              volumeMounts:
+                {{- include "openhands.caBundle.volumeMount" . | nindent 16 }}
+              {{- end }}
               env:
                 {{- include "openhands.env" . | nindent 16 }}
+                {{- include "openhands.caBundle.env" . | nindent 16 }}
               resources:
                 {{- toYaml .Values.maintenanceTasks.resources | nindent 16 }}
 {{- end }}

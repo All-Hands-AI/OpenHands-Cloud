@@ -1,6 +1,6 @@
 image:
-  repository: ghcr.io/all-hands-ai/runtime
-  tag: 0.9.6-nikolaik
+  repository: ghcr.io/openhands/agent-server
+  tag: 1.16.1-python
   pullPolicy: Always
 
 runtimeClass: sysbox-runc

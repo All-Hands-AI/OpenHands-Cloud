@@ -70,8 +70,10 @@
 {{- end }}
 - name: NO_SETUP
   value: 'true'
-- name: SANDBOX_RUNTIME_CONTAINER_IMAGE
-  value: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag | default (printf "%s-nikolaik" (.Values.image.tag | default .Chart.AppVersion)) }}"
+- name: AGENT_SERVER_IMAGE_REPOSITORY
+  value: "{{ .Values.runtime.image.repository }}"
+- name: AGENT_SERVER_IMAGE_TAG
+  value: "{{ .Values.runtime.image.tag }}"
 - name: SANDBOX_REMOTE_RUNTIME_API_URL
   value: {{ .Values.sandbox.apiHostname }}
 - name: SANDBOX_API_KEY
