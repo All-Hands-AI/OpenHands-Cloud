@@ -2,6 +2,12 @@
 # Variables for Shared Keycloak Infrastructure
 # -----------------------------------------------------------------------------
 
+variable "kube_context" {
+  description = "Kubernetes context to use (from kubeconfig)"
+  type        = string
+  default     = "gke_platform-team-sandbox-62793_us-central1_ohe-staging-path-cluster"
+}
+
 variable "namespace" {
   description = "Kubernetes namespace for shared auth services"
   type        = string
@@ -21,9 +27,9 @@ variable "keycloak_admin_password" {
 }
 
 variable "keycloak_chart_version" {
-  description = "Version of the Bitnami Keycloak Helm chart"
+  description = "Version of the codecentric/keycloakx Helm chart"
   type        = string
-  default     = "24.4.5"
+  default     = "7.1.11"
 }
 
 # -----------------------------------------------------------------------------

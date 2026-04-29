@@ -23,6 +23,22 @@ terraform {
 }
 
 # -----------------------------------------------------------------------------
+# Provider Configuration - uses local kubeconfig
+# -----------------------------------------------------------------------------
+
+provider "kubernetes" {
+  config_path    = "~/.kube/config"
+  config_context = var.kube_context
+}
+
+provider "helm" {
+  kubernetes = {
+    config_path    = "~/.kube/config"
+    config_context = var.kube_context
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Namespace for shared authentication services
 # -----------------------------------------------------------------------------
 
@@ -89,14 +105,18 @@ resource "kubernetes_secret" "staging_client" {
 }
 
 # -----------------------------------------------------------------------------
-# Shared Keycloak Helm Release
+# Shared Keycloak Helm Release (using codecentric/keycloakx chart)
+# 
+# Note: Using codecentric/keycloakx instead of Bitnami because Bitnami
+# images are currently unavailable on Docker Hub. The codecentric chart
+# uses official quay.io/keycloak/keycloak images.
 # -----------------------------------------------------------------------------
 
 resource "helm_release" "keycloak" {
   name       = "keycloak"
   namespace  = kubernetes_namespace.shared_auth.metadata[0].name
-  repository = "oci://registry-1.docker.io/bitnamicharts"
-  chart      = "keycloak"
+  repository = "https://codecentric.github.io/helm-charts"
+  chart      = "keycloakx"
   version    = var.keycloak_chart_version
 
   values = [
@@ -127,7 +147,7 @@ resource "kubernetes_config_map" "realm_template" {
   }
 
   data = {
-    "realm-template.json" = templatefile("${path.module}/realm-template.json", {})
+    "realm-template.json" = file("${path.module}/realm-template.json")
   }
 }
 
@@ -306,7 +326,7 @@ resource "kubernetes_job" "realm_setup" {
 
           env {
             name  = "KEYCLOAK_URL"
-            value = "http://keycloak:80/auth"
+            value = "http://keycloak-http:80/auth"
           }
 
           env {
