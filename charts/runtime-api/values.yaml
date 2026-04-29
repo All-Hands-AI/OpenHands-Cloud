@@ -10,7 +10,7 @@ databaseMigrations:
 
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-e24aef6
+  tag: sha-b0514a7
   pullPolicy: Always
 
 imagePullSecrets:
@@ -24,6 +24,17 @@ serviceAccount:
 
 runtimeInSameCluster: false
 defaultAPIKeySecretName: default-api-key
+
+# Mount a trust-manager / user-supplied CA bundle into the runtime-api pod and
+# point the Python TLS stack (httpx + requests) at it. Required when the
+# runtime ingress serves a cert signed by a CA that isn't in the OS trust
+# store — `runtimes.check_alive_with_ingress` uses requests.get and silently
+# returns False on TLS failures, leaving runtimes stuck in `starting`.
+caBundle:
+  enabled: false
+  name: openhands-ca-bundle
+  key: ca-bundle.crt
+  mountPath: /etc/openhands/ca-bundle
 
 service:
   type: ClusterIP

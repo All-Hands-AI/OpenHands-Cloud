@@ -82,8 +82,8 @@ spec:
           type: file
           required: true
         - name: tls_ca_certificate
-          title: TLS CA Certificate (Recommended)
-          help_text: Upload your CA certificate or certificate chain file (.crt or .pem) - recommended for proper certificate validation
+          title: Additional Trusted CA Certificates
+          help_text: Upload a root CA certificate in PEM format. Concatenate multiple PEM-encoded certificates in the same file to add them all to the cluster's default trust store. If the TLS certificate provided above is self-signed, include the CA that signed it here so components inside the cluster can validate it.
           type: file
           required: false
           recommended: true

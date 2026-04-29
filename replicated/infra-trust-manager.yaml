@@ -1,0 +1,59 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: infra-trust-manager
+spec:
+  chart:
+    name: infra
+  releaseName: infra-trust-manager
+  namespace: cert-manager
+  # Weight 6 runs after cert-manager (weight 5) so its CRDs (Certificate, Issuer)
+  # already exist when helm builds trust-manager's manifests.
+  weight: 6
+  helmUpgradeFlags: ["--wait", "--timeout", "600s"]
+  values:
+    cert-manager:
+      enabled: false
+    trust-manager:
+      enabled: true
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-manager'
+      defaultPackageImage:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/trust-pkg-debian-bookworm'
+
+    # Wait for cert-manager CRDs to be Established before this release applies
+    # trust-manager's webhook Certificate/Issuer resources. The cert-manager
+    # release (weight 5) runs first, but `helm install --wait` only waits for
+    # pods — CRD `Established` registration with the apiserver can lag, so a
+    # fast follow-on apply here can race.
+    crdCheck:
+      enabled: true
+      crds:
+        - certificates.cert-manager.io
+        - issuers.cert-manager.io
+        - clusterissuers.cert-manager.io
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rancher/kubectl'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+
+  optionalValues:
+    - when: '{{repl HasLocalRegistry }}'
+      recursiveMerge: true
+      values:
+        trust-manager:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-manager'
+          defaultPackageImage:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/trust-pkg-debian-bookworm'
+        crdCheck:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/kubectl'
+
+  builder:
+    cert-manager:
+      enabled: false
+    trust-manager:
+      enabled: true
