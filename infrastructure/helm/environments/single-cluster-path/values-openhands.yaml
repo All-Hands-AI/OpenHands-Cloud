@@ -21,11 +21,13 @@ deployment:
       memory: 2Gi
 
 # Ingress - path-based routing (all paths on same host)
+# For saurya-prototype branch: saurya-prototype.ohe-staging.platform-team.all-hands.dev
 ingress:
   enabled: true
-  host: "34.46.229.222.nip.io"  # Using nip.io for testing without DNS
+  host: "saurya-prototype.ohe-staging.platform-team.all-hands.dev"
   class: traefik
-  annotations: {}
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls: "true"
   root:
     annotations: {}
   integrations:
@@ -33,9 +35,10 @@ ingress:
   mcp:
     annotations: {}
 
-# TLS disabled for initial testing
+# TLS configuration 
 tls:
-  enabled: false
+  enabled: true
+  env: staging  # Used to derive secret name: app-all-hands-staging-tls
 
 # Environment variables
 env:
@@ -43,7 +46,7 @@ env:
   LOG_LEVEL: "INFO"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
   # Runtime URL pattern for path-based routing
-  RUNTIME_URL_PATTERN: "http://34.46.229.222.nip.io/runtime/{runtime_id}"
+  RUNTIME_URL_PATTERN: "https://saurya-prototype.ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
 
 # Session JWT secret
 sessions:
@@ -59,6 +62,7 @@ databaseMigrations:
   waitForDatabase: true
   createDatabases: true
   migrate: true
+  postgresImage: "public.ecr.aws/bitnami/postgresql:latest"
 
 # Disable features not needed for testing
 github:
@@ -102,82 +106,29 @@ minio:
       cpu: 200m
 
 # -----------------------
-# Keycloak for authentication
+# Keycloak for authentication - Using SHARED Keycloak
 # -----------------------
+# For shared Keycloak (Option 2), we disable the embedded Keycloak subchart
+# and point to the shared instance at auth.ohe-staging.platform-team.all-hands.dev
 keycloak:
-  enabled: true
-  url: "http://keycloak"
-  fullnameOverride: keycloak
-  replicaCount: 1
-  production: false  # Use dev mode for easier testing
-  proxyHeaders: forwarded
-  ingress:
-    enabled: true
-    hostname: "34.46.229.222.nip.io"
-    path: /auth
-    pathType: Prefix
-    servicePort: 80
-    tls: false
-    ingressClassName: traefik
-  auth:
-    adminUser: admin
-    existingSecret: keycloak-admin
-    passwordSecretKey: admin-password
-  service:
-    type: ClusterIP
-  serviceAccount:
-    name: "keycloak-sa"
-  postgresql:
-    enabled: false
+  enabled: false  # Disable embedded Keycloak - using shared instance
+  # External URL for shared Keycloak (used by browser redirects)
+  url: "https://auth.ohe-staging.platform-team.all-hands.dev/auth"
+  # Internal URL is not used when keycloak.enabled=false
+  # The keycloak-realm secret must be created separately with:
+  #   - realm-name: allhands
+  #   - client-id: <branch-specific-client-id>
+  #   - client-secret: <branch-specific-client-secret>
+  #   - smtp-password: <from shared keycloak>
+  #
+  # Create with:
+  # kubectl create secret generic keycloak-realm -n <namespace> \
+  #   --from-literal=realm-name=allhands \
+  #   --from-literal=client-id=openhands-saurya-prototype \
+  #   --from-literal=client-secret=<secret> \
+  #   --from-literal=smtp-password=<smtp-password>
   externalDatabase:
-    host: openhands-postgresql
-    database: bitnami_keycloak
-    existingSecret: postgres-password
-    existingSecretUserKey: username
-    existingSecretPasswordKey: password
-  extraEnvVars:
-    - name: KC_FEATURES
-      value: token-exchange,admin-fine-grained-authz
-    - name: KC_HTTP_ENABLED
-      value: "true"
-    - name: KC_PROXY_HEADERS
-      value: "xforwarded"
-    - name: KC_HTTP_RELATIVE_PATH
-      value: "/auth"
-    - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
-      value: "true"
-  image:
-    registry: docker.io
-    repository: bitnami/keycloak
-    tag: "latest"
-  waitForDb:
-    image: "bitnami/postgresql:latest"
-  initContainers:
-    - name: wait-for-db
-      image: '{{ .Values.waitForDb.image }}'
-      command: ['sh', '-c']
-      args:
-        - |
-          echo "Waiting for database at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
-          until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" > /dev/null 2>&1; do
-            echo "PostgreSQL is unavailable - sleeping 5s"
-            sleep 5
-          done
-          echo "PostgreSQL is ready!"
-      envFrom:
-        - configMapRef:
-            name: keycloak-env-vars
-      env:
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-password
-              key: username
-        - name: DB_PASS
-          valueFrom:
-            secretKeyRef:
-              name: postgres-password
-              key: password
+    database: bitnami_keycloak  # Still needed for database creation
 
 # -----------------------
 # LiteLLM proxy - DISABLED for initial testing
@@ -198,6 +149,7 @@ postgresql:
   fullnameOverride: openhands-postgresql
   auth:
     username: postgres
+    database: openhands_db
     existingSecret: postgres-password
     secretKeys:
       adminPasswordKey: password
@@ -210,8 +162,9 @@ postgresql:
   service:
     ports:
       postgresql: 5432
+  # Use AWS ECR for Bitnami images (Docker Hub removed bitnami images)
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/postgresql
     tag: "latest"
 
@@ -237,8 +190,9 @@ redis:
     limits:
       memory: 512Mi
       cpu: 200m
+  # Use AWS ECR for Bitnami images (Docker Hub removed bitnami images)
   image:
-    registry: docker.io
+    registry: public.ecr.aws
     repository: bitnami/redis
     tag: "latest"
 
@@ -308,20 +262,22 @@ runtime-api:
   # Runtime API ingress - path-based
   ingress:
     enabled: true
-    host: "34.46.229.222.nip.io"
+    host: "saurya-prototype.ohe-staging.platform-team.all-hands.dev"
     path: /runtime
     pathType: Prefix
     className: traefik
-    annotations: {}
-    tls: false
+    annotations:
+      traefik.ingress.kubernetes.io/router.tls: "true"
+    tls: true
+    tlsSecretName: app-all-hands-staging-tls
   env:
     DB_HOST: openhands-postgresql
     DB_USER: postgres
     DB_NAME: runtime_api_db
     K8S_NAMESPACE: "openhands"
     RUNTIME_CLASS: ""
-    RUNTIME_BASE_URL: "34.46.229.222.nip.io"
-    RUNTIME_DISABLE_SSL: "true"
+    RUNTIME_BASE_URL: "saurya-prototype.ohe-staging.platform-team.all-hands.dev"
+    RUNTIME_DISABLE_SSL: "false"
     MEMORY_REQUEST: "2048Mi"
     MEMORY_LIMIT: "2048Mi"
     CPU_REQUEST: "500m"
