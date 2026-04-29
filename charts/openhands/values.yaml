@@ -356,6 +356,10 @@ uvicorn:
 keycloak:
   enabled: false
   url: "http://keycloak"
+  # authHost: Override AUTH_WEB_HOST for shared/external Keycloak (without https://)
+  # Use this when Keycloak is shared across branches and shouldn't get branch prefix
+  # Example: auth.ohe-staging.platform-team.all-hands.dev
+  authHost: ""
   fullnameOverride: keycloak
   replicaCount: 1
   production: true
