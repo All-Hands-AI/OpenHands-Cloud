@@ -1,55 +1,79 @@
 # -----------------------------------------------------------------------------
-# Shared Keycloak Helm Values
+# Shared Keycloak Helm Values (codecentric/keycloakx chart)
 # 
 # This Keycloak instance serves all staging branch deployments at:
 #   https://auth.ohe-staging.platform-team.all-hands.dev
+# 
+# Using codecentric/keycloakx chart with official quay.io/keycloak/keycloak image
+# because Bitnami images are currently unavailable on Docker Hub.
 # -----------------------------------------------------------------------------
 
-replicaCount: 1
-production: true
-proxyHeaders: forwarded
+replicas: 1
 
 # Use stable fullname for service discovery
 fullnameOverride: keycloak
 
 # -----------------------------------------------------------------------------
 # Image Configuration
+# Uses official quay.io/keycloak/keycloak image
+# Chart 7.1.11 defaults to 26.5.6, but we can override if needed
 # -----------------------------------------------------------------------------
 image:
-  registry: public.ecr.aws
-  repository: bitnami/keycloak
-  tag: "26"
+  repository: quay.io/keycloak/keycloak
+  tag: "26.1.0"
+  pullPolicy: IfNotPresent
 
 # -----------------------------------------------------------------------------
-# Authentication
+# Command Configuration
+# Start Keycloak with the 'start' command for production mode
 # -----------------------------------------------------------------------------
-auth:
-  adminUser: admin
-  existingSecret: keycloak-admin
-  passwordSecretKey: admin-password
+command:
+  - "/opt/keycloak/bin/kc.sh"
+  - "start"
+  - "--http-enabled=true"
+  - "--http-port=8080"
+  - "--hostname-strict=false"
 
 # -----------------------------------------------------------------------------
 # Service Configuration
 # -----------------------------------------------------------------------------
 service:
   type: ClusterIP
+  httpPort: 80
+  httpNodePort: null
+  httpsPort: 8443
+  httpsNodePort: null
 
 serviceAccount:
+  create: true
   name: "keycloak-sa"
 
 # -----------------------------------------------------------------------------
-# External Database Configuration
+# Database Configuration
 # Uses shared PostgreSQL from openhands namespace
 # -----------------------------------------------------------------------------
-postgresql:
-  enabled: false
-
-externalDatabase:
-  host: "${postgres_host}"
+database:
+  vendor: postgres
+  hostname: "${postgres_host}"
+  port: 5432
   database: "${postgres_database}"
+  username: ""
+  password: ""
   existingSecret: postgres-password
-  existingSecretUserKey: username
-  existingSecretPasswordKey: password
+  existingSecretKey: password
+
+# -----------------------------------------------------------------------------
+# Proxy Configuration
+# -----------------------------------------------------------------------------
+proxy:
+  enabled: true
+  mode: edge
+
+# -----------------------------------------------------------------------------
+# HTTP Configuration
+# -----------------------------------------------------------------------------
+http:
+  relativePath: "/auth"
 
 # -----------------------------------------------------------------------------
 # Ingress Configuration
@@ -57,75 +81,81 @@ externalDatabase:
 # -----------------------------------------------------------------------------
 ingress:
   enabled: true
-  hostname: "${hostname}"
   ingressClassName: "${ingress_class}"
-  path: /auth
-  pathType: Prefix
-  servicePort: 80
-  tls: true
-  extraTls:
+  annotations: {}
+  rules:
+    - host: "${hostname}"
+      paths:
+        - path: /auth
+          pathType: Prefix
+  tls:
     - hosts:
         - "${hostname}"
       secretName: "${tls_secret_name}"
 
 # -----------------------------------------------------------------------------
-# Keycloak Features and Configuration
+# Environment Variables
 # -----------------------------------------------------------------------------
-extraEnvVars:
+extraEnv: |
+  - name: KEYCLOAK_ADMIN
+    value: admin
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-admin
+        key: admin-password
+  - name: KC_DB
+    value: postgres
+  - name: KC_DB_URL_HOST
+    value: "${postgres_host}"
+  - name: KC_DB_URL_PORT
+    value: "5432"
+  - name: KC_DB_URL_DATABASE
+    value: "${postgres_database}"
+  - name: KC_DB_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: postgres-password
+        key: username
+  - name: KC_DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgres-password
+        key: password
   - name: KC_FEATURES
     value: token-exchange,admin-fine-grained-authz
-  - name: KC_HTTP_ENABLED
-    value: "true"
   - name: KC_PROXY_HEADERS
-    value: "xforwarded"
+    value: xforwarded
   - name: KC_HTTP_RELATIVE_PATH
-    value: "/auth"
+    value: /auth
+  - name: KC_HOSTNAME
+    value: "${hostname}"
+  - name: KC_HOSTNAME_STRICT
+    value: "false"
+  - name: KC_HOSTNAME_STRICT_HTTPS
+    value: "false"
   - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
     value: "true"
-
-# -----------------------------------------------------------------------------
-# Health Checks
-# -----------------------------------------------------------------------------
-customReadinessProbe:
-  httpGet:
-    path: /auth/realms/master
-    port: http
-    scheme: HTTP
-  initialDelaySeconds: 60
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 6
-  successThreshold: 1
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+  - name: KC_METRICS_ENABLED
+    value: "true"
 
 # -----------------------------------------------------------------------------
 # Init Container - Wait for Database
 # -----------------------------------------------------------------------------
-initContainers:
+extraInitContainers: |
   - name: wait-for-db
-    image: 'public.ecr.aws/bitnami/postgresql:latest'
+    image: postgres:15-alpine
     command: ['sh', '-c']
     args:
       - |
-        echo "Waiting for database \"$KEYCLOAK_DATABASE_NAME\" at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
-        until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" > /dev/null 2>&1; do
+        echo "Waiting for PostgreSQL at ${postgres_host}:5432..."
+        until pg_isready -h "${postgres_host}" -p 5432 -U postgres > /dev/null 2>&1; do
           echo "PostgreSQL is unavailable - sleeping 5s"
           sleep 5
         done
         echo "PostgreSQL is ready!"
-    envFrom:
-      - configMapRef:
-          name: keycloak-env-vars
-    env:
-      - name: DB_USER
-        valueFrom:
-          secretKeyRef:
-            name: postgres-password
-            key: username
-      - name: DB_PASS
-        valueFrom:
-          secretKeyRef:
-            name: postgres-password
-            key: password
 
 # -----------------------------------------------------------------------------
 # Resource Limits
@@ -137,3 +167,12 @@ resources:
   limits:
     cpu: 1000m
     memory: 1Gi
+
+# -----------------------------------------------------------------------------
+# Health and Metrics
+# -----------------------------------------------------------------------------
+health:
+  enabled: true
+
+metrics:
+  enabled: true
