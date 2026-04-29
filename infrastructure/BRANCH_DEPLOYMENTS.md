@@ -6,12 +6,37 @@ This guide explains how to deploy your own branch of OpenHands to the shared sta
 
 The staging infrastructure supports multiple simultaneous deployments using **Helm release isolation**. Each developer can deploy their own branch with a unique release name, and the ingress controller routes traffic based on subdomain or path prefixes.
 
+### Two-Level Routing Architecture
+
+The Helm chart supports a **two-level routing architecture**:
+
+| Level | Option | Description |
+|-------|--------|-------------|
+| **Level 1: Branch Routing** | `routingMode` | How branches are differentiated (`subdomain` or `path`) |
+| **Level 2: Service Routing** | `serviceRoutingMode` | How services within a branch are routed (`path` or `subdomain`) |
+
+#### Common Configurations
+
+**Config A: Branch subdomain + Service paths** (most common)
+```
+my-feature.staging.example.com/                     # Main UI
+my-feature.staging.example.com/api/automation       # Automation API
+my-feature.staging.example.com/integration/github   # Integrations
+```
+
+**Config B: Branch subdomain + Service subdomains** (isolated services)
+```
+my-feature.staging.example.com                      # Main UI
+automation.my-feature.staging.example.com           # Automation API
+integrations.my-feature.staging.example.com         # Integrations
+```
+
 ### How It Works
 
 1. **Helm Release Isolation**: Each deployment uses a unique Helm release name (e.g., `openhands-yourname`)
 2. **Namespace Isolation**: Each deployment gets its own Kubernetes namespace
-3. **Subdomain Routing**: For subdomain-based clusters, your deployment is accessible at `your-branch.staging.example.com`
-4. **Path Routing**: For path-based clusters, services are differentiated by release name
+3. **Branch Routing**: Your deployment is accessible via subdomain or path prefix
+4. **Service Routing**: Services within your branch use paths or subdomains
 
 ## Prerequisites
 
@@ -51,11 +76,17 @@ image:
   repository: ghcr.io/all-hands-ai/openhands
   tag: "your-branch-name"  # Your branch's image tag
 
-# Ingress configuration for subdomain-based routing
+# Ingress configuration
 ingress:
   enabled: true
   host: staging.example.com
-  prefixWithBranch: true
+  
+  # Level 1: Branch routing
+  routingMode: subdomain      # Options: "subdomain" | "path"
+  prefixWithBranch: true      # Prepend branchSanitized to host
+  
+  # Level 2: Service routing (only used when routingMode=subdomain)
+  serviceRoutingMode: path    # Options: "path" | "subdomain"
 
 # REQUIRED: Sanitized branch name (lowercase, alphanumeric, hyphens only)
 # This becomes your subdomain: your-branch.staging.example.com
@@ -100,14 +131,24 @@ helm install openhands-${BRANCH_NAME} ./charts/openhands \
 
 ### 4. Access Your Deployment
 
-For **subdomain-based** clusters:
+For **subdomain-based** routing (`routingMode: subdomain`):
 ```
-https://your-branch.staging.example.com
+https://your-branch.staging.example.com           # Main app
+https://your-branch.staging.example.com/api/automation  # Automation API (if serviceRoutingMode=path)
 ```
 
-For **path-based** clusters:
+For **subdomain-based** routing with **service subdomains** (`serviceRoutingMode: subdomain`):
 ```
-https://staging.example.com/  (routed by ingress to your release)
+https://your-branch.staging.example.com           # Main app
+https://automation.your-branch.staging.example.com  # Automation API
+https://integrations.your-branch.staging.example.com  # Integrations
+https://mcp.your-branch.staging.example.com       # MCP
+```
+
+For **path-based** routing (`routingMode: path`):
+```
+https://staging.example.com/your-branch/          # Main app
+https://staging.example.com/your-branch/api/automation  # Automation API
 ```
 
 ## Deployment Patterns
@@ -126,7 +167,9 @@ branchSanitized: "yourname"
 ingress:
   enabled: true
   host: staging.example.com
+  routingMode: subdomain
   prefixWithBranch: true
+  serviceRoutingMode: path  # Services at /api/*, /integration/*, etc.
 
 deployment:
   replicas: 1
@@ -160,7 +203,9 @@ branchSanitized: "yourname-full"
 ingress:
   enabled: true
   host: staging.example.com
+  routingMode: subdomain
   prefixWithBranch: true
+  serviceRoutingMode: path
 
 deployment:
   replicas: 2
@@ -176,6 +221,31 @@ integrationEvents:
 postgresql:
   host: "your-postgres-instance"
   database: "openhands_yourname"
+```
+
+### Service Subdomain Deployment
+
+For isolated service testing (requires wildcard TLS cert for `*.branch.host`):
+
+```yaml
+# service-subdomain-values.yaml
+image:
+  tag: "your-branch"
+
+branchSanitized: "yourname"
+
+ingress:
+  enabled: true
+  host: staging.example.com
+  routingMode: subdomain
+  prefixWithBranch: true
+  serviceRoutingMode: subdomain  # Each service gets its own subdomain
+
+# Results in:
+#   yourname.staging.example.com (main app)
+#   automation.yourname.staging.example.com
+#   integrations.yourname.staging.example.com
+#   mcp.yourname.staging.example.com
 ```
 
 ## Runtime API Deployment
