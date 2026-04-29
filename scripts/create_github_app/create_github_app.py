@@ -322,11 +322,12 @@ def main(
     print(f"\nCredentials:")
     display_names = {
         "id": "GitHub App ID",
+        "slug": "GitHub App Slug",
         "client_id": "GitHub App Client ID",
         "client_secret": "GitHub App Client Secret",
         "webhook_secret": "GitHub App Webhook Secret",
     }
-    for key in ["client_id", "client_secret", "id", "webhook_secret"]:
+    for key in ["client_id", "client_secret", "id", "slug", "webhook_secret"]:
         if key in credentials:
             display_key = display_names.get(key, key)
             print(f"  {display_key}: {credentials[key]}")

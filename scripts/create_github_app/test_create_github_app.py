@@ -459,6 +459,50 @@ class TestMainInteractiveFlow:
         assert "GitHub App ID: 123" in captured.out
         assert "GitHub App Webhook Secret: whsec789" in captured.out
 
+    def test_slug_is_displayed_when_present_in_credentials(self, capsys):
+        """Test that GitHub App Slug is displayed when present in credentials."""
+        with mock_main_dependencies({
+            "id": 123,
+            "slug": "my-openhands-app",
+            "client_id": "Iv1.abc123",
+            "client_secret": "secret456",
+            "webhook_secret": "whsec789",
+        }):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "GitHub App Slug: my-openhands-app" in captured.out
+
+    def test_slug_appears_after_app_id_and_before_webhook_secret(self, capsys):
+        """Test that GitHub App Slug is displayed immediately after GitHub App ID."""
+        with mock_main_dependencies({
+            "id": 123,
+            "slug": "my-openhands-app",
+            "client_id": "Iv1.abc123",
+            "client_secret": "secret456",
+            "webhook_secret": "whsec789",
+        }):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        id_pos = captured.out.index("GitHub App ID:")
+        slug_pos = captured.out.index("GitHub App Slug:")
+        webhook_pos = captured.out.index("GitHub App Webhook Secret:")
+        assert id_pos < slug_pos < webhook_pos
+
+    def test_slug_is_omitted_when_absent_from_credentials(self, capsys):
+        """Test that GitHub App Slug line is not printed when absent from credentials."""
+        with mock_main_dependencies({
+            "id": 123,
+            "client_id": "Iv1.abc123",
+            "client_secret": "secret456",
+            "webhook_secret": "whsec789",
+        }):
+            main(base_domain="example.com", dry_run=False, app_name="my-app")
+
+        captured = capsys.readouterr()
+        assert "GitHub App Slug" not in captured.out
+
     def test_saves_pem_to_keys_directory_in_script_folder(self, capsys, monkeypatch, tmp_path):
         """Test that pem is saved to keys/ directory in the script's folder, not cwd."""
         # Change to a different directory to verify keys are NOT created in cwd
