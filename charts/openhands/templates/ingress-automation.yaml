@@ -3,36 +3,33 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: openhands-automation-ingress
+  {{- $annotations := .Values.ingress.root.annotations | default .Values.ingress.annotations }}
+  {{- $middlewareAnnotation := include "openhands.pathMiddlewareAnnotation" . }}
+  {{- if or $annotations $middlewareAnnotation }}
   annotations:
-    {{- if .Values.ingress.root.annotations }}
-    {{ .Values.ingress.root.annotations | toYaml | nindent 4 }}
-    {{- else }}
-    {{ .Values.ingress.annotations | toYaml | nindent 4 }}
+    {{- with $annotations }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
+    {{- if $middlewareAnnotation }}
+    {{ $middlewareAnnotation | nindent 4 }}
+    {{- end }}
+  {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.class }}
   {{- if .Values.tls.enabled }}
   tls:
   - hosts:
-    {{- if .Values.ingress.prefixWithBranch }}
-    - {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
-    {{- else }}
-    - {{ .Values.ingress.host }}
-    {{- end }}
+    - {{ include "openhands.ingressHost" . }}
     secretName: app-all-hands-{{ .Values.tls.env }}-tls
   {{- end }}
   rules:
-  {{- if .Values.ingress.prefixWithBranch }}
-  - host: {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
-  {{- else }}
-  - host: {{ .Values.ingress.host }}
-  {{- end }}
+  - host: {{ include "openhands.ingressHost" . }}
     http:
       paths:
       {{- if .Values.automation.events.enabled }}
       # Route webhook events to dedicated events pods
       # IMPORTANT: This more specific path must come before the general /api/automation path
-      - path: /api/automation/v1/events
+      - path: {{ include "openhands.routedPath" (dict "path" "/api/automation/v1/events" "Values" .Values) }}
         pathType: Prefix
         backend:
           service:
@@ -40,14 +37,14 @@ spec:
             port:
               number: 80
       {{- end }}
-      - path: /api/automation
+      - path: {{ include "openhands.routedPath" (dict "path" "/api/automation" "Values" .Values) }}
         pathType: Prefix
         backend:
           service:
             name: automation
             port:
               number: 80
-      - path: /automations
+      - path: {{ include "openhands.routedPath" (dict "path" "/automations" "Values" .Values) }}
         pathType: Prefix
         backend:
           service:

@@ -162,11 +162,31 @@ ingress:
   pathType: Prefix
   tls: true
   
-  # Branch-based routing: when true, ingress host becomes {branchSanitized}.{host}
-  # Example: with prefixWithBranch=true, branchSanitized="feature-x", host="runtime.example.com"
-  #          the ingress will route traffic from: feature-x.runtime.example.com
-  # Requires: wildcard TLS cert and wildcard DNS record pointing to ingress
+  # =============================================================================
+  # ROUTING MODE: Choose subdomain-based OR path-based routing
+  # =============================================================================
+  #
+  # Option 1: Subdomain-based routing (default)
+  #   routingMode: subdomain
+  #   prefixWithBranch: true
+  #   branchSanitized: "my-branch"
+  #   Result: my-branch.runtime.example.com
+  #   Requires: Wildcard TLS cert and wildcard DNS
+  #
+  # Option 2: Path-based routing
+  #   routingMode: path
+  #   pathPrefix: "my-branch"
+  #   Result: runtime.example.com/my-branch/
+  #   Requires: Single-domain TLS cert, path prefix stripped before backend
+  #
+  routingMode: subdomain  # Options: "subdomain" | "path"
+  
+  # For subdomain mode
   prefixWithBranch: false
+  branchSanitized: ""
+  
+  # For path mode
+  pathPrefix: ""
 
 # Base ingress configuration for runtime ingress inheritance
 # Only metadata (labels and annotations) will be inherited, not the spec

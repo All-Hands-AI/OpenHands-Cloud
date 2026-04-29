@@ -1,0 +1,34 @@
+{{/*
+Compute the ingress host based on routing mode
+Supports branchSanitized at both root level (.Values.branchSanitized) and ingress level (.Values.ingress.branchSanitized)
+*/}}
+{{- define "openhands.ingressHost" -}}
+{{- $branch := .Values.ingress.branchSanitized | default .Values.branchSanitized -}}
+{{- if and (eq .Values.ingress.routingMode "subdomain") .Values.ingress.prefixWithBranch $branch -}}
+{{ $branch }}.{{ .Values.ingress.host }}
+{{- else -}}
+{{ .Values.ingress.host }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Compute a path with optional prefix for path-based routing
+Usage: {{ include "openhands.routedPath" (dict "path" "/api/foo" "Values" .Values) }}
+*/}}
+{{- define "openhands.routedPath" -}}
+{{- if and (eq .Values.ingress.routingMode "path") .Values.ingress.pathPrefix -}}
+/{{ .Values.ingress.pathPrefix }}{{ .path }}
+{{- else -}}
+{{ .path }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get middleware annotation for path-based routing (Traefik)
+Returns the middleware reference if path mode is enabled
+*/}}
+{{- define "openhands.pathMiddlewareAnnotation" -}}
+{{- if and (eq .Values.ingress.routingMode "path") .Values.ingress.pathPrefix -}}
+traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-openhands-strip-prefix@kubernetescrd
+{{- end -}}
+{{- end -}}
