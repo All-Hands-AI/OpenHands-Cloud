@@ -600,6 +600,76 @@ jiraDc:
 linear:
   enabled: false
 
+# Plugin Directory subchart configuration
+# When enabled, deploys the plugin directory marketplace as a subchart
+# The plugin directory allows users to discover, browse, and review agent plugins
+# Routing is handled by parent chart via /plugins subpath
+plugin-directory:
+  enabled: false
+
+  databaseMigrations:
+    waitForDatabase: true
+    createDatabases: false
+    migrate: true
+
+  client:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-client
+      # tag: set via helm args or override
+
+  server:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-server
+      # tag: set via helm args or override
+
+  imagePullSecrets: []
+
+  deployment:
+    replicas: 1
+
+  # Application environment variables
+  appEnv:
+    MARKETPLACE_SOURCE: ""
+    FEATURED_PLUGIN_IDS: ""
+    LOG_LEVEL: "INFO"
+
+  # App URL - set by parent chart based on ingress configuration
+  appUrl: ""
+
+  # PostgreSQL database configuration
+  database:
+    # Full hostname of the PostgreSQL server
+    # When deployed as subchart, this is set by parent chart
+    host: ""
+    port: "5432"
+    user: "postgres"
+    name: "plugindir"
+    secretName: "postgres-password"
+    secretKey: "password"
+
+  # Authentication configuration
+  auth:
+    existingSecret: plugin-directory-secrets
+    identitySharedSecretKey: identity-shared-secret
+    sessionSecretKey: session-secret
+
+  # OIDC configuration — reuses the allhands Keycloak client via the
+  # shared keycloak-realm secret (same client the main app uses).
+  oidc:
+    issuerUrl: ""
+    realmSecretName: "keycloak-realm"
+    realmSecretKey: "realm-name"
+    clientIdKey: "client-id"
+    clientSecretKey: "client-secret"
+
+  # Datadog configuration
+  datadog:
+    enabled: false
+    env: "dev"
+
+  # Env vars passed directly to containers (overrides defaults)
+  env: {}
+
 automationServiceKey:
   enabled: false
   existingSecret: automation-service-key
