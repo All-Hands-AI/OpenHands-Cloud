@@ -22,6 +22,7 @@ spec:
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}
         {{- end }}
+        {{- include "openhands.caBundle.checksumAnnotation" . | nindent 8 }}
     spec:
       terminationGracePeriodSeconds: 60
       serviceAccountName: {{ .Values.serviceAccount.name }}
@@ -34,6 +35,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
+        {{- include "openhands.caBundle.volume" . | nindent 8 }}
         {{- if .Values.allowedUsers }}
         - name: user-waitlist
           configMap:
@@ -113,9 +115,11 @@ spec:
           periodSeconds: 10
           failureThreshold: 3
         volumeMounts:
+          {{- include "openhands.caBundle.volumeMount" . | nindent 10 }}
           {{- if .Values.allowedUsers }}
           - name: user-waitlist
             mountPath: /app/user-waitlist
           {{- end }}
         env:
         {{- include "openhands.env" . | nindent 8 }}
+        {{- include "openhands.caBundle.env" . | nindent 8 }}
