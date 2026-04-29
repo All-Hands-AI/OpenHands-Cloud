@@ -297,6 +297,7 @@ spec:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
     gitlab:
       enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
+      host: 'repl{{ ConfigOption "gitlab_host" }}'
 
     automation:
       image:

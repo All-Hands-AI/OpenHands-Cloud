@@ -177,6 +177,8 @@
     secretKeyRef:
       name: gitlab-app
       key: client-secret
+- name: GITLAB_HOST
+  value: {{ .Values.gitlab.host | default "gitlab.com" | quote }}
 {{- end }}
 {{- if .Values.bitbucket.enabled }}
 - name: BITBUCKET_APP_CLIENT_ID

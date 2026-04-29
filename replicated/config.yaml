@@ -397,6 +397,12 @@ spec:
           help_text: Enable GitLab OAuth for user authentication
           type: bool
           default: "0"
+        - name: gitlab_host
+          title: GitLab Host
+          help_text: Hostname of your GitLab instance (e.g. gitlab.example.com). Leave blank to use gitlab.com.
+          type: text
+          default: "gitlab.com"
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
         - name: gitlab_oauth_client_id
           title: GitLab OAuth Client ID
           help_text: Client ID from your GitLab OAuth App

@@ -84,6 +84,8 @@ githubProxy:
 
 gitlab:
   enabled: false
+  # Host for self-hosted GitLab (e.g. gitlab.example.com). Defaults to gitlab.com.
+  host: ""
 
 bitbucket:
   enabled: false
