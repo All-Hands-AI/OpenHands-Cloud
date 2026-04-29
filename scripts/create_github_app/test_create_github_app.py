@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import create_github_app
 from create_github_app import (
+    SCRIPT_DIR,
     build_app_manifest,
     create_callback_app,
     create_github_app as create_github_app_func,
@@ -32,7 +33,7 @@ from create_github_app import (
     parse_args,
     start_callback_server,
     stop_callback_server,
-    SCRIPT_DIR,
+    wait_for_app_installation,
 )
 
 
@@ -768,6 +769,34 @@ class TestMainWithCallbackServer:
 
         # input() should never be called
         mock_input.assert_not_called()
+
+
+class TestWaitForAppInstallation:
+    """Tests for wait_for_app_installation()."""
+
+    def test_returns_false_when_github_authentication_fails(self, capsys):
+        """Test that authentication errors are surfaced as warnings instead of crashing."""
+        with patch("create_github_app.Auth.AppAuth", side_effect=RuntimeError("bad auth")):
+            assert wait_for_app_installation(app_id=123, private_key="pem", timeout=1) is False
+
+        captured = capsys.readouterr()
+        assert "could not authenticate with github api" in captured.out.lower()
+        assert "bad auth" in captured.out
+
+    def test_returns_false_when_installation_check_fails(self, capsys):
+        """Test that installation polling errors are surfaced as warnings instead of crashing."""
+        mock_integration = MagicMock()
+        mock_integration.get_installations.side_effect = RuntimeError("api unavailable")
+
+        with patch("create_github_app.Auth.AppAuth"):
+            with patch("create_github_app.GithubIntegration", return_value=mock_integration):
+                with patch("create_github_app.time.time", side_effect=[0, 0]):
+                    with patch("create_github_app.time.sleep"):
+                        assert wait_for_app_installation(app_id=123, private_key="pem", timeout=1) is False
+
+        captured = capsys.readouterr()
+        assert "error checking installations" in captured.out.lower()
+        assert "api unavailable" in captured.out
 
 
 class TestMainInstallationFlow:

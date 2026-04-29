@@ -251,12 +251,21 @@ def wait_for_app_installation(
     poll_interval: float = 5.0,
 ) -> bool:
     """Poll GitHub API until the app has at least one installation or timeout."""
-    auth = Auth.AppAuth(app_id, private_key)
-    gi = GithubIntegration(auth=auth)
+    try:
+        auth = Auth.AppAuth(app_id, private_key)
+        gi = GithubIntegration(auth=auth)
+    except Exception as exc:
+        print(f"Warning: Could not authenticate with GitHub API: {exc}")
+        return False
+
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if list(gi.get_installations()):
-            return True
+        try:
+            if list(gi.get_installations()):
+                return True
+        except Exception as exc:
+            print(f"Warning: Error checking installations: {exc}")
+            return False
         time.sleep(poll_interval)
     return False
 
