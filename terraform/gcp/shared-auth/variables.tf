@@ -1,0 +1,94 @@
+# -----------------------------------------------------------------------------
+# Variables for Shared Keycloak Infrastructure
+# -----------------------------------------------------------------------------
+
+variable "namespace" {
+  description = "Kubernetes namespace for shared auth services"
+  type        = string
+  default     = "shared-auth"
+}
+
+variable "keycloak_hostname" {
+  description = "Hostname for Keycloak ingress"
+  type        = string
+  default     = "auth.ohe-staging.platform-team.all-hands.dev"
+}
+
+variable "keycloak_admin_password" {
+  description = "Admin password for Keycloak"
+  type        = string
+  sensitive   = true
+}
+
+variable "keycloak_chart_version" {
+  description = "Version of the Bitnami Keycloak Helm chart"
+  type        = string
+  default     = "24.4.5"
+}
+
+# -----------------------------------------------------------------------------
+# Realm and Client Configuration
+# -----------------------------------------------------------------------------
+
+variable "realm_name" {
+  description = "Name of the Keycloak realm for staging"
+  type        = string
+  default     = "staging"
+}
+
+variable "client_id" {
+  description = "Client ID for the OpenHands staging client"
+  type        = string
+  default     = "openhands-staging"
+}
+
+variable "client_secret" {
+  description = "Client secret for the OpenHands staging client"
+  type        = string
+  sensitive   = true
+}
+
+# -----------------------------------------------------------------------------
+# PostgreSQL Configuration
+# Uses the shared PostgreSQL instance from openhands namespace
+# -----------------------------------------------------------------------------
+
+variable "postgres_host" {
+  description = "PostgreSQL host (can be cross-namespace service DNS)"
+  type        = string
+  default     = "openhands-postgresql.openhands.svc.cluster.local"
+}
+
+variable "postgres_database" {
+  description = "PostgreSQL database name for Keycloak"
+  type        = string
+  default     = "shared_keycloak"
+}
+
+variable "postgres_username" {
+  description = "PostgreSQL username"
+  type        = string
+  default     = "postgres"
+}
+
+variable "postgres_password" {
+  description = "PostgreSQL password"
+  type        = string
+  sensitive   = true
+}
+
+# -----------------------------------------------------------------------------
+# Ingress Configuration
+# -----------------------------------------------------------------------------
+
+variable "ingress_class" {
+  description = "Ingress class name"
+  type        = string
+  default     = "traefik"
+}
+
+variable "tls_secret_name" {
+  description = "Name of the TLS secret for Keycloak ingress"
+  type        = string
+  default     = "ohe-staging-wildcard-tls"
+}

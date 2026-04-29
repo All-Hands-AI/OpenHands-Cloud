@@ -1,0 +1,139 @@
+# -----------------------------------------------------------------------------
+# Shared Keycloak Helm Values
+# 
+# This Keycloak instance serves all staging branch deployments at:
+#   https://auth.ohe-staging.platform-team.all-hands.dev
+# -----------------------------------------------------------------------------
+
+replicaCount: 1
+production: true
+proxyHeaders: forwarded
+
+# Use stable fullname for service discovery
+fullnameOverride: keycloak
+
+# -----------------------------------------------------------------------------
+# Image Configuration
+# -----------------------------------------------------------------------------
+image:
+  registry: public.ecr.aws
+  repository: bitnami/keycloak
+  tag: "26"
+
+# -----------------------------------------------------------------------------
+# Authentication
+# -----------------------------------------------------------------------------
+auth:
+  adminUser: admin
+  existingSecret: keycloak-admin
+  passwordSecretKey: admin-password
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+
+serviceAccount:
+  name: "keycloak-sa"
+
+# -----------------------------------------------------------------------------
+# External Database Configuration
+# Uses shared PostgreSQL from openhands namespace
+# -----------------------------------------------------------------------------
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: "${postgres_host}"
+  database: "${postgres_database}"
+  existingSecret: postgres-password
+  existingSecretUserKey: username
+  existingSecretPasswordKey: password
+
+# -----------------------------------------------------------------------------
+# Ingress Configuration
+# Stable hostname for all branch deployments to reference
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  hostname: "${hostname}"
+  ingressClassName: "${ingress_class}"
+  path: /auth
+  pathType: Prefix
+  servicePort: 80
+  tls: true
+  extraTls:
+    - hosts:
+        - "${hostname}"
+      secretName: "${tls_secret_name}"
+
+# -----------------------------------------------------------------------------
+# Keycloak Features and Configuration
+# -----------------------------------------------------------------------------
+extraEnvVars:
+  - name: KC_FEATURES
+    value: token-exchange,admin-fine-grained-authz
+  - name: KC_HTTP_ENABLED
+    value: "true"
+  - name: KC_PROXY_HEADERS
+    value: "xforwarded"
+  - name: KC_HTTP_RELATIVE_PATH
+    value: "/auth"
+  - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+    value: "true"
+
+# -----------------------------------------------------------------------------
+# Health Checks
+# -----------------------------------------------------------------------------
+customReadinessProbe:
+  httpGet:
+    path: /auth/realms/master
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+# -----------------------------------------------------------------------------
+# Init Container - Wait for Database
+# -----------------------------------------------------------------------------
+initContainers:
+  - name: wait-for-db
+    image: 'public.ecr.aws/bitnami/postgresql:latest'
+    command: ['sh', '-c']
+    args:
+      - |
+        echo "Waiting for database \"$KEYCLOAK_DATABASE_NAME\" at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
+        until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" > /dev/null 2>&1; do
+          echo "PostgreSQL is unavailable - sleeping 5s"
+          sleep 5
+        done
+        echo "PostgreSQL is ready!"
+    envFrom:
+      - configMapRef:
+          name: keycloak-env-vars
+    env:
+      - name: DB_USER
+        valueFrom:
+          secretKeyRef:
+            name: postgres-password
+            key: username
+      - name: DB_PASS
+        valueFrom:
+          secretKeyRef:
+            name: postgres-password
+            key: password
+
+# -----------------------------------------------------------------------------
+# Resource Limits
+# -----------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
