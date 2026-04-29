@@ -168,7 +168,19 @@ def create_callback_app() -> tuple[FastAPI, CodeHolder]:
 <body>
 <p>Created app! Navigating to install page...</p>
 <script>
+var attempts = 0;
+var maxAttempts = 60;
+
+function showInstallUrlError() {
+  document.body.innerHTML = '<h1>Error</h1><p>Installation URL not available. Check the terminal for instructions.</p>';
+}
+
 function checkInstallUrl() {
+  if (attempts++ >= maxAttempts) {
+    showInstallUrlError();
+    return;
+  }
+
   fetch('/installation-url')
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -177,6 +189,9 @@ function checkInstallUrl() {
       } else {
         setTimeout(checkInstallUrl, 1000);
       }
+    })
+    .catch(function() {
+      showInstallUrlError();
     });
 }
 setTimeout(checkInstallUrl, 500);

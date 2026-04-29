@@ -602,6 +602,27 @@ class TestCallbackServer:
 
         assert "/installation-url" in response.text
 
+    def test_callback_endpoint_limits_install_url_polling_attempts(self):
+        """Test that /callback stops polling after a bounded number of attempts."""
+        app, _ = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback?code=some-code")
+
+        assert "var attempts = 0;" in response.text
+        assert "var maxAttempts = 60;" in response.text
+        assert "if (attempts++ >= maxAttempts)" in response.text
+
+    def test_callback_endpoint_shows_timeout_error_message(self):
+        """Test that /callback renders a helpful message if install URL polling times out."""
+        app, _ = create_callback_app()
+        client = TestClient(app)
+
+        response = client.get("/callback?code=some-code")
+
+        assert "Installation URL not available. Check the terminal for instructions." in response.text
+
+
     def test_callback_endpoint_redirects_same_tab(self):
         """Test that /callback redirects in the same tab (window.location.href) not a new window."""
         app, _ = create_callback_app()
@@ -809,7 +830,7 @@ class TestMainInstallationFlow:
             main(base_domain="example.com", dry_run=False, app_name="my-app")
 
         captured = capsys.readouterr()
-        assert "GitHub OAuth Client ID: Iv1.abc" in captured.out
+        assert "GitHub App Client ID: Iv1.abc" in captured.out
 
 
 if __name__ == "__main__":
