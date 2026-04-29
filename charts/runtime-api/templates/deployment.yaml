@@ -8,6 +8,12 @@ spec:
   {{- if and (not .Values.autoscaling.enabled) .Values.replicaCount }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  minReadySeconds: {{ .Values.deployment.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.deployment.strategy.maxUnavailable }}
+      maxSurge: {{ .Values.deployment.strategy.maxSurge }}
   selector:
     matchLabels:
       {{- include "runtime-api.selectorLabels" . | nindent 6 }}
@@ -25,7 +31,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}
+      {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled .Values.caBundle.enabled }}
       volumes:
         {{- if .Values.warmRuntimes.enabled }}
         - name: warm-runtimes-config
@@ -36,6 +42,11 @@ spec:
         - name: ingress-base-config
           configMap:
             name: {{ include "runtime-api.fullname" . }}-ingress-base
+        {{- end }}
+        {{- if .Values.caBundle.enabled }}
+        - name: openhands-ca-bundle
+          configMap:
+            name: {{ .Values.caBundle.name }}
         {{- end }}
       {{- end }}
       initContainers:
@@ -50,6 +61,12 @@ spec:
               protocol: TCP
           env:
             {{- include "runtime-api.env" . | nindent 12 }}
+            {{- if .Values.caBundle.enabled }}
+            - name: SSL_CERT_FILE
+              value: {{ .Values.caBundle.mountPath }}/{{ .Values.caBundle.key }}
+            - name: REQUESTS_CA_BUNDLE
+              value: {{ .Values.caBundle.mountPath }}/{{ .Values.caBundle.key }}
+            {{- end }}
             - name: DB_POOL_SIZE
               value: {{ .Values.database.poolSize.api | default 5 | quote }}
             - name: DB_MAX_OVERFLOW
@@ -69,21 +86,37 @@ spec:
                   key: admin-password
             
 
-          livenessProbe:
+          {{- if .Values.probes.startup.enabled }}
+          startupProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.probes.startup.path }}
               port: http
-            initialDelaySeconds: 15
-            periodSeconds: 20
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.probes.readiness.path }}
               port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}
+          {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled .Values.caBundle.enabled }}
           volumeMounts:
           {{- if .Values.warmRuntimes.enabled }}
             - name: warm-runtimes-config
@@ -92,5 +125,10 @@ spec:
           {{- if .Values.ingressBase.enabled }}
             - name: ingress-base-config
               mountPath: /ingress-base
+          {{- end }}
+          {{- if .Values.caBundle.enabled }}
+            - name: openhands-ca-bundle
+              mountPath: {{ .Values.caBundle.mountPath }}
+              readOnly: true
           {{- end }}
           {{- end }}

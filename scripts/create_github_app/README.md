@@ -41,8 +41,8 @@ No manual copy-paste required - the script automatically captures the authorizat
 After successful creation, you'll receive:
 
 - **GitHub App ID** - The numeric ID of your app
-- **GitHub OAuth Client ID** - For OAuth authentication
-- **GitHub OAuth Client Secret** - Keep this secret!
+- **GitHub App Client ID** - Used by the GitHub App authentication flow
+- **GitHub App Client Secret** - Keep this secret!
 - **GitHub App Webhook Secret** - For webhook verification
 - **Private Key** - Saved to `./keys/<app-name>.pem`
 

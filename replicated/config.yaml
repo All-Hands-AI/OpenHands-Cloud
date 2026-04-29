@@ -33,6 +33,13 @@ spec:
           default: "app.example.com"
           when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
           required: true
+        - name: analytics_hostname
+          title: Analytics Hostname
+          help_text: The hostname for the Analytics service
+          type: text
+          default: "analytics.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
         - name: auth_hostname
           title: Authentication Hostname
           help_text: The hostname for Keycloak authentication service
@@ -75,8 +82,8 @@ spec:
           type: file
           required: true
         - name: tls_ca_certificate
-          title: TLS CA Certificate (Recommended)
-          help_text: Upload your CA certificate or certificate chain file (.crt or .pem) - recommended for proper certificate validation
+          title: Additional Trusted CA Certificates
+          help_text: Upload a root CA certificate in PEM format. Concatenate multiple PEM-encoded certificates in the same file to add them all to the cluster's default trust store. If the TLS certificate provided above is self-signed, include the CA that signed it here so components inside the cluster can validate it.
           type: file
           required: false
           recommended: true
@@ -323,22 +330,22 @@ spec:
 
     - name: github_authentication
       title: GitHub Authentication
-      description: Configure GitHub OAuth and App integration for user authentication
+      description: Configure GitHub App integration for user authentication. Note that this is a GitHub App and NOT a GitHub OAuth app.
       items:
         - name: github_auth_enabled
           title: Enable GitHub Authentication
-          help_text: Enable GitHub OAuth for user authentication
+          help_text: Enable GitHub App authentication for user sign-in
           type: bool
           default: "0"
         - name: github_oauth_client_id
-          title: GitHub OAuth Client ID
-          help_text: Client ID from your GitHub OAuth App
+          title: GitHub App Client ID
+          help_text: Client ID from your GitHub App
           type: text
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
         - name: github_oauth_client_secret
-          title: GitHub OAuth Client Secret
-          help_text: Client Secret from your GitHub OAuth App
+          title: GitHub App Client Secret
+          help_text: Client Secret from your GitHub App
           type: password
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
@@ -462,6 +469,19 @@ spec:
       title: Sandbox Configuration
       description: OpenHands conversations run in isolated sandboxes. Configure sandbox resources and lifecycle settings here. Adjust these settings based on your expected workload and the size of your cluster.
       items:
+        - name: runtime_routing_mode
+          title: Sandbox Routing Mode
+          help_text: |
+            How sandbox URLs are constructed.
+            Subdomain routes each sandbox at `{id}.{runtime_base}`. The uploaded TLS cert must have a SAN for `*.{runtime_base}`.
+            Path-based routes every sandbox at `{runtime_base}/{id}`. The uploaded TLS cert must have a SAN for `{runtime_base}`.
+          type: select_one
+          default: "subdomain"
+          items:
+            - name: "subdomain"
+              title: "Subdomain"
+            - name: "path"
+              title: "Path-based"
         - name: sandbox_idle_seconds
           title: Idle Time (seconds)
           help_text: How long (in seconds) before idle conversations are paused. Pausing a conversation frees up memory and CPU resources.
@@ -525,6 +545,15 @@ spec:
             regex:
               pattern: ^[1-9][0-9]*m$
               message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+        - name: sandbox_warm_runtime_count
+          title: Warm Runtime Count
+          help_text: Number of warm runtime sandboxes to keep ready so new conversations start instantly. Set to 0 to disable and cold-start each sandbox.
+          type: text
+          default: "1"
+          validation:
+            regex:
+              pattern: ^(0|[1-9][0-9]*)$
+              message: Must be a non-negative integer
 
     - name: proxy_configuration
       title: Proxy Configuration
@@ -575,5 +604,9 @@ spec:
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
-      when: false
       items:
+        - name: analytics_enabled
+          title: Enable Analytics
+          help_text: Enable analytics for LLM observability and tracing
+          type: bool
+          default: "0"

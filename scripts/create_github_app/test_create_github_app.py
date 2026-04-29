@@ -250,6 +250,22 @@ class TestBuildAppManifest:
         for url in manifest["callback_urls"]:
             assert "localhost" not in url
 
+    @pytest.mark.parametrize("event", [
+        "issue_comment",
+        "pull_request",
+        "pull_request_review_comment",
+    ])
+    def test_manifest_subscribes_to_event(self, event):
+        """Test that manifest subscribes to required GitHub events."""
+        manifest = build_app_manifest(base_domain="example.com")
+        assert event in manifest["default_events"]
+
+    def test_manifest_has_only_expected_events(self):
+        """Test that manifest subscribes to exactly the expected events, no more."""
+        manifest = build_app_manifest(base_domain="example.com")
+        expected = {"issue_comment", "pull_request", "pull_request_review_comment"}
+        assert set(manifest["default_events"]) == expected
+
 
 class TestGenerateManifestHtml:
     """Tests for generate_manifest_html function."""
@@ -438,8 +454,8 @@ class TestMainInteractiveFlow:
 
         captured = capsys.readouterr()
         # Verify labels
-        assert "GitHub OAuth Client ID: Iv1.abc123" in captured.out
-        assert "GitHub OAuth Client Secret: secret456" in captured.out
+        assert "GitHub App Client ID: Iv1.abc123" in captured.out
+        assert "GitHub App Client Secret: secret456" in captured.out
         assert "GitHub App ID: 123" in captured.out
         assert "GitHub App Webhook Secret: whsec789" in captured.out
 

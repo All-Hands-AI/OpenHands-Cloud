@@ -45,7 +45,7 @@
 - name: AWS_SECRET_ACCESS_KEY
   value: {{ (index .Values.minio.svcaccts 0).secretKey }}
 - name: AWS_S3_ENDPOINT
-  value: {{ printf "%s-minio:9000" .Release.Name }}
+  value: {{ printf "http://%s-minio:9000" .Release.Name }}
 {{- else }}
 # Using external minio (e.g., parent chart's minio instance)
 - name: AWS_ACCESS_KEY_ID
@@ -79,6 +79,14 @@
     secretKeyRef:
       name: {{ .Values.serviceKeyFromSecret.name }}
       key: {{ .Values.serviceKeyFromSecret.key }}
+{{- end }}
+# Automation webhook secret for verifying webhook signatures
+{{- if .Values.automationWebhookSecretFromSecret }}
+- name: AUTOMATION_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationWebhookSecretFromSecret.name }}
+      key: {{ .Values.automationWebhookSecretFromSecret.key }}
 {{- end }}
 # Datadog configuration
 - name: DD_AGENT_HOST
