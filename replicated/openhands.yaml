@@ -34,6 +34,11 @@ spec:
       existingSecret: automation-service-key
       secretKey: automation-service-key
 
+    automationWebhookSecret:
+      enabled: true
+      existingSecret: automation-webhook-secret
+      secretKey: webhook-secret
+
     ingress:
       enabled: true
       host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
@@ -310,6 +315,8 @@ spec:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/automation'
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
+      openhandsApiUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+      automationBaseUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
       database:
         createDatabaseUser: true
         host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}openhands-postgresql{{repl end}}'
