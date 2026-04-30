@@ -184,7 +184,20 @@ spec:
           required: true
         - name: azure_endpoint
           title: Azure OpenAI Endpoint
-          help_text: Your Azure OpenAI endpoint URL
+          help_text: Your Azure OpenAI endpoint URL (e.g., https://eastus2.api.cognitive.microsoft.com or https://my-resource.openai.azure.com)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_api_version
+          title: Azure OpenAI API Version
+          help_text: The API version for your Azure OpenAI deployment
+          type: text
+          default: "2024-10-21"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_deployment_name
+          title: Azure OpenAI Deployment Name
+          help_text: The name of your Azure OpenAI model deployment (set when you deployed the model in Azure)
           type: text
           when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
           required: true
@@ -414,6 +427,34 @@ spec:
           help_text: Client Secret from your GitLab OAuth App
           type: password
           when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+          required: true
+
+    - name: slack_configuration
+      title: Enable Slack
+      description: Enable Slack
+      items:
+        - name: slack_enabled
+          title: Enable Slack Integration
+          help_text: Configure to allow the use of @OpenHands in Slack
+          type: bool
+          default: "0"
+        - name: slack_client_id
+          title: Slack Client ID
+          help_text: Client ID from your Slack App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+        - name: slack_client_secret
+          title: Slack Client Secret
+          help_text: Client Secret from your Slack App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+        - name: slack_signing_secret
+          title: Slack Signing Secret
+          help_text: Signing Secret from your Slack App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
           required: true
 
     - name: database_configuration

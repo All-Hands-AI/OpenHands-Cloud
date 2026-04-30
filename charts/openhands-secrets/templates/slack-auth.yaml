@@ -1,0 +1,18 @@
+{{- if or .Values.config.slack_client_id .Values.config.slack_client_secret .Values.config.slack_signing_secret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: slack-auth
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  {{- if .Values.config.slack_client_id }}
+  client-id: {{ .Values.config.slack_client_id | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.slack_client_secret }}
+  client-secret: {{ .Values.config.slack_client_secret | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.slack_signing_secret }}
+  signing-secret: {{ .Values.config.slack_signing_secret | b64enc | quote }}
+  {{- end }}
+{{- end }}
