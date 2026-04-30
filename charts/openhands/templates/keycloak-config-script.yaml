@@ -93,7 +93,8 @@ data:
     # Bitbucket Data Center needs a placeholder host when not configured, otherwise
     # the OAuth2 provider creation fails with an invalid host.
     export BITBUCKET_DATA_CENTER_HOST=${BITBUCKET_DATA_CENTER_HOST:-"placeholder.invalid"}
-    envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /realm-template/allhands-realm-github-provider.json.tmpl > /tmp/allhands-realm-github-provider.json
+    export GITLAB_HOST=${GITLAB_HOST:-"gitlab.com"}
+    envsubst '$WEB_HOST,$AUTH_WEB_HOST,$KEYCLOAK_REALM_NAME,$KEYCLOAK_CLIENT_ID,$KEYCLOAK_CLIENT_SECRET,$GITHUB_APP_CLIENT_ID,$GITHUB_APP_CLIENT_SECRET,$GITLAB_APP_CLIENT_ID,$GITLAB_APP_CLIENT_SECRET,$GITLAB_HOST,$BITBUCKET_APP_CLIENT_ID,$BITBUCKET_APP_CLIENT_SECRET,$GITHUB_BASE_URL,$KEYCLOAK_SMTP_PASSWORD,$BITBUCKET_DATA_CENTER_HOST,$BITBUCKET_DATA_CENTER_CLIENT_ID,$BITBUCKET_DATA_CENTER_CLIENT_SECRET'< /realm-template/allhands-realm-github-provider.json.tmpl > /tmp/allhands-realm-github-provider.json
     REALM_JSON=/tmp/allhands-realm-github-provider.json
 
     if [ "$ERROR_MESSAGE" = "Realm not found." ]; then
@@ -121,21 +122,30 @@ data:
       keycloak_api_call "curl -s -X PUT \"$KC_REALM\" $AUTH $CT --data \"@/tmp/realm-settings.json\""
       echo "  Updated realm settings."
 
-      # 2. Update the allhands client in-place by UUID.
-      ALLHANDS_UUID=$(curl -s "$KC_REALM/clients?clientId=$KEYCLOAK_CLIENT_ID" \
-        -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
-      if [ -z "$ALLHANDS_UUID" ] || [ "$ALLHANDS_UUID" = "null" ]; then
-        echo "Error: Could not find client $KEYCLOAK_CLIENT_ID"
-        exit 1
-      fi
-      jq --arg cid "$KEYCLOAK_CLIENT_ID" '.clients[] | select(.clientId == $cid)' \
-        $REALM_JSON > /tmp/allhands-client.json
-      if [ ! -s /tmp/allhands-client.json ]; then
-        echo "Error: Client $KEYCLOAK_CLIENT_ID not found in realm template"
-        exit 1
-      fi
-      keycloak_api_call "curl -s -X PUT \"$KC_REALM/clients/$ALLHANDS_UUID\" $AUTH $CT --data \"@/tmp/allhands-client.json\""
-      echo "  Updated client $KEYCLOAK_CLIENT_ID."
+      # 2. Upsert custom clients from the realm template (skip Keycloak built-ins).
+      #    PUT by UUID if the client already exists, POST otherwise. Strip the
+      #    template's hardcoded .id so POST lets Keycloak assign a fresh UUID.
+      BUILTIN_CLIENTS="account account-console admin-cli broker realm-management security-admin-console"
+      for cid in $(jq -r '.clients[].clientId' $REALM_JSON); do
+        case " $BUILTIN_CLIENTS " in
+          *" $cid "*) continue ;;
+        esac
+        jq --arg cid "$cid" '.clients[] | select(.clientId == $cid) | del(.id)' \
+          $REALM_JSON > /tmp/client.json
+        if [ ! -s /tmp/client.json ]; then
+          echo "Error: Client $cid not found in realm template"
+          exit 1
+        fi
+        EXISTING_UUID=$(curl -s "$KC_REALM/clients?clientId=$cid" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+        if [ -n "$EXISTING_UUID" ] && [ "$EXISTING_UUID" != "null" ]; then
+          keycloak_api_call "curl -s -X PUT \"$KC_REALM/clients/$EXISTING_UUID\" $AUTH $CT --data \"@/tmp/client.json\""
+          echo "  Updated client: $cid"
+        else
+          keycloak_api_call "curl -s -X POST \"$KC_REALM/clients\" $AUTH $CT --data \"@/tmp/client.json\""
+          echo "  Created client: $cid"
+        fi
+      done
 
       # 3. Update or create identity providers by alias.
       EXISTING_IDPS=$(curl -s "$KC_REALM/identity-provider/instances" \

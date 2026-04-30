@@ -54,7 +54,7 @@ spec:
         # this is what we need to use for real deployments
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
         # repository: 'ghcr.io/openhands/agent-server'
-        tag: '1.16.1-python'
+        tag: '1.19.0-python'
 
     keycloak:
       enabled: true
@@ -234,7 +234,7 @@ spec:
         count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
         configs:
           - name: default
-            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.16.1-python'
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.19.0-python'
             working_dir: "/workspace"
             environment:
               LOG_JSON: "1"
@@ -297,6 +297,7 @@ spec:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
     gitlab:
       enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
+      host: 'repl{{ ConfigOption "gitlab_host" }}'
     slack:
       enabled: repl{{ ConfigOptionEquals "slack_enabled" "1" }}
 
@@ -339,6 +340,9 @@ spec:
         runtime-api:
           databaseMigrations:
             createDatabases: true
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: true
         postgresql:
           enabled: true
           auth:
@@ -375,6 +379,9 @@ spec:
             createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
           env:
             DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -388,7 +395,6 @@ spec:
           webhookSecret: '{{repl ConfigOption "github_app_webhook_secret"}}'
           privateKey: |
             {{repl ConfigOptionData "github_app_private_key" | nindent 12}}
-
     - when: '{{repl ConfigOptionEquals "slack_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -396,7 +402,20 @@ spec:
           ENABLE_V1_SLACK_RESOLVER: "true"
         slack:
           clientId: 'repl{{ ConfigOption "slack_client_id" }}'
-
+    - when: '{{repl ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        env:
+          ENABLE_V1_GITLAB_RESOLVER: "true"
+        gitlabWebhookInstallation:
+          enabled: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
@@ -417,11 +436,11 @@ spec:
         runtime:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
-            tag: '1.16.1-python'
+            tag: '1.19.0-python'
           warmRuntimes:
             configs:
               - name: default
-                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.16.1-python'
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.0-python'
                 working_dir: "/workspace"
                 environment:
                   LOG_JSON: "1"
@@ -531,6 +550,22 @@ spec:
             HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
             NO_PROXY: '{{repl $computedNoProxy}}'
             SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
+    - when: '{{repl ConfigOptionEquals "llm_provider" "azure" }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/azure-{{repl ConfigOption "azure_deployment_name"}}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"AZURE_API_KEY\": \"%s\", \"AZURE_API_BASE\": \"%s\", \"AZURE_API_VERSION\": \"%s\"}" (ConfigOption "azure_api_key") (ConfigOption "azure_endpoint") (ConfigOption "azure_api_version") }}'
+        litellm-helm:
+          proxy_config:
+            model_list:
+              - model_name: 'azure-{{repl ConfigOption "azure_deployment_name"}}'
+                litellm_params:
+                  model: 'azure/{{repl ConfigOption "azure_deployment_name"}}'
+                  api_key: os.environ/AZURE_API_KEY
+                  api_base: os.environ/AZURE_API_BASE
+                  api_version: os.environ/AZURE_API_VERSION
+
     - when: '{{repl ConfigOptionEquals "google_api_type" "vertex" }}'
       recursiveMerge: true
       values:
@@ -640,6 +675,29 @@ spec:
           rabbitmq:
             persistence:
               storageClass: "openebs-hostpath"
+    - when: '{{repl ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        plugin-directory:
+          enabled: true
+          appUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/plugins'
+          # OpenHands API host (same host as appUrl, without the /plugins path).
+          # The curl template appends /api/v1/app-conversations to this base.
+          curlApiUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          appEnv:
+            MARKETPLACE_SOURCE: '{{repl ConfigOption "plugin_directory_marketplace_source"}}'
+          database:
+            host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+          oidc:
+            issuerUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
+          client:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-client'
+          server:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-server'
+          imagePullSecrets:
+            - name: '{{repl ImagePullSecretName }}'
 
   builder:
     keycloak:

@@ -184,7 +184,20 @@ spec:
           required: true
         - name: azure_endpoint
           title: Azure OpenAI Endpoint
-          help_text: Your Azure OpenAI endpoint URL
+          help_text: Your Azure OpenAI endpoint URL (e.g., https://eastus2.api.cognitive.microsoft.com or https://my-resource.openai.azure.com)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_api_version
+          title: Azure OpenAI API Version
+          help_text: The API version for your Azure OpenAI deployment
+          type: text
+          default: "2024-10-21"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_deployment_name
+          title: Azure OpenAI Deployment Name
+          help_text: The name of your Azure OpenAI model deployment (set when you deployed the model in Azure)
           type: text
           when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
           required: true
@@ -299,6 +312,16 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
+        - name: plugin_directory_identity_shared_secret
+          title: Plugin Directory Identity Shared Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: plugin_directory_session_secret
+          title: Plugin Directory Session Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication
@@ -359,6 +382,12 @@ spec:
             regex:
               pattern: ^[0-9]+$
               message: Must be a numeric value
+        - name: github_app_slug
+          title: GitHub App Slug
+          help_text: Slug of your GitHub App (the human-readable identifier in the app's URL)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
         - name: github_app_webhook_secret
           title: GitHub App Webhook Secret
           help_text: Webhook secret from your GitHub App
@@ -381,6 +410,12 @@ spec:
           help_text: Enable GitLab OAuth for user authentication
           type: bool
           default: "0"
+        - name: gitlab_host
+          title: GitLab Host
+          help_text: Hostname of your GitLab instance (e.g. gitlab.example.com). Leave blank to use gitlab.com.
+          type: text
+          default: "gitlab.com"
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
         - name: gitlab_oauth_client_id
           title: GitLab OAuth Client ID
           help_text: Client ID from your GitLab OAuth App
@@ -628,6 +663,22 @@ spec:
               title: "Info (default)"
             - name: "DEBUG"
               title: "Debug"
+
+    - name: experimental
+      title: Experimental
+      description: Preview features that are still in development. Enable at your own risk.
+      items:
+        - name: plugin_directory_enabled
+          title: Enable Plugin Directory
+          help_text: Deploy the Plugin Directory marketplace, accessible at /plugins on your application hostname.
+          type: bool
+          default: "0"
+        - name: plugin_directory_marketplace_source
+          title: Marketplace Source
+          help_text: "URI of the plugin catalog to load. Supports github://owner/repo[@ref], https:// URLs to a catalog JSON file, or file:// paths."
+          type: text
+          when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+          required: true
 
     - name: advanced_options
       title: Advanced Options

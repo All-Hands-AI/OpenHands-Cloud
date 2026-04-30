@@ -84,6 +84,8 @@ githubProxy:
 
 gitlab:
   enabled: false
+  # Host for self-hosted GitLab (e.g. gitlab.example.com). Defaults to gitlab.com.
+  host: ""
 
 bitbucket:
   enabled: false
@@ -114,7 +116,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-1890940
+  tag: cloud-1.25.1
 
 ingress:
   enabled: false
@@ -211,7 +213,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: 1.16.1-python
+    tag: 1.19.0-python
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -354,6 +356,23 @@ keycloak:
 laminar:
   # Enable this if you want to use laminar
   enabled: false
+
+  # Laminar project API key from K8s secret
+  # Used for Laminar monitoring/analytics
+  apiKeyFromSecret:
+    name: lmnr-project-api-key
+    key: LMNR_PROJECT_API_KEY
+
+  # Laminar base URL from K8s secret
+  # Used for Laminar monitoring/analytics
+  baseUrlFromSecret:
+    name: lmnr-base-url
+    key: LMNR_BASE_URL
+
+  # Force HTTP instead of HTTPS for Laminar connections
+  # Useful for development/test environments without TLS
+  forceHttp: true
+
   frontend:
     ingress:
       # Hostname for the frontend ingress
@@ -537,7 +556,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:1.16.1-python"
+        image: "ghcr.io/openhands/agent-server:1.19.0-python"
         working_dir: "/workspace"
         environment:
           LOG_JSON: "1"
@@ -600,6 +619,76 @@ jiraDc:
 
 linear:
   enabled: false
+
+# Plugin Directory subchart configuration
+# When enabled, deploys the plugin directory marketplace as a subchart
+# The plugin directory allows users to discover, browse, and review agent plugins
+# Routing is handled by parent chart via /plugins subpath
+plugin-directory:
+  enabled: false
+
+  databaseMigrations:
+    waitForDatabase: true
+    createDatabases: false
+    migrate: true
+
+  client:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-client
+      # tag: set via helm args or override
+
+  server:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-server
+      # tag: set via helm args or override
+
+  imagePullSecrets: []
+
+  deployment:
+    replicas: 1
+
+  # Application environment variables
+  appEnv:
+    MARKETPLACE_SOURCE: ""
+    FEATURED_PLUGIN_IDS: ""
+    LOG_LEVEL: "INFO"
+
+  # App URL - set by parent chart based on ingress configuration
+  appUrl: ""
+
+  # PostgreSQL database configuration
+  database:
+    # Full hostname of the PostgreSQL server
+    # When deployed as subchart, this is set by parent chart
+    host: ""
+    port: "5432"
+    user: "postgres"
+    name: "plugindir"
+    secretName: "postgres-password"
+    secretKey: "password"
+
+  # Authentication configuration
+  auth:
+    existingSecret: plugin-directory-secrets
+    identitySharedSecretKey: identity-shared-secret
+    sessionSecretKey: session-secret
+
+  # OIDC configuration — reuses the allhands Keycloak client via the
+  # shared keycloak-realm secret (same client the main app uses).
+  oidc:
+    issuerUrl: ""
+    realmSecretName: "keycloak-realm"
+    realmSecretKey: "realm-name"
+    clientIdKey: "client-id"
+    clientSecretKey: "client-secret"
+
+  # Datadog configuration
+  datadog:
+    enabled: false
+    env: "dev"
+
+  # Env vars passed directly to containers (overrides defaults)
+  env: {}
 
 automationServiceKey:
   enabled: false
