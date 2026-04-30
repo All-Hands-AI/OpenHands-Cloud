@@ -321,7 +321,7 @@ spec:
       filestore:
         type: local
       env:
-        LOCAL_STORAGE_PATH: /data/automation
+        LOCAL_STORAGE_PATH: /tmp/automation
       database:
         createDatabaseUser: true
         host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}openhands-postgresql{{repl end}}'
