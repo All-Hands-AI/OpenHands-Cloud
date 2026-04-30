@@ -160,11 +160,13 @@
     secretKeyRef:
       name: github-app
       key: client-secret
+{{- if .Values.github.appSlugEnabled }}
 - name: GITHUB_APP_SLUG
   valueFrom:
     secretKeyRef:
       name: github-app
       key: app-slug
+{{- end }}
 {{- end }}
 {{- if .Values.gitlab.enabled }}
 - name: GITLAB_APP_CLIENT_ID
