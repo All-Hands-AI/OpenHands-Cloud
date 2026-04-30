@@ -82,8 +82,8 @@ spec:
           type: file
           required: true
         - name: tls_ca_certificate
-          title: TLS CA Certificate (Recommended)
-          help_text: Upload your CA certificate or certificate chain file (.crt or .pem) - recommended for proper certificate validation
+          title: Additional Trusted CA Certificates
+          help_text: Upload a root CA certificate in PEM format. Concatenate multiple PEM-encoded certificates in the same file to add them all to the cluster's default trust store. If the TLS certificate provided above is self-signed, include the CA that signed it here so components inside the cluster can validate it.
           type: file
           required: false
           recommended: true
@@ -312,6 +312,16 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
+        - name: plugin_directory_identity_shared_secret
+          title: Plugin Directory Identity Shared Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: plugin_directory_session_secret
+          title: Plugin Directory Session Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication
@@ -372,6 +382,12 @@ spec:
             regex:
               pattern: ^[0-9]+$
               message: Must be a numeric value
+        - name: github_app_slug
+          title: GitHub App Slug
+          help_text: Slug of your GitHub App (the human-readable identifier in the app's URL)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
         - name: github_app_webhook_secret
           title: GitHub App Webhook Secret
           help_text: Webhook secret from your GitHub App
@@ -394,6 +410,12 @@ spec:
           help_text: Enable GitLab OAuth for user authentication
           type: bool
           default: "0"
+        - name: gitlab_host
+          title: GitLab Host
+          help_text: Hostname of your GitLab instance (e.g. gitlab.example.com). Leave blank to use gitlab.com.
+          type: text
+          default: "gitlab.com"
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
         - name: gitlab_oauth_client_id
           title: GitLab OAuth Client ID
           help_text: Client ID from your GitLab OAuth App
@@ -482,6 +504,19 @@ spec:
       title: Sandbox Configuration
       description: OpenHands conversations run in isolated sandboxes. Configure sandbox resources and lifecycle settings here. Adjust these settings based on your expected workload and the size of your cluster.
       items:
+        - name: runtime_routing_mode
+          title: Sandbox Routing Mode
+          help_text: |
+            How sandbox URLs are constructed.
+            Subdomain routes each sandbox at `{id}.{runtime_base}`. The uploaded TLS cert must have a SAN for `*.{runtime_base}`.
+            Path-based routes every sandbox at `{runtime_base}/{id}`. The uploaded TLS cert must have a SAN for `{runtime_base}`.
+          type: select_one
+          default: "subdomain"
+          items:
+            - name: "subdomain"
+              title: "Subdomain"
+            - name: "path"
+              title: "Path-based"
         - name: sandbox_idle_seconds
           title: Idle Time (seconds)
           help_text: How long (in seconds) before idle conversations are paused. Pausing a conversation frees up memory and CPU resources.
@@ -545,6 +580,15 @@ spec:
             regex:
               pattern: ^[1-9][0-9]*m$
               message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+        - name: sandbox_warm_runtime_count
+          title: Warm Runtime Count
+          help_text: Number of warm runtime sandboxes to keep ready so new conversations start instantly. Set to 0 to disable and cold-start each sandbox.
+          type: text
+          default: "1"
+          validation:
+            regex:
+              pattern: ^(0|[1-9][0-9]*)$
+              message: Must be a non-negative integer
 
     - name: proxy_configuration
       title: Proxy Configuration
@@ -591,6 +635,22 @@ spec:
               title: "Info (default)"
             - name: "DEBUG"
               title: "Debug"
+
+    - name: experimental
+      title: Experimental
+      description: Preview features that are still in development. Enable at your own risk.
+      items:
+        - name: plugin_directory_enabled
+          title: Enable Plugin Directory
+          help_text: Deploy the Plugin Directory marketplace, accessible at /plugins on your application hostname.
+          type: bool
+          default: "0"
+        - name: plugin_directory_marketplace_source
+          title: Marketplace Source
+          help_text: "URI of the plugin catalog to load. Supports github://owner/repo[@ref], https:// URLs to a catalog JSON file, or file:// paths."
+          type: text
+          when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+          required: true
 
     - name: advanced_options
       title: Advanced Options

@@ -31,7 +31,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}
+      {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled .Values.caBundle.enabled }}
       volumes:
         {{- if .Values.warmRuntimes.enabled }}
         - name: warm-runtimes-config
@@ -42,6 +42,11 @@ spec:
         - name: ingress-base-config
           configMap:
             name: {{ include "runtime-api.fullname" . }}-ingress-base
+        {{- end }}
+        {{- if .Values.caBundle.enabled }}
+        - name: openhands-ca-bundle
+          configMap:
+            name: {{ .Values.caBundle.name }}
         {{- end }}
       {{- end }}
       initContainers:
@@ -56,6 +61,12 @@ spec:
               protocol: TCP
           env:
             {{- include "runtime-api.env" . | nindent 12 }}
+            {{- if .Values.caBundle.enabled }}
+            - name: SSL_CERT_FILE
+              value: {{ .Values.caBundle.mountPath }}/{{ .Values.caBundle.key }}
+            - name: REQUESTS_CA_BUNDLE
+              value: {{ .Values.caBundle.mountPath }}/{{ .Values.caBundle.key }}
+            {{- end }}
             - name: DB_POOL_SIZE
               value: {{ .Values.database.poolSize.api | default 5 | quote }}
             - name: DB_MAX_OVERFLOW
@@ -105,7 +116,7 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled }}
+          {{- if or .Values.warmRuntimes.enabled .Values.ingressBase.enabled .Values.caBundle.enabled }}
           volumeMounts:
           {{- if .Values.warmRuntimes.enabled }}
             - name: warm-runtimes-config
@@ -114,5 +125,10 @@ spec:
           {{- if .Values.ingressBase.enabled }}
             - name: ingress-base-config
               mountPath: /ingress-base
+          {{- end }}
+          {{- if .Values.caBundle.enabled }}
+            - name: openhands-ca-bundle
+              mountPath: {{ .Values.caBundle.mountPath }}
+              readOnly: true
           {{- end }}
           {{- end }}

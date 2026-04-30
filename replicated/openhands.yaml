@@ -22,12 +22,12 @@ spec:
 
     env:
       LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
-      LLM_BASE_URL: "http://openhands-litellm:4000"
       REQUIRE_PAYMENT: 0
       ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: true
       LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
+      OH_AGENT_SERVER_ENV: '{"SSL_CERT_FILE": "/etc/openhands/ca-bundle/ca-bundle.crt", "REQUESTS_CA_BUNDLE": "/etc/openhands/ca-bundle/ca-bundle.crt", "GIT_SSL_CAINFO": "/etc/openhands/ca-bundle/ca-bundle.crt", "CURL_CA_BUNDLE": "/etc/openhands/ca-bundle/ca-bundle.crt", "NODE_EXTRA_CA_CERTS": "/etc/openhands/ca-bundle/ca-bundle.crt"}'
 
     ingress:
       enabled: true
@@ -52,8 +52,9 @@ spec:
     runtime:
       image:
         # this is what we need to use for real deployments
-        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime'
-        # repository: 'ghcr.io/openhands/runtime'
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
+        # repository: 'ghcr.io/openhands/agent-server'
+        tag: '1.16.1-python'
 
     keycloak:
       enabled: true
@@ -94,6 +95,29 @@ spec:
           repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/keycloak-config-cli'
       waitForDb:
         image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql:latest'
+      # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
+      # Keycloak's truststore at the merged PEM. Repeats the chart's default
+      # KC_* env vars because helm value merging replaces arrays — adding
+      # only KC_TRUSTSTORE_PATHS here would drop the others.
+      extraEnvVars:
+        - name: KC_FEATURES
+          value: token-exchange,admin-fine-grained-authz
+        - name: KC_HTTP_ENABLED
+          value: "true"
+        - name: KC_PROXY_HEADERS
+          value: "xforwarded"
+        - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+          value: "true"
+        - name: KC_TRUSTSTORE_PATHS
+          value: /etc/openhands/ca-bundle/ca-bundle.crt
+      extraVolumes:
+        - name: openhands-ca-bundle
+          configMap:
+            name: openhands-ca-bundle
+      extraVolumeMounts:
+        - name: openhands-ca-bundle
+          mountPath: /etc/openhands/ca-bundle
+          readOnly: true
 
     litellm:
       url: 'http://openhands-litellm:4000'
@@ -117,6 +141,23 @@ spec:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
         - litellm-env-secrets
+      # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
+      # the Python SSL stack (httpx + requests) at the merged PEM. envVars
+      # is a map (merges with proxy/vertex blocks), but volumes/volumeMounts
+      # are arrays — the vertex optionalValues block below repeats the
+      # ca-bundle entry alongside the google-credentials entry so its array
+      # replacement preserves both.
+      envVars:
+        SSL_CERT_FILE: /etc/openhands/ca-bundle/ca-bundle.crt
+        REQUESTS_CA_BUNDLE: /etc/openhands/ca-bundle/ca-bundle.crt
+      volumes:
+        - name: openhands-ca-bundle
+          configMap:
+            name: openhands-ca-bundle
+      volumeMounts:
+        - name: openhands-ca-bundle
+          mountPath: /etc/openhands/ca-bundle
+          readOnly: true
       ingress:
         enabled: true
         className: traefik
@@ -154,6 +195,19 @@ spec:
         host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime-api.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_api_hostname"}}{{repl end}}'
         tls: true
         tlsSecretName: openhands-tls
+        # Suppress the chart's default letsencrypt annotation: Replicated
+        # installs use a manually-uploaded TLS cert (openhands-tls), and the
+        # cluster-issuer annotation triggers cert-manager to take SSA
+        # ownership of the Secret, blocking subsequent updates to it.
+        annotations:
+          cert-manager.io/cluster-issuer: null
+      # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
+      # the Python TLS stack (httpx + requests) at the merged PEM. Required
+      # so runtimes.check_alive_with_ingress can verify the runtime ingress
+      # cert when the user uploads a custom CA — otherwise it silently fails
+      # TLS and runtimes get stuck in `starting`.
+      caBundle:
+        enabled: true
       runtimeInSameCluster: true
       cleanup:
         idle_seconds: repl{{ ConfigOption "sandbox_idle_seconds" }}
@@ -174,12 +228,13 @@ spec:
         CPU_REQUEST: 'repl{{ ConfigOption "sandbox_cpu_request" }}'
         CPU_LIMIT: 'repl{{ ConfigOption "sandbox_cpu_limit" }}'
         LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
+        ADDITIONAL_CONFIGMAPS: "openhands-ca-bundle:/etc/openhands/ca-bundle"
       warmRuntimes:
         enabled: true
-        count: 1
+        count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
         configs:
           - name: default
-            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.12.0-python'
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.16.1-python'
             working_dir: "/workspace"
             environment:
               LOG_JSON: "1"
@@ -194,6 +249,11 @@ spec:
               VSCODE_PORT: "60001"
               WORKER_1: "12000"
               WORKER_2: "12001"
+              CURL_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              GIT_SSL_CAINFO: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
             command:
               - /usr/local/bin/openhands-agent-server
               - "--port"
@@ -237,6 +297,7 @@ spec:
       enabled: repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}
     gitlab:
       enabled: repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}
+      host: 'repl{{ ConfigOption "gitlab_host" }}'
 
     automation:
       image:
@@ -248,6 +309,26 @@ spec:
         registry: images.r9.all-hands.dev
         repository: library/replicated-sdk-image
 
+    crdCheck:
+      enabled: true
+      crds:
+        - certificates.cert-manager.io
+        - issuers.cert-manager.io
+        - clusterissuers.cert-manager.io
+        - bundles.trust.cert-manager.io
+        - ingressroutes.traefik.io
+        - middlewares.traefik.io
+        - tlsstores.traefik.io
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rancher/kubectl'
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+
+    caBundle:
+      enabled: true
+      userCA: |
+        {{repl ConfigOptionData "tls_ca_certificate" | nindent 8 }}
+
   optionalValues:
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
@@ -255,6 +336,9 @@ spec:
         databaseMigrations:
           createDatabases: true
         runtime-api:
+          databaseMigrations:
+            createDatabases: true
+        plugin-directory:
           databaseMigrations:
             createDatabases: true
         postgresql:
@@ -293,9 +377,14 @@ spec:
             createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
           env:
             DB_NAME: '{{repl ConfigOption "external_postgres_runtime_api_database"}}'
+        plugin-directory:
+          databaseMigrations:
+            createDatabases: repl{{ ConfigOptionEquals "external_postgres_create_databases" "1" }}
     - when: '{{repl ConfigOptionEquals "github_auth_enabled" "1" }}'
       recursiveMerge: true
       values:
+        env:
+          ENABLE_V1_GITHUB_RESOLVER: "true"
         githubApp:
           enabled: true
           appId: '{{repl ConfigOption "github_app_id"}}'
@@ -324,11 +413,12 @@ spec:
           repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/deploy'
         runtime:
           image:
-            repository: '{{repl LocalRegistryNamespace }}/runtime'
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
+            tag: '1.16.1-python'
           warmRuntimes:
             configs:
               - name: default
-                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.12.0-python'
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.16.1-python'
                 working_dir: "/workspace"
                 environment:
                   LOG_JSON: "1"
@@ -343,6 +433,11 @@ spec:
                   VSCODE_PORT: "60001"
                   WORKER_1: "12000"
                   WORKER_2: "12001"
+                  CURL_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  GIT_SSL_CAINFO: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
                 command:
                   - /usr/local/bin/openhands-agent-server
                   - "--port"
@@ -377,6 +472,9 @@ spec:
           image:
             registry: '{{repl LocalRegistryHost }}'
             repository: '{{repl LocalRegistryNamespace }}/replicated-sdk-image'
+        crdCheck:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/kubectl'
     # Compute NO_PROXY variable, then evaluate proxy_enabled gate.
     # Assignments produce no output; the when value resolves to just the boolean.
     - when: >-
@@ -403,7 +501,7 @@ spec:
           HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
           NO_PROXY: '{{repl $computedNoProxy}}'
           SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
-          OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
         keycloak:
           extraEnvVars:
             # Existing KC env vars (must be repeated because recursiveMerge replaces arrays)
@@ -415,6 +513,8 @@ spec:
               value: "xforwarded"
             - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
               value: "true"
+            - name: KC_TRUSTSTORE_PATHS
+              value: /etc/openhands/ca-bundle/ca-bundle.crt
             # Proxy env vars
             - name: HTTP_PROXY
               value: '{{repl ConfigOption "http_proxy"}}'
@@ -449,9 +549,15 @@ spec:
       values:
         env:
           LITELLM_DEFAULT_MODEL: 'litellm_proxy/gemini-2.5-flash'
-          OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
         litellm-helm:
+          # volumes / volumeMounts are arrays — recursiveMerge replaces them,
+          # so the ca-bundle entry from spec.values.litellm-helm above must
+          # be repeated here alongside the google-credentials entry.
           volumes:
+            - name: openhands-ca-bundle
+              configMap:
+                name: openhands-ca-bundle
             - name: google-application-credentials
               secret:
                 secretName: litellm-env-secrets
@@ -459,6 +565,9 @@ spec:
                   - key: "GOOGLE_APPLICATION_CREDENTIALS_JSON"
                     path: "vertex_credentials.json"
           volumeMounts:
+            - name: openhands-ca-bundle
+              mountPath: /etc/openhands/ca-bundle
+              readOnly: true
             - name: google-application-credentials
               mountPath: /etc/gcloud/vertex_credentials.json
               subPath: vertex_credentials.json
@@ -476,6 +585,29 @@ spec:
             enabled: true
             project: '{{repl ConfigOption "google_vertex_project_id"}}'
             location: '{{repl ConfigOption "google_vertex_location"}}'
+    # Path-based sandbox routing: route every runtime at <base>/{id} through a
+    # shared Gateway instead of per-sandbox Ingresses at {id}.<base>. Traefik's
+    # kubernetesGateway provider (enabled in embedded-cluster.yaml) installs
+    # the Gateway API CRDs and serves the Gateway.
+    - when: '{{repl ConfigOptionEquals "runtime_routing_mode" "path" }}'
+      recursiveMerge: true
+      values:
+        env:
+          RUNTIME_ROUTING_MODE: "path"
+          RUNTIME_URL_PATTERN: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}/{runtime_id}'
+        runtime-api:
+          env:
+            RUNTIME_ROUTING_MODE: "path"
+            RUNTIME_URL_SEPARATOR: "/"
+            USE_GATEWAY_API: "true"
+            GATEWAY_NAME: "sandbox-gateway"
+            RUNTIME_CERT_SECRET: "openhands-tls"
+          ingressBase:
+            enabled: false
+          sandboxGateway:
+            enabled: true
+            hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
+            tlsSecretName: openhands-tls
     - when: '{{repl ConfigOptionEquals "analytics_enabled" "1" }}'
       recursiveMerge: true
       values:
@@ -521,6 +653,29 @@ spec:
           rabbitmq:
             persistence:
               storageClass: "openebs-hostpath"
+    - when: '{{repl ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        plugin-directory:
+          enabled: true
+          appUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}/plugins'
+          # OpenHands API host (same host as appUrl, without the /plugins path).
+          # The curl template appends /api/v1/app-conversations to this base.
+          curlApiUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          appEnv:
+            MARKETPLACE_SOURCE: '{{repl ConfigOption "plugin_directory_marketplace_source"}}'
+          database:
+            host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}oh-main-postgresql{{repl end}}'
+          oidc:
+            issuerUrl: 'https://{{repl if ConfigOptionEquals "hostname_mode" "derive"}}auth.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "auth_hostname"}}{{repl end}}'
+          client:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-client'
+          server:
+            image:
+              repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-server'
+          imagePullSecrets:
+            - name: '{{repl ImagePullSecretName }}'
 
   builder:
     keycloak:
