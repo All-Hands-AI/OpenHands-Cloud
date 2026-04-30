@@ -300,7 +300,7 @@ spec:
       host: 'repl{{ ConfigOption "gitlab_host" }}'
 
     automation:
-      enabled: true
+      enabled: false
 
     replicated:
       enabled: true
