@@ -58,6 +58,10 @@ config:
   plugin_directory_identity_shared_secret: ""
   plugin_directory_session_secret: ""
 
+  # Automation secrets
+  automation_service_key: ""
+  automation_webhook_secret: ""
+
   # TLS certificates
   tls_certificate: ""
   tls_private_key: ""

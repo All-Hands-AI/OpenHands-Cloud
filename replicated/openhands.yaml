@@ -29,6 +29,16 @@ spec:
       LOG_LEVEL: 'repl{{ ConfigOption "log_level" }}'
       OH_AGENT_SERVER_ENV: '{"SSL_CERT_FILE": "/etc/openhands/ca-bundle/ca-bundle.crt", "REQUESTS_CA_BUNDLE": "/etc/openhands/ca-bundle/ca-bundle.crt", "GIT_SSL_CAINFO": "/etc/openhands/ca-bundle/ca-bundle.crt", "CURL_CA_BUNDLE": "/etc/openhands/ca-bundle/ca-bundle.crt", "NODE_EXTRA_CA_CERTS": "/etc/openhands/ca-bundle/ca-bundle.crt"}'
 
+    automationServiceKey:
+      enabled: true
+      existingSecret: automation-service-key
+      secretKey: automation-service-key
+
+    automationWebhookSecret:
+      enabled: true
+      existingSecret: automation-webhook-secret
+      secretKey: webhook-secret
+
     ingress:
       enabled: true
       host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "app_hostname"}}{{repl end}}'
@@ -54,7 +64,7 @@ spec:
         # this is what we need to use for real deployments
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
         # repository: 'ghcr.io/openhands/agent-server'
-        tag: '1.16.1-python'
+        tag: '1.19.0-python'
 
     keycloak:
       enabled: true
@@ -234,7 +244,7 @@ spec:
         count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
         configs:
           - name: default
-            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.16.1-python'
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.19.0-python'
             working_dir: "/workspace"
             environment:
               LOG_JSON: "1"
@@ -300,8 +310,21 @@ spec:
       host: 'repl{{ ConfigOption "gitlab_host" }}'
 
     automation:
+      enabled: true
       image:
-        tag: "sha-36b5df4"
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/automation'
+        tag: sha-e52cca3
+      imagePullSecrets:
+        - name: '{{repl ImagePullSecretName }}'
+      openhandsApiUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+      automationBaseUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+      filestore:
+        type: local
+      env:
+        LOCAL_STORAGE_PATH: /tmp/automation
+      database:
+        createDatabaseUser: true
+        host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}openhands-postgresql{{repl end}}'
 
     replicated:
       enabled: true
@@ -414,11 +437,11 @@ spec:
         runtime:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
-            tag: '1.16.1-python'
+            tag: '1.19.0-python'
           warmRuntimes:
             configs:
               - name: default
-                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.16.1-python'
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.0-python'
                 working_dir: "/workspace"
                 environment:
                   LOG_JSON: "1"
