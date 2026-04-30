@@ -113,7 +113,8 @@ minio:
 keycloak:
   enabled: false  # Disable embedded Keycloak - using shared instance
   # External URL for shared Keycloak (used by browser redirects)
-  url: "https://auth.ohe-staging.platform-team.all-hands.dev/auth"
+  # Note: No /auth suffix - Keycloak is served at root path
+  url: "https://auth.ohe-staging.platform-team.all-hands.dev"
   # Internal URL is not used when keycloak.enabled=false
   # The keycloak-realm secret must be created separately with:
   #   - realm-name: allhands
