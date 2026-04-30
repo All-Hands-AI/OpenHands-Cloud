@@ -550,7 +550,7 @@ spec:
             HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
             NO_PROXY: '{{repl $computedNoProxy}}'
             SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
-    - when: '{{repl ConfigOptionEquals "llm_provider" "azure" }}'
+    - when: '{{repl and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "api_key") }}'
       recursiveMerge: true
       values:
         env:
@@ -565,6 +565,22 @@ spec:
                   api_key: os.environ/AZURE_API_KEY
                   api_base: os.environ/AZURE_API_BASE
                   api_version: os.environ/AZURE_API_VERSION
+    - when: '{{repl and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/azure-{{repl ConfigOption "azure_deployment_name"}}'
+        litellm-helm:
+          proxy_config:
+            model_list:
+              - model_name: 'azure-{{repl ConfigOption "azure_deployment_name"}}'
+                litellm_params:
+                  model: 'azure/{{repl ConfigOption "azure_deployment_name"}}'
+                  api_base: os.environ/AZURE_API_BASE
+                  api_version: os.environ/AZURE_API_VERSION
+                  tenant_id: os.environ/AZURE_TENANT_ID
+                  client_id: os.environ/AZURE_CLIENT_ID
+                  client_secret: os.environ/AZURE_CLIENT_SECRET
 
     - when: '{{repl ConfigOptionEquals "google_api_type" "vertex" }}'
       recursiveMerge: true

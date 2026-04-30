@@ -109,7 +109,7 @@ spec:
             - name: "mistral"
               title: "Mistral AI"
             - name: "azure"
-              title: "Azure OpenAI"
+              title: "Azure"
             - name: "groq"
               title: "Groq"
             - name: "openrouter"
@@ -176,15 +176,45 @@ spec:
           type: password
           when: 'repl{{ ConfigOptionEquals "llm_provider" "mistral" }}'
           required: true
+        - name: azure_auth_method
+          title: Azure Authentication Method
+          help_text: Authentication method for Azure OpenAI. Service Principal (Microsoft Entra ID) is recommended for production.
+          type: select_one
+          default: "api_key"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+          items:
+            - name: "api_key"
+              title: "API Key"
+            - name: "service_principal"
+              title: "Microsoft Entra ID — Service Principal"
         - name: azure_api_key
           title: Azure OpenAI API Key
           help_text: Your Azure OpenAI API key
           type: password
-          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "api_key") }}'
+          required: true
+        - name: azure_tenant_id
+          title: Microsoft Entra Tenant ID
+          help_text: The Microsoft Entra directory (tenant) ID (under Microsoft Entra ID → Overview in the Azure portal).
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
+          required: true
+        - name: azure_client_id
+          title: Microsoft Entra Application (Client) ID
+          help_text: The Application (client) ID of the Entra app registration. Grant it the "Cognitive Services OpenAI User" role on your Azure OpenAI resource.
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
+          required: true
+        - name: azure_client_secret
+          title: Microsoft Entra Client Secret
+          help_text: The client secret for the Entra ID app registration.
+          type: password
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
           required: true
         - name: azure_endpoint
           title: Azure OpenAI Endpoint
-          help_text: Your Azure OpenAI endpoint URL (e.g., https://eastus2.api.cognitive.microsoft.com or https://my-resource.openai.azure.com)
+          help_text: Your Azure OpenAI endpoint URL (e.g., https://my-resource.openai.azure.com). Regional endpoints (e.g., https://eastus2.api.cognitive.microsoft.com) only work with API Key auth, not Microsoft Entra ID.
           type: text
           when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
           required: true
