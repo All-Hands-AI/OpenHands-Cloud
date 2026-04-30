@@ -62,6 +62,8 @@ filestore:
 
 github:
   enabled: false
+  # Set to true if you have configured github_app_slug in the github-app Secret
+  appSlugEnabled: false
 
 enrichUserInteractionData:
   enabled: false
