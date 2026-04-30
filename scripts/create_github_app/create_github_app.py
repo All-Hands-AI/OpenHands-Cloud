@@ -11,6 +11,7 @@ import json
 import secrets
 import tempfile
 import threading
+import time
 import webbrowser
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,7 +20,8 @@ from typing import Any, Protocol
 import requests
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from github import Auth, GithubIntegration
 
 SCRIPT_DIR = Path(__file__).parent
 
@@ -79,7 +81,7 @@ def build_app_manifest(
         "redirect_url": f"http://localhost:{callback_port}/callback",
         "callback_urls": [f"https://auth.app.{base_domain}/realms/allhands/broker/github/endpoint"],
         "public": False,
-        "request_oauth_on_install": True,
+        "request_oauth_on_install": False,
         "default_permissions": {
             "actions": "write",
             "contents": "write",
@@ -142,10 +144,11 @@ class CodeHolder:
 
     code: str | None = None
     code_received: threading.Event = field(default_factory=threading.Event)
+    installation_url: str | None = None
 
 
 def create_callback_app() -> tuple[FastAPI, CodeHolder]:
-    """Create a FastAPI app with a /callback endpoint to capture the OAuth code."""
+    """Create a FastAPI app with /callback and /installation-url endpoints."""
     app = FastAPI()
     code_holder = CodeHolder()
 
@@ -159,16 +162,48 @@ def create_callback_app() -> tuple[FastAPI, CodeHolder]:
         code_holder.code = code
         code_holder.code_received.set()
         return HTMLResponse(
-            content="""<html>
-<head><title>Success</title></head>
+            content="""<!DOCTYPE html>
+<html>
+<head><title>GitHub App Created</title></head>
 <body>
-<h1>Success!</h1>
-<p>GitHub App code received. You can close this window.</p>
-<p>Return to the terminal to continue.</p>
+<p>Created app! Navigating to install page...</p>
+<script>
+var attempts = 0;
+var maxAttempts = 60;
+
+function showInstallUrlError() {
+  document.body.innerHTML = '<h1>Error</h1><p>Installation URL not available. Check the terminal for instructions.</p>';
+}
+
+function checkInstallUrl() {
+  if (attempts++ >= maxAttempts) {
+    showInstallUrlError();
+    return;
+  }
+
+  fetch('/installation-url')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setTimeout(checkInstallUrl, 1000);
+      }
+    })
+    .catch(function() {
+      showInstallUrlError();
+    });
+}
+setTimeout(checkInstallUrl, 500);
+</script>
 </body>
 </html>""",
             status_code=200,
         )
+
+    @app.get("/installation-url")
+    def installation_url_endpoint():
+        return JSONResponse({"url": code_holder.installation_url})
 
     return app, code_holder
 
@@ -207,6 +242,32 @@ def exchange_code_for_credentials(code: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def wait_for_app_installation(
+    app_id: int,
+    private_key: str,
+    timeout: float = 300,
+    poll_interval: float = 5.0,
+) -> bool:
+    """Poll GitHub API until the app has at least one installation or timeout."""
+    try:
+        auth = Auth.AppAuth(app_id, private_key)
+        gi = GithubIntegration(auth=auth)
+    except Exception as exc:
+        print(f"Warning: Could not authenticate with GitHub API: {exc}")
+        return False
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if list(gi.get_installations()):
+                return True
+        except Exception as exc:
+            print(f"Warning: Error checking installations: {exc}")
+            return False
+        time.sleep(poll_interval)
+    return False
 
 
 def create_github_app(
@@ -253,12 +314,25 @@ def main(
             return
 
         print("Authorization code received!")
+
+        credentials = exchange_code_for_credentials(code)
+        print(f"\nGitHub App created successfully!")
+
+        if "slug" in credentials:
+            install_url = f"https://github.com/apps/{credentials['slug']}/installations/new"
+            print(f"\nInstall URL: {install_url}")
+            code_holder.installation_url = install_url
+
+        if "pem" in credentials:
+            print("\nWaiting for app installation...")
+            installed = wait_for_app_installation(app_id=credentials["id"], private_key=credentials["pem"])
+            if installed:
+                print("GitHub App installed successfully!")
+            else:
+                print("Warning: Timed out waiting for app installation.")
     finally:
         # Always stop the callback server
         stop_callback_server(server_handle)
-
-    credentials = exchange_code_for_credentials(code)
-    print(f"\nGitHub App created successfully!")
 
     # Save pem to keys/ directory relative to script location
     pem_path = None
