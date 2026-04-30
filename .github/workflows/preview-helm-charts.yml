@@ -19,6 +19,7 @@ jobs:
       image-loader: ${{ steps.changes.outputs.image-loader }}
       automation: ${{ steps.changes.outputs.automation }}
       plugin-directory: ${{ steps.changes.outputs.plugin-directory }}
+      service-template: ${{ steps.changes.outputs.service-template }}
       openhands: ${{ steps.changes.outputs.openhands }}
       openhands-secrets: ${{ steps.changes.outputs.openhands-secrets }}
     steps:
@@ -39,7 +40,7 @@ jobs:
           echo "$CHANGED_FILES"
 
           # Check each chart for changes
-          for chart in crd-check runtime-api image-loader automation plugin-directory openhands openhands-secrets; do
+          for chart in crd-check runtime-api image-loader automation plugin-directory service-template openhands openhands-secrets; do
             if echo "$CHANGED_FILES" | grep -q "^charts/${chart}/"; then
               echo "${chart}=true" >> $GITHUB_OUTPUT
               echo "Changes detected in charts/${chart}"
@@ -73,6 +74,8 @@ jobs:
             path: charts/runtime-api
           - name: image-loader
             path: charts/image-loader
+          - name: service-template
+            path: charts/service-template
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
@@ -88,6 +91,7 @@ jobs:
           HAS_CHANGES_IMAGE_LOADER: ${{ needs.detect-changes.outputs.image-loader }}
           HAS_CHANGES_AUTOMATION: ${{ needs.detect-changes.outputs.automation }}
           HAS_CHANGES_PLUGIN_DIRECTORY: ${{ needs.detect-changes.outputs.plugin-directory }}
+          HAS_CHANGES_SERVICE_TEMPLATE: ${{ needs.detect-changes.outputs.service-template }}
           HAS_CHANGES_OPENHANDS: ${{ needs.detect-changes.outputs.openhands }}
           HAS_CHANGES_OPENHANDS_SECRETS: ${{ needs.detect-changes.outputs.openhands-secrets }}
           IS_PUBLISHABLE_CRD_CHECK: ${{ needs.validate-chart-versions.outputs.crd-check-publishable }}
@@ -95,6 +99,7 @@ jobs:
           IS_PUBLISHABLE_IMAGE_LOADER: ${{ needs.validate-chart-versions.outputs.image-loader-publishable }}
           IS_PUBLISHABLE_AUTOMATION: ${{ needs.validate-chart-versions.outputs.automation-publishable }}
           IS_PUBLISHABLE_PLUGIN_DIRECTORY: ${{ needs.validate-chart-versions.outputs.plugin-directory-publishable }}
+          IS_PUBLISHABLE_SERVICE_TEMPLATE: ${{ needs.validate-chart-versions.outputs.service-template-publishable }}
           IS_PUBLISHABLE_OPENHANDS: ${{ needs.validate-chart-versions.outputs.openhands-publishable }}
           IS_PUBLISHABLE_OPENHANDS_SECRETS: ${{ needs.validate-chart-versions.outputs.openhands-secrets-publishable }}
         run: |
@@ -119,6 +124,10 @@ jobs:
             plugin-directory)
               HAS_CHANGES="$HAS_CHANGES_PLUGIN_DIRECTORY"
               IS_PUBLISHABLE="$IS_PUBLISHABLE_PLUGIN_DIRECTORY"
+              ;;
+            service-template)
+              HAS_CHANGES="$HAS_CHANGES_SERVICE_TEMPLATE"
+              IS_PUBLISHABLE="$IS_PUBLISHABLE_SERVICE_TEMPLATE"
               ;;
             openhands)
               HAS_CHANGES="$HAS_CHANGES_OPENHANDS"
@@ -279,6 +288,8 @@ jobs:
             path: charts/automation
           - name: plugin-directory
             path: charts/plugin-directory
+          - name: service-template
+            path: charts/service-template
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
