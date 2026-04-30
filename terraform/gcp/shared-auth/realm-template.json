@@ -1,5 +1,5 @@
 {
-  "realm": "staging",
+  "realm": "allhands",
   "displayName": "OpenHands Staging",
   "enabled": true,
   "sslRequired": "external",
@@ -52,23 +52,57 @@
     ]
   },
   "attributes": {
-    "frontendUrl": "https://auth.ohe-staging.platform-team.all-hands.dev/auth"
+    "frontendUrl": "https://auth.ohe-staging.platform-team.all-hands.dev"
   },
-  "identityProviders": [],
-  "identityProviderMappers": [],
+  "identityProviders": [
+    {
+      "alias": "enterprise_sso",
+      "displayName": "Enterprise SSO (Google Workspace)",
+      "providerId": "saml",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "validateSignature": "true",
+        "postBindingLogout": "true",
+        "nameIDPolicyFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+        "postBindingResponse": "true",
+        "entityId": "openhands-allhands",
+        "signatureAlgorithm": "RSA_SHA256",
+        "wantAssertionsEncrypted": "false",
+        "xmlSigKeyInfoKeyNameTransformer": "KEY_ID",
+        "wantAssertionsSigned": "true",
+        "postBindingAuthnRequest": "true",
+        "syncMode": "IMPORT",
+        "forceAuthn": "false"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "identity_provider",
+      "identityProviderAlias": "enterprise_sso",
+      "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute": "identity_provider",
+        "attribute.value": "enterprise_sso:saml"
+      }
+    }
+  ],
   "clients": [
     {
-      "clientId": "openhands-staging",
+      "clientId": "allhands",
       "name": "OpenHands Staging Client",
-      "description": "Shared client for all staging branch deployments",
+      "description": "Shared client for all staging branch deployments. Uses 'allhands' clientId to match frontend hardcoded values.",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "https://*.ohe-staging.platform-team.all-hands.dev/oauth/keycloak/callback",
-        "https://*.ohe-staging.platform-team.all-hands.dev/oauth/keycloak/offline/callback",
-        "https://*.ohe-staging.platform-team.all-hands.dev/slack/keycloak-callback",
-        "https://*.ohe-staging.platform-team.all-hands.dev/oauth/device/keycloak-callback",
-        "https://*.ohe-staging.platform-team.all-hands.dev/api/email/verified"
+        "https://*.ohe-staging.platform-team.all-hands.dev/*"
       ],
       "webOrigins": [
         "https://*.ohe-staging.platform-team.all-hands.dev"
