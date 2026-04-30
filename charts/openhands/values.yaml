@@ -938,6 +938,12 @@ global:
     # This allows using the bitnamilegacy image repo.
     # See: https://github.com/bitnami/containers/issues/83267
     allowInsecureImages: true
+  # Ingress configuration shared with subcharts (for service-template auth URL)
+  # These should match the parent chart's ingress config
+  ingress:
+    host: ""  # Set to ingress.host value (e.g., "app.all-hands.dev")
+    prefixWithBranch: false  # Set to ingress.prefixWithBranch value
+  branchSanitized: ""  # Set to branchSanitized value for feature envs
 
 vertexAI:
   enabled: false

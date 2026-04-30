@@ -9,9 +9,17 @@
   value: {{ .Values.service.corsOrigins | quote }}
 {{- end }}
 # Authentication API URL
+# Use explicit value if set, otherwise derive from global ingress config
 {{- if .Values.authApiBaseUrl }}
 - name: SERVICE_AUTH_API_BASE_URL
   value: {{ .Values.authApiBaseUrl | quote }}
+{{- else if and .Values.global .Values.global.ingress .Values.global.ingress.host }}
+{{- $host := .Values.global.ingress.host }}
+{{- if and .Values.global.ingress.prefixWithBranch .Values.global.branchSanitized }}
+{{- $host = printf "%s.%s" .Values.global.branchSanitized .Values.global.ingress.host }}
+{{- end }}
+- name: SERVICE_AUTH_API_BASE_URL
+  value: {{ printf "https://%s" $host | quote }}
 {{- end }}
 # PostgreSQL database configuration
 - name: SERVICE_DB_HOST
