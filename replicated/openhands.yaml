@@ -300,8 +300,7 @@ spec:
       host: 'repl{{ ConfigOption "gitlab_host" }}'
 
     automation:
-      image:
-        tag: "sha-36b5df4"
+      enabled: true
 
     replicated:
       enabled: true
