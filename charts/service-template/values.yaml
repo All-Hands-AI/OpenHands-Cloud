@@ -60,8 +60,11 @@ database:
   user: "service_user"
   name: "service"
   # Secret containing the database password
-  secretName: "service-db-secret"
+  secretName: "service-template-db-secret"
   secretKey: "db-password"
+  # Use an existing secret instead of auto-generating one
+  # When true, the chart will not create the db secret
+  existingSecret: false
   # Create database and user in an existing PostgreSQL instance
   # When true, runs an init container to create the database and user
   # Useful when sharing a PostgreSQL instance with other services
