@@ -1,0 +1,94 @@
+{{- define "service-template.env.defaults" }}
+# Service configuration
+{{- if .Values.service.baseUrl }}
+- name: SERVICE_BASE_URL
+  value: {{ .Values.service.baseUrl | quote }}
+{{- end }}
+{{- if .Values.service.corsOrigins }}
+- name: SERVICE_CORS_ORIGINS
+  value: {{ .Values.service.corsOrigins | quote }}
+{{- end }}
+# Authentication API URL
+{{- if .Values.authApiBaseUrl }}
+- name: SERVICE_AUTH_API_BASE_URL
+  value: {{ .Values.authApiBaseUrl | quote }}
+{{- end }}
+# PostgreSQL database configuration
+- name: SERVICE_DB_HOST
+  value: {{ .Values.database.host | quote }}
+- name: SERVICE_DB_PORT
+  value: {{ .Values.database.port | quote }}
+- name: SERVICE_DB_USER
+  value: {{ .Values.database.user | quote }}
+- name: SERVICE_DB_NAME
+  value: {{ .Values.database.name | quote }}
+- name: SERVICE_DB_PASS
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
+{{- if .Values.gcp.dbInstance }}
+- name: SERVICE_GCP_DB_INSTANCE
+  value: {{ .Values.gcp.dbInstance | quote }}
+- name: SERVICE_GCP_PROJECT
+  value: {{ .Values.gcp.project | quote }}
+- name: SERVICE_GCP_REGION
+  value: {{ .Values.gcp.region | quote }}
+{{- end }}
+{{- if .Values.datadog.enabled }}
+# Datadog configuration
+- name: DD_AGENT_HOST
+  value: "datadog-agent.all-hands-system.svc.cluster.local"
+- name: DD_TRACE_AGENT_PORT
+  value: "8126"
+- name: DD_SERVICE
+  value: {{ .Values.datadog.serviceName | quote }}
+- name: DD_ENV
+  value: {{ .Values.datadog.env | quote }}
+- name: DD_TRACE_ENABLED
+  value: "true"
+{{- end }}
+{{- end }}
+
+{{/*
+  service-template.env — Deduplicated environment variable list.
+
+  This wrapper renders the default env vars from "service-template.env.defaults",
+  then removes any entries whose name conflicts with a key in .Values.env,
+  and finally appends the .Values.env overrides. The result is a clean list
+  with no duplicate names, which prevents:
+    - Helm warnings about duplicate env vars
+    - Strategic Merge Patch conflicts during helm upgrade
+      ("The order in patch list doesn't match $setElementOrder list")
+
+  How it works:
+    1. Render "service-template.env.defaults" via include (evaluates all conditionals)
+    2. Parse the rendered YAML list into Go objects with fromYamlArray
+    3. Filter out any default entries whose name appears in .Values.env
+    4. Append .Values.env entries (user overrides always win)
+    5. Re-render the deduplicated list with toYaml
+*/}}
+{{- define "service-template.env" }}
+{{- $defaults := include "service-template.env.defaults" . | fromYamlArray }}
+{{- /* Build a lookup dict of override keys for O(1) membership checks */}}
+{{- $overrideKeys := dict }}
+{{- if .Values.env }}
+{{- range $key, $_ := .Values.env }}
+{{- $_ := set $overrideKeys $key true }}
+{{- end }}
+{{- end }}
+{{- /* Keep only default entries that are NOT overridden by .Values.env */}}
+{{- $filtered := list }}
+{{- range $entry := $defaults }}
+{{- if not (hasKey $overrideKeys (get $entry "name")) }}
+{{- $filtered = append $filtered $entry }}
+{{- end }}
+{{- end }}
+{{- /* Append user overrides from .Values.env (these take precedence) */}}
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+{{- $filtered = append $filtered (dict "name" $key "value" ($value | toString)) }}
+{{- end }}
+{{- end }}
+{{- $filtered | toYaml }}
+{{- end }}

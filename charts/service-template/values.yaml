@@ -1,0 +1,111 @@
+image:
+  repository: ghcr.io/openhands/service-template
+  tag: latest
+
+imagePullSecrets: []
+
+deployment:
+  replicas: 1
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+securityContext:
+  runAsUser: 42420
+  runAsGroup: 42420
+  runAsNonRoot: true
+
+serviceAccount:
+  create: true
+  name: service-template-sa
+  annotations: {}
+
+probes:
+  startup:
+    failureThreshold: 30
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+
+# Service configuration
+service:
+  # Public base URL where this service is reachable
+  # Example: https://api.example.com or https://domain/myservice
+  baseUrl: ""
+  # CORS origins (comma-separated list)
+  corsOrigins: ""
+
+# Authentication API URL for validating credentials
+authApiBaseUrl: ""
+
+# PostgreSQL database configuration
+database:
+  # Full hostname of the PostgreSQL server
+  # Examples:
+  #   - Cloud SQL: "my-project:us-central1:my-instance"
+  #   - In-cluster: "service-template-postgresql"
+  #   - Feature env: "service-template-feature-branch-postgresql"
+  host: ""
+  port: "5432"
+  user: "service_user"
+  name: "service"
+  # Secret containing the database password
+  secretName: "service-db-secret"
+  secretKey: "db-password"
+  # Create database and user in an existing PostgreSQL instance
+  # When true, runs an init container to create the database and user
+  # Useful when sharing a PostgreSQL instance with other services
+  createDatabaseUser: false
+  # Secret containing the postgres superuser password (for creating the service user)
+  # Only used when createDatabaseUser=true
+  superuserSecretName: "postgres-password"
+  superuserSecretKey: "password"
+
+# GCP Cloud SQL (leave empty for non-GCP)
+gcp:
+  dbInstance: ""
+  project: ""
+  region: ""
+
+# Datadog configuration
+datadog:
+  enabled: false
+  env: "dev"
+  serviceName: "service-template"
+
+# Env vars passed directly to the container
+env: {}
+
+# PostgreSQL subchart configuration (for ephemeral/feature environments)
+# When enabled, deploys an in-cluster PostgreSQL instance
+# Service name will be "{release-name}-postgresql", secret name also "{release-name}-postgresql"
+postgresql:
+  enabled: false
+  auth:
+    username: postgres
+    database: service
+  primary:
+    persistence:
+      enabled: false
+    initdb:
+      scriptsConfigMap: ""
+  service:
+    ports:
+      postgresql: 5432
+  image:
+    repository: bitnamilegacy/postgresql
+
+global:
+  security:
+    # This allows using the bitnamilegacy image repo
+    allowInsecureImages: true
