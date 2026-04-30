@@ -46,7 +46,7 @@ dependencies:
     condition: automation.enabled
   - name: service-template
     repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.0-alpha.595
+    version: 0.1.1-alpha.595
     condition: service-template.enabled
   - name: crd-check
     repository: oci://ghcr.io/all-hands-ai/helm-charts
