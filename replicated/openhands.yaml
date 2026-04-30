@@ -307,6 +307,7 @@ spec:
         - name: '{{repl ImagePullSecretName }}'
       database:
         createDatabaseUser: true
+        host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}openhands-postgresql{{repl end}}'
 
     replicated:
       enabled: true
