@@ -54,6 +54,11 @@ config:
   github_app_webhook_secret: ""
   github_app_private_key: ""
   
+  # Slack credentials
+  slack_client_id: ""
+  slack_client_secret: ""
+  slack_signing_secret: ""
+
   # Plugin Directory secrets
   plugin_directory_identity_shared_secret: ""
   plugin_directory_session_secret: ""
