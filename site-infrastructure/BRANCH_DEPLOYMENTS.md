@@ -125,7 +125,7 @@ deployment:
 # From the repository root
 helm install openhands-${BRANCH_NAME} ./charts/openhands \
   --namespace ${NAMESPACE} \
-  --values infrastructure/helm/base-values.yaml \
+  --values site-infrastructure/helm/base-values.yaml \
   --values my-branch-values.yaml
 ```
 

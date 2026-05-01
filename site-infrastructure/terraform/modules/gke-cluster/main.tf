@@ -159,7 +159,13 @@ resource "google_container_node_pool" "primary" {
 }
 
 # -----------------------------------------------------------------------------
-# Runtime Node Pool (optional, for multi-cluster setups or dedicated runtime nodes)
+# Runtime Node Pool (optional, for dedicated sysbox runtime nodes)
+# -----------------------------------------------------------------------------
+# This node pool is designed to run OpenHands runtime containers with sysbox.
+# Key features:
+# - Labeled with sysbox-install=yes for sysbox DaemonSet targeting
+# - Tainted to prevent non-runtime workloads from scheduling
+# - Larger disk for runtime image caching (~10GB+ runtime images)
 # -----------------------------------------------------------------------------
 
 resource "google_container_node_pool" "runtime" {
@@ -191,12 +197,18 @@ resource "google_container_node_pool" "runtime" {
       "https://www.googleapis.com/auth/cloud-platform",
     ]
 
+    # Labels for node selection
+    # - sysbox-install: Used by sysbox DaemonSet and image-loader to target these nodes
+    # - openhands.ai/node-type: General classification label
     labels = merge(var.node_labels, {
-      "openhands.ai/node-type" = "runtime"
+      "sysbox-install"          = "yes"
+      "openhands.ai/node-type"  = "runtime"
     })
 
+    # Taint to prevent non-runtime workloads from scheduling on these nodes
+    # Runtime pods, image-loader, and sysbox installer must tolerate this taint
     taint {
-      key    = "openhands.ai/runtime"
+      key    = "sysbox-runtime"
       value  = "true"
       effect = "NO_SCHEDULE"
     }

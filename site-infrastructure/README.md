@@ -1,6 +1,8 @@
-# OpenHands Staging Infrastructure
+# OpenHands Site-Specific Infrastructure
 
-This directory contains Terraform modules and Helm configurations for deploying OpenHands to GKE in the staging GCP project (`staging-092324`).
+This directory contains site-specific Terraform modules and Helm value overrides for deploying OpenHands to GKE in the staging GCP project (`staging-092324`).
+
+> **Note:** This folder contains only site-specific configurations. The base Helm charts and their default values live in `charts/`. Only override values that differ from the defaults.
 
 ## Overview
 
@@ -14,7 +16,7 @@ Two independent deployment environments are supported:
 ## Directory Structure
 
 ```
-infrastructure/
+site-infrastructure/
 ├── terraform/
 │   ├── modules/
 │   │   ├── gke-cluster/      # GKE cluster module

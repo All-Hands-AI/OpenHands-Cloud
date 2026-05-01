@@ -24,7 +24,7 @@ nodeSelector:
 tolerations:
 - key: "sysbox-runtime"
   operator: "Equal"
-  value: "not-running"
+  value: "true"
   effect: "NoSchedule"
 affinity: {}
 

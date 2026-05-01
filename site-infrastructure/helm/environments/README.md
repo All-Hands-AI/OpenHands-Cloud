@@ -87,7 +87,7 @@ helm repo update
 cd /path/to/OpenHands-Cloud
 
 helm install openhands ./charts/openhands \
-  -f infrastructure/helm/environments/single-cluster-path/values-openhands.yaml \
+  -f site-infrastructure/helm/environments/single-cluster-path/values-openhands.yaml \
   -n openhands \
   --create-namespace
 ```
@@ -104,7 +104,7 @@ BRANCH_NAME="my-feature"
 BRANCH_SANITIZED=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
 
 helm install "openhands-${BRANCH_SANITIZED}" ./charts/openhands \
-  -f infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
+  -f site-infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
   --set branchSanitized="${BRANCH_SANITIZED}" \
   -n openhands \
   --create-namespace
@@ -135,7 +135,7 @@ jobs:
       - name: Deploy to GKE
         run: |
           helm upgrade --install "openhands-${{ steps.branch.outputs.sanitized }}" ./charts/openhands \
-            -f infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
+            -f site-infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
             --set branchSanitized="${{ steps.branch.outputs.sanitized }}" \
             -n openhands
 ```
