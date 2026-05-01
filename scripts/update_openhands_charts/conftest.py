@@ -35,16 +35,12 @@ Usage Example
 """
 
 import base64
-import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from ruamel.yaml import YAML
-
-sys.path.insert(0, str(Path(__file__).parent))
-from update_openhands_charts import bump_patch_version
 
 # =============================================================================
 # Fixture baseline constants
@@ -205,6 +201,7 @@ def assert_version_bumped(file_path: Path, original_version: str) -> None:
         >>> assert_version_bumped(chart_path, "1.2.3")  # passes
         >>> assert_version_bumped(chart_path, "1.2.2")  # fails: expected 1.2.3
     """
+    from update_openhands_charts import bump_patch_version
     expected = bump_patch_version(original_version)
     actual = get_chart_value(file_path, "version")
     assert actual == expected, f"Expected version {expected}, got {actual}"
