@@ -30,6 +30,9 @@ config:
   deepseek_api_key: ""
   mistral_api_key: ""
   azure_api_key: ""
+  azure_endpoint: ""
+  azure_api_version: ""
+  azure_deployment_name: ""
   groq_api_key: ""
   openrouter_api_key: ""
   custom_api_key: ""
@@ -47,9 +50,19 @@ config:
   github_oauth_client_id: ""
   github_oauth_client_secret: ""
   github_app_id: ""
+  github_app_slug: ""
   github_app_webhook_secret: ""
   github_app_private_key: ""
   
+  # Slack credentials
+  slack_client_id: ""
+  slack_client_secret: ""
+  slack_signing_secret: ""
+
+  # Plugin Directory secrets
+  plugin_directory_identity_shared_secret: ""
+  plugin_directory_session_secret: ""
+
   # TLS certificates
   tls_certificate: ""
   tls_private_key: ""

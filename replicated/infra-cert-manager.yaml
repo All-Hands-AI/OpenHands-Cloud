@@ -1,0 +1,62 @@
+apiVersion: kots.io/v1beta2
+kind: HelmChart
+metadata:
+  name: infra-cert-manager
+spec:
+  chart:
+    name: infra
+  releaseName: infra-cert-manager
+  namespace: cert-manager
+  # Weight 5 installs cert-manager and its CRDs before trust-manager (weight 6)
+  # can reference them, and before openhands (weight 10) installs resources that
+  # depend on them (Bundle, certs).
+  weight: 5
+  helmUpgradeFlags: ["--wait", "--timeout", "600s"]
+  values:
+    trust-manager:
+      enabled: false
+    cert-manager:
+      enabled: true
+      global:
+        imagePullSecrets:
+          - name: '{{repl ImagePullSecretName }}'
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-controller'
+      webhook:
+        image:
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-webhook'
+      cainjector:
+        image:
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-cainjector'
+      acmesolver:
+        image:
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-acmesolver'
+      startupapicheck:
+        image:
+          repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/jetstack/cert-manager-startupapicheck'
+
+  optionalValues:
+    - when: '{{repl HasLocalRegistry }}'
+      recursiveMerge: true
+      values:
+        cert-manager:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cert-manager-controller'
+          webhook:
+            image:
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cert-manager-webhook'
+          cainjector:
+            image:
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cert-manager-cainjector'
+          acmesolver:
+            image:
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cert-manager-acmesolver'
+          startupapicheck:
+            image:
+              repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/cert-manager-startupapicheck'
+
+  builder:
+    cert-manager:
+      enabled: true
+    trust-manager:
+      enabled: false

@@ -1,4 +1,4 @@
-{{- if or .Values.config.github_oauth_client_id .Values.config.github_oauth_client_secret .Values.config.github_app_id .Values.config.github_app_webhook_secret .Values.config.github_app_private_key }}
+{{- if or .Values.config.github_oauth_client_id .Values.config.github_oauth_client_secret .Values.config.github_app_id .Values.config.github_app_slug .Values.config.github_app_webhook_secret .Values.config.github_app_private_key }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -8,6 +8,9 @@ type: Opaque
 data:
   {{- if .Values.config.github_app_id }}
   app-id: {{ .Values.config.github_app_id | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.github_app_slug }}
+  app-slug: {{ .Values.config.github_app_slug | b64enc | quote }}
   {{- end }}
   {{- if .Values.config.github_app_webhook_secret }}
   webhook-secret: {{ .Values.config.github_app_webhook_secret | b64enc | quote }}
