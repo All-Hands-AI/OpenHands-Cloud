@@ -1,6 +1,22 @@
 # OpenHands values for single-cluster-subdomain staging environment
 # Subdomain-based routing: each branch/release gets its own subdomain
 # Example: my-branch.ohe-staging.platform-team.all-hands.dev
+#
+# =============================================================================
+# PREREQUISITES - Required Secrets
+# =============================================================================
+# Before deploying, create these secrets with MATCHING values for API keys:
+#
+# GLOBAL_SECRET=$(openssl rand -hex 32)
+#
+# # IMPORTANT: sandbox-api-key and default-api-key MUST have the same value!
+# kubectl create secret generic sandbox-api-key -n openhands \
+#   --from-literal=sandbox-api-key=$GLOBAL_SECRET
+# kubectl create secret generic default-api-key -n openhands \
+#   --from-literal=default-api-key=$GLOBAL_SECRET
+#
+# See charts/openhands/README.md for full list of required secrets.
+# =============================================================================
 
 # Branch sanitization - set at deploy time via --set
 # branchSanitized: "my-branch"  # Set via: helm install --set branchSanitized=my-branch
@@ -53,8 +69,9 @@ env:
   LOG_LEVEL: "INFO"
   SANDBOX_REMOTE_RUNTIME_API_TIMEOUT: "60"
   # Runtime URL pattern for subdomain-based routing
-  # The {branch} placeholder will be replaced with the actual branch name
-  RUNTIME_URL_PATTERN: "https://{branch}.ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+  # NOTE: Override this at deploy time with the actual branch name:
+  # --set env.RUNTIME_URL_PATTERN="https://my-branch.ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+  RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
 
 # Session JWT secret
 sessions:
@@ -70,6 +87,12 @@ databaseMigrations:
   waitForDatabase: true
   createDatabases: true
   migrate: true
+
+# Enterprise SSO - enables SAML-based SSO via Keycloak
+# When enabled, users can login via "Login with Enterprise SSO" button
+# Requires Keycloak to be configured with a SAML identity provider
+enterpriseSSO:
+  enabled: true
 
 # Disable features not needed for testing
 github:
@@ -115,90 +138,58 @@ minio:
 # -----------------------
 # Keycloak for authentication
 # -----------------------
+# NOTE: For multi-branch deployments with shared Keycloak:
+# - Set keycloak.enabled: false to use external shared Keycloak
+# - Set keycloak.authHost to the shared Keycloak host (without https://)
+# - Set keycloak.url to the full URL of the shared Keycloak
+#
+# For single-branch deployments or testing, enable Keycloak subchart below.
 keycloak:
-  enabled: true
-  url: "https://keycloak.ohe-staging.platform-team.all-hands.dev"
-  fullnameOverride: keycloak
-  replicaCount: 1
-  production: false  # Use dev mode for easier testing
-  proxyHeaders: forwarded
-  ingress:
-    enabled: true
-    hostname: "keycloak.ohe-staging.platform-team.all-hands.dev"
-    path: /
-    pathType: Prefix
-    servicePort: 80
-    tls: true
-    ingressClassName: traefik
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-dns01
-  auth:
-    adminUser: admin
-    existingSecret: keycloak-admin
-    passwordSecretKey: admin-password
-  service:
-    type: ClusterIP
-  serviceAccount:
-    name: "keycloak-sa"
-  postgresql:
-    enabled: false
-  externalDatabase:
-    host: openhands-postgresql
-    database: bitnami_keycloak
-    existingSecret: postgres-password
-    existingSecretUserKey: username
-    existingSecretPasswordKey: password
-  extraEnvVars:
-    - name: KC_FEATURES
-      value: token-exchange,admin-fine-grained-authz
-    - name: KC_HTTP_ENABLED
-      value: "true"
-    - name: KC_PROXY_HEADERS
-      value: "xforwarded"
-    - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
-      value: "true"
-  image:
-    registry: docker.io
-    repository: bitnami/keycloak
-    tag: "latest"
-  waitForDb:
-    image: "bitnami/postgresql:latest"
-  initContainers:
-    - name: wait-for-db
-      image: '{{ .Values.waitForDb.image }}'
-      command: ['sh', '-c']
-      args:
-        - |
-          echo "Waiting for database at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
-          until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" > /dev/null 2>&1; do
-            echo "PostgreSQL is unavailable - sleeping 5s"
-            sleep 5
-          done
-          echo "PostgreSQL is ready!"
-      envFrom:
-        - configMapRef:
-            name: keycloak-env-vars
-      env:
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-password
-              key: username
-        - name: DB_PASS
-          valueFrom:
-            secretKeyRef:
-              name: postgres-password
-              key: password
+  # Set to false to use shared/external Keycloak instance
+  enabled: false
+  # URL of the external Keycloak instance
+  url: "https://auth.ohe-staging.platform-team.all-hands.dev"
+  # authHost overrides AUTH_WEB_HOST env var for shared Keycloak
+  # This prevents branch prefix from being added to the auth hostname
+  authHost: "auth.ohe-staging.platform-team.all-hands.dev"
 
 # -----------------------
-# LiteLLM proxy - DISABLED for initial testing
+# LiteLLM proxy
 # -----------------------
 litellm-helm:
-  enabled: false
+  enabled: true
+  db:
+    useExisting: true
+    deployStandalone: false
+    endpoint: openhands-postgresql
+    database: litellm
+    secret:
+      name: postgres-password
+      usernameKey: username
+      passwordKey: password
+  ingress:
+    enabled: false  # Access via internal service only
+  masterkeySecretName: lite-llm-api-key
+  masterkeySecretKey: lite-llm-api-key
+  migrationJob:
+    enabled: false
+  environmentSecrets: []
+  proxy_config:
+    environment_variables:
+      OR_APP_NAME: OpenHands
+      OR_SITE_URL: https://docs.all-hands.dev
+    litellm_settings:
+      num_retries: 3
+      request_timeout: 600
+    model_list:
+      - model_name: default
+        litellm_params:
+          model: openai/gpt-4o-mini
+          api_key: sk-placeholder-key  # Replace with real API key
 
-# LiteLLM URL (point to external or enable litellm-helm)
+# LiteLLM internal URL
 litellm:
-  url: "http://localhost:4000"  # Placeholder - will need real LLM proxy
+  url: "http://litellm-helm:4000"
   teamId: "openhands"
 
 # -----------------------
@@ -329,12 +320,17 @@ runtime-api:
       traefik.ingress.kubernetes.io/router.tls: "true"
     tls: true
     tlsSecretName: app-all-hands-staging-tls
+  # Pass branchSanitized to runtime-api for subdomain routing
+  # Set via: helm install --set branchSanitized=my-branch --set runtime-api.branchSanitized=my-branch
+  # branchSanitized: "my-branch"
   env:
     DB_HOST: openhands-postgresql
     DB_USER: postgres
     DB_NAME: runtime_api_db
     K8S_NAMESPACE: "openhands"
     RUNTIME_CLASS: ""
+    # NOTE: For branch deployments, override RUNTIME_BASE_URL with branch prefix:
+    # --set runtime-api.env.RUNTIME_BASE_URL=my-branch.ohe-staging.platform-team.all-hands.dev
     RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
     RUNTIME_DISABLE_SSL: "false"
     MEMORY_REQUEST: "2048Mi"
@@ -350,8 +346,11 @@ runtime:
   runAsRoot: true
 
 # Sandbox configuration
+# IMPORTANT: apiHostname must match the runtime-api service name
+# Format: http://{release-name}-runtime-api:5000
+# When deployed as 'openhands', the service is 'openhands-runtime-api'
 sandbox:
-  apiHostname: "http://runtime-api-runtime-api:5000"
+  apiHostname: "http://openhands-runtime-api:5000"
 
 # -----------------------
 # Automation - disabled for initial testing
