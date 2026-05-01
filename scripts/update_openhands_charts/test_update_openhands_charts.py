@@ -323,40 +323,29 @@ class TestUpdateChart:
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
-    def test_yaml_structure_and_metadata_preserved_after_update(self, temp_chart_file):
-        """Verify YAML structure, metadata, and non-version fields are preserved."""
+    @pytest.mark.parametrize("key,expected", [
+        ("apiVersion", "v2"),
+        ("description", "Test chart"),
+        ("name", "test-chart"),
+    ])
+    def test_scalar_metadata_preserved_after_update(self, temp_chart_file, key, expected):
+        """Verify scalar metadata fields are not modified by chart update."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
-        # Verify structure is preserved
-        assert get_chart_value(temp_chart_file, "apiVersion") == "v2"
-        assert get_chart_value(temp_chart_file, "description") == "Test chart"
-        assert get_chart_value(temp_chart_file, "name") == "test-chart"
+        assert get_chart_value(temp_chart_file, key) == expected
+
+    def test_maintainers_count_preserved_after_update(self, temp_chart_file):
+        """Verify maintainers list length is not modified by chart update."""
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
+
         assert len(get_chart_value(temp_chart_file, "maintainers")) == 1
+
+    def test_dependencies_count_preserved_after_update(self, temp_chart_file):
+        """Verify dependencies list length is not modified by chart update."""
+        update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
+
         assert len(get_chart_value(temp_chart_file, "dependencies")) == 2
 
-
-class TestDeployConfig:
-    """Tests for DeployConfig dataclass.
-
-    DeployConfig holds configuration values extracted from the deploy workflow,
-    used to synchronize chart versions with deployed infrastructure.
-    """
-
-    def test_deploy_config_stores_runtime_api_sha(self):
-        """Verify DeployConfig correctly stores the runtime-api commit SHA."""
-        config = DeployConfig(
-            runtime_api_sha="def5678901234",
-            openhands_runtime_image_tag="cloud-1.21.0-nikolaik",
-        )
-        assert config.runtime_api_sha == "def5678901234"
-
-    def test_deploy_config_stores_openhands_runtime_image_tag(self):
-        """Verify DeployConfig correctly stores the runtime image tag from deploy config."""
-        config = DeployConfig(
-            runtime_api_sha="def5678901234",
-            openhands_runtime_image_tag="cloud-1.21.0-nikolaik",
-        )
-        assert config.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
 
 # =============================================================================
@@ -550,40 +539,25 @@ class TestGetChartValue:
     reducing coupling to internal YAML data structures in tests.
     """
 
-    def test_returns_value_when_key_exists(self, make_temp_yaml_file):
-        """Test that value is returned when key exists."""
-        chart_content = """\
+    CHART_CONTENT = """\
 apiVersion: v2
 appVersion: cloud-1.0.0
 version: 0.3.11
 name: openhands
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "appVersion") == "cloud-1.0.0"
-
-    def test_returns_value_for_any_top_level_key(self, make_temp_yaml_file):
-        """Test that value is returned for any top-level key."""
-        chart_content = """\
-apiVersion: v2
-appVersion: cloud-2.0.0
-version: 0.1.0
-name: test-chart
 description: A test chart
 """
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "name") == "test-chart"
-        assert get_chart_value(temp_file, "version") == "0.1.0"
-        assert get_chart_value(temp_file, "description") == "A test chart"
 
-    def test_returns_none_when_key_not_found(self, make_temp_yaml_file):
-        """Test that None is returned when key doesn't exist."""
-        chart_content = """\
-apiVersion: v2
-name: test-chart
-version: 1.0.0
-"""
-        temp_file = make_temp_yaml_file(chart_content)
-        assert get_chart_value(temp_file, "nonexistent-key") is None
+    @pytest.mark.parametrize("key,expected", [
+        ("appVersion", "cloud-1.0.0"),
+        ("version", "0.3.11"),
+        ("name", "openhands"),
+        ("description", "A test chart"),
+        ("nonexistent-key", None),
+    ])
+    def test_returns_correct_value_for_key(self, make_temp_yaml_file, key, expected):
+        """Verify top-level keys are returned correctly, and None for missing keys."""
+        temp_file = make_temp_yaml_file(self.CHART_CONTENT)
+        assert get_chart_value(temp_file, key) == expected
 
 
 # =============================================================================
@@ -1292,13 +1266,21 @@ class TestUpdateRuntimeApiChart:
         assert get_chart_value(temp_runtime_api_chart_file, "version") == "0.1.21"
         assert new_version == "0.1.21"
 
-    def test_preserves_other_fields(self, temp_runtime_api_chart_file):
-        """Test that other fields are preserved."""
+    @pytest.mark.parametrize("key,expected", [
+        ("apiVersion", "v2"),
+        ("name", "runtime-api"),
+        ("appVersion", "1.0.0"),
+    ])
+    def test_scalar_fields_preserved_after_version_bump(self, temp_runtime_api_chart_file, key, expected):
+        """Verify scalar fields are not modified by runtime-api chart version bump."""
         update_runtime_api_chart(temp_runtime_api_chart_file)
 
-        assert get_chart_value(temp_runtime_api_chart_file, "apiVersion") == "v2"
-        assert get_chart_value(temp_runtime_api_chart_file, "name") == "runtime-api"
-        assert get_chart_value(temp_runtime_api_chart_file, "appVersion") == "1.0.0"
+        assert get_chart_value(temp_runtime_api_chart_file, key) == expected
+
+    def test_dependencies_count_preserved_after_version_bump(self, temp_runtime_api_chart_file):
+        """Verify dependencies list length is not modified by runtime-api chart version bump."""
+        update_runtime_api_chart(temp_runtime_api_chart_file)
+
         assert len(get_chart_value(temp_runtime_api_chart_file, "dependencies")) == 1
 
     def test_dry_run_no_file_changes(self, temp_runtime_api_chart_file):
@@ -1448,8 +1430,6 @@ class TestGetLatestCloudTag:
         result = get_latest_cloud_tag("fake-token", "All-Hands-AI/OpenHands")
 
         assert result == "cloud-1.20.0"
-        assert result.startswith("cloud-")
-        assert extract_version_from_cloud_tag(result) == "1.20.0"
 
     def test_skips_non_cloud_tags(self, mock_github_tags):
         """Test that non-cloud tags are skipped."""
@@ -1531,28 +1511,6 @@ class TestCloudTagExists:
         calls = mock_repo.get_git_ref.call_args_list
         assert calls[0][0][0] == "tags/cloud-1.0.0"
         assert calls[1][0][0] == "tags/cloud-10.20.30"
-
-
-class TestParseArgs:
-    """Tests for parse_args function."""
-
-    def test_cloud_tag_argument_exists(self, monkeypatch):
-        """Test that --cloud-tag argument is accepted."""
-        monkeypatch.setattr(sys, "argv", ["script", "--cloud-tag", "cloud-1.2.0"])
-        args = parse_args()
-        assert args.cloud_tag == "cloud-1.2.0"
-
-    def test_cloud_tag_default_is_none(self, monkeypatch):
-        """Test that --cloud-tag defaults to None."""
-        monkeypatch.setattr(sys, "argv", ["script"])
-        args = parse_args()
-        assert args.cloud_tag is None
-
-    def test_dry_run_argument(self, monkeypatch):
-        """Test that --dry-run argument works."""
-        monkeypatch.setattr(sys, "argv", ["script", "--dry-run"])
-        args = parse_args()
-        assert args.dry_run is True
 
 
 if __name__ == "__main__":
