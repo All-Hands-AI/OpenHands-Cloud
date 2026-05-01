@@ -7,17 +7,11 @@
 
 import argparse
 import os
-import secrets
 from typing import Any
 
 import requests
 
-APP_NAME_PREFIX = "openhands"
 SLACK_MANIFEST_API = "https://slack.com/api/apps.manifest.create"
-
-
-def generate_unique_app_name() -> str:
-    return f"{APP_NAME_PREFIX}-{secrets.token_hex(4)}"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

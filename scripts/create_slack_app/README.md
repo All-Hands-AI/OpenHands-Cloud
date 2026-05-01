@@ -17,15 +17,17 @@ Create a Slack app configured for the Replicated self-hosted install of OpenHand
 
 ## Usage
 
+Run from the repository root:
+
 ```bash
-./create_slack_app.py --base-domain <your-domain> --slack-token <xoxe.xoxp-...>
+./scripts/create_slack_app/create_slack_app.py --base-domain <your-domain> --slack-token <xoxe.xoxp-...>
 ```
 
 The token can also be provided via the `SLACK_CONFIG_TOKEN` environment variable:
 
 ```bash
 export SLACK_CONFIG_TOKEN=xoxe.xoxp-...
-./create_slack_app.py --base-domain <your-domain>
+./scripts/create_slack_app/create_slack_app.py --base-domain <your-domain>
 ```
 
 ### Options
@@ -40,7 +42,7 @@ export SLACK_CONFIG_TOKEN=xoxe.xoxp-...
 ### Example
 
 ```bash
-./create_slack_app.py --base-domain mycompany.com --slack-token xoxe.xoxp-...
+./scripts/create_slack_app/create_slack_app.py --base-domain mycompany.com --slack-token xoxe.xoxp-...
 ```
 
 ### Output
