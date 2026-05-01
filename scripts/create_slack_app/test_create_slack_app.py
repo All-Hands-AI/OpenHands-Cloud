@@ -1,6 +1,7 @@
 """Tests for create_slack_app.py — written before implementation (TDD RED phase)."""
 
 import os
+import runpy
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -19,10 +20,10 @@ from create_slack_app import (
 # ---------------------------------------------------------------------------
 
 
-def make_mock_response(response_data: dict, ok: bool = True) -> MagicMock:
+def make_mock_response(response_data: dict, http_success: bool = True) -> MagicMock:
     mock = MagicMock()
     mock.json.return_value = response_data
-    if ok:
+    if http_success:
         mock.raise_for_status.return_value = None
     else:
         mock.raise_for_status.side_effect = Exception("HTTP error")
@@ -162,14 +163,14 @@ class TestCreateSlackApp:
         with patch("create_slack_app.requests.post") as mock_post:
             mock_post.return_value = make_mock_response(make_successful_create_response())
             create_slack_app(manifest, token="xoxe-test-token")
-        assert mock_post.call_args[0][0] == "https://slack.com/api/apps.manifest.create"
+        assert mock_post.call_args.args[0] == "https://slack.com/api/apps.manifest.create"
 
     def test_includes_token_in_authorization_header(self):
         manifest = build_app_manifest("example.com")
         with patch("create_slack_app.requests.post") as mock_post:
             mock_post.return_value = make_mock_response(make_successful_create_response())
             create_slack_app(manifest, token="xoxe-my-token")
-        headers = mock_post.call_args[1]["headers"]
+        headers = mock_post.call_args.kwargs["headers"]
         assert headers["Authorization"] == "Bearer xoxe-my-token"
 
     def test_sends_manifest_in_request_body(self):
@@ -177,7 +178,7 @@ class TestCreateSlackApp:
         with patch("create_slack_app.requests.post") as mock_post:
             mock_post.return_value = make_mock_response(make_successful_create_response())
             create_slack_app(manifest, token="xoxe-test-token")
-        assert mock_post.call_args[1]["json"]["manifest"] == manifest
+        assert mock_post.call_args.kwargs["json"]["manifest"] == manifest
 
     def test_returns_full_response_data(self):
         manifest = build_app_manifest("example.com")
@@ -197,7 +198,7 @@ class TestCreateSlackApp:
     def test_raises_on_http_error(self):
         manifest = build_app_manifest("example.com")
         with patch("create_slack_app.requests.post") as mock_post:
-            mock_post.return_value = make_mock_response({}, ok=False)
+            mock_post.return_value = make_mock_response({}, http_success=False)
             with pytest.raises(Exception):
                 create_slack_app(manifest, token="xoxe-test-token")
 
@@ -236,6 +237,28 @@ class TestMissingTokenMessage:
 
     def test_instructs_to_use_access_token(self):
         assert "access token" in missing_token_message()
+
+
+# ---------------------------------------------------------------------------
+# TestMissingTokenGuard
+# ---------------------------------------------------------------------------
+
+
+class TestMissingTokenGuard:
+    def test_parse_args_returns_none_slack_token_when_not_provided(self):
+        env = {k: v for k, v in os.environ.items() if k != "SLACK_CONFIG_TOKEN"}
+        with patch.dict(os.environ, env, clear=True):
+            args = parse_args(argv=["--base-domain", "example.com"])
+        assert args.slack_token is None
+
+    def test_main_script_exits_with_error_message_when_token_missing(self):
+        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "create_slack_app.py")
+        env = {k: v for k, v in os.environ.items() if k != "SLACK_CONFIG_TOKEN"}
+        with patch.dict(os.environ, env, clear=True):
+            with patch("sys.argv", ["create_slack_app", "--base-domain", "example.com"]):
+                with pytest.raises(SystemExit) as exc_info:
+                    runpy.run_path(script_path, run_name="__main__")
+        assert "Slack configuration token required" in str(exc_info.value)
 
 
 # ---------------------------------------------------------------------------
@@ -307,13 +330,13 @@ class TestMain:
     def test_passes_token_to_api(self):
         with mock_main_dependencies() as mocks:
             main(base_domain="example.com", slack_token="xoxe-my-token")
-        headers = mocks["requests_post"].call_args[1]["headers"]
+        headers = mocks["requests_post"].call_args.kwargs["headers"]
         assert "xoxe-my-token" in headers["Authorization"]
 
     def test_passes_base_domain_to_manifest(self):
         with mock_main_dependencies() as mocks:
             main(base_domain="mycompany.com", slack_token="tok")
-        redirect_urls = mocks["requests_post"].call_args[1]["json"]["manifest"]["oauth_config"][
+        redirect_urls = mocks["requests_post"].call_args.kwargs["json"]["manifest"]["oauth_config"][
             "redirect_urls"
         ]
         assert any("mycompany.com" in url for url in redirect_urls)
@@ -321,17 +344,12 @@ class TestMain:
     def test_uses_custom_app_name(self):
         with mock_main_dependencies() as mocks:
             main(base_domain="example.com", slack_token="tok", app_name="custom-bot")
-        manifest = mocks["requests_post"].call_args[1]["json"]["manifest"]
+        manifest = mocks["requests_post"].call_args.kwargs["json"]["manifest"]
         assert manifest["display_information"]["name"] == "custom-bot"
 
-    def test_display_name_is_OpenHands_when_no_app_name_provided(self):
+    def test_default_display_names_are_OpenHands_when_no_app_name_provided(self):
         with mock_main_dependencies() as mocks:
             main(base_domain="example.com", slack_token="tok")
-        manifest = mocks["requests_post"].call_args[1]["json"]["manifest"]
+        manifest = mocks["requests_post"].call_args.kwargs["json"]["manifest"]
         assert manifest["display_information"]["name"] == "OpenHands"
-
-    def test_bot_display_name_is_OpenHands_when_no_app_name_provided(self):
-        with mock_main_dependencies() as mocks:
-            main(base_domain="example.com", slack_token="tok")
-        manifest = mocks["requests_post"].call_args[1]["json"]["manifest"]
         assert manifest["features"]["bot_user"]["display_name"] == "OpenHands"
