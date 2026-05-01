@@ -1,0 +1,78 @@
+# =============================================================================
+# OpenHands Site-Specific Values: single-cluster-subdomain
+# =============================================================================
+# This file contains ONLY overrides from charts/openhands/values.yaml
+# 
+# Usage:
+#   helm install openhands ./charts/openhands \
+#     -f site-infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
+#     --set branchSanitized=my-branch
+# =============================================================================
+
+# Site-specific hostnames with subdomain routing
+ingress:
+  enabled: true
+  host: "ohe-staging.platform-team.all-hands.dev"
+  prefixWithBranch: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-dns01
+
+env:
+  RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+
+# Use shared Keycloak (disabled in-cluster)
+keycloak:
+  enabled: false
+  url: "https://auth.ohe-staging.platform-team.all-hands.dev"
+
+enterpriseSSO:
+  enabled: true
+
+# LiteLLM using shared PostgreSQL
+litellm-helm:
+  enabled: true
+  db:
+    useExisting: true
+    deployStandalone: false
+    endpoint: openhands-postgresql
+  ingress:
+    enabled: false
+
+litellm:
+  url: "http://litellm-helm:4000"
+
+# Ephemeral storage for testing
+filestore:
+  ephemeral: true
+
+# Enable embedded PostgreSQL with persistence
+databaseMigrations:
+  createDatabases: true
+
+postgresql:
+  fullnameOverride: openhands-postgresql
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+redis:
+  fullnameOverride: openhands-redis
+
+# Runtime API site-specific config
+runtime-api:
+  imagePullSecrets:
+    - name: ghcr-login-secret
+  databaseMigrations:
+    createDatabases: true
+  ingress:
+    enabled: true
+    host: "ohe-staging.platform-team.all-hands.dev"
+    prefixWithBranch: true
+    path: /runtime
+    pathType: Prefix
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-dns01
+  env:
+    DB_HOST: openhands-postgresql
+    RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"

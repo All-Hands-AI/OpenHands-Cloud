@@ -1,0 +1,63 @@
+# =============================================================================
+# OpenHands Site-Specific Values: single-cluster-path
+# =============================================================================
+# This file contains ONLY overrides from charts/openhands/values.yaml
+# 
+# Usage:
+#   helm install openhands ./charts/openhands \
+#     -f site-infrastructure/helm/environments/single-cluster-path/values-openhands.yaml
+# =============================================================================
+
+# Site-specific hostnames
+ingress:
+  enabled: true
+  host: "ohe-staging.platform-team.all-hands.dev"
+
+env:
+  RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+
+# Use shared Keycloak (disabled in-cluster)
+keycloak:
+  enabled: false
+  url: "https://auth.ohe-staging.platform-team.all-hands.dev"
+
+# Ephemeral storage for testing
+filestore:
+  ephemeral: true
+
+# Enable embedded PostgreSQL with persistence
+databaseMigrations:
+  createDatabases: true
+
+postgresql:
+  fullnameOverride: openhands-postgresql
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+redis:
+  fullnameOverride: openhands-redis
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+
+# Runtime API site-specific config
+runtime-api:
+  imagePullSecrets:
+    - name: ghcr-login-secret
+  databaseMigrations:
+    createDatabases: true
+  ingress:
+    enabled: true
+    host: "ohe-staging.platform-team.all-hands.dev"
+    path: /runtime
+    pathType: Prefix
+  env:
+    DB_HOST: openhands-postgresql
+    RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
+    # Disable runtime pod probes - they require API key authentication which
+    # Kubernetes HTTP probes cannot provide, causing pods to never become Ready
+    INCLUDE_START_PROBE: "false"
+    INCLUDE_LIVENESS_PROBE: "false"

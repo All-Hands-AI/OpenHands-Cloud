@@ -24,7 +24,7 @@ This document outlines the testing strategy for validating the OpenHands staging
 Validate Terraform configuration syntax and module references:
 
 ```bash
-cd infrastructure/terraform/environments
+cd site-infrastructure/terraform/environments
 
 for env in single-cluster-path single-cluster-subdomain multi-cluster-path multi-cluster-subdomain; do
   echo "=== Validating $env ==="
@@ -40,7 +40,7 @@ done
 Verify Helm values produce valid Kubernetes manifests:
 
 ```bash
-cd infrastructure/helm
+cd site-infrastructure/helm
 
 # Add required repos
 helm repo add jetstack https://charts.jetstack.io
@@ -108,7 +108,7 @@ gcloud projects describe staging-092324
 
 ```bash
 # Start with single-cluster-path
-cd infrastructure/terraform/environments/single-cluster-path
+cd site-infrastructure/terraform/environments/single-cluster-path
 
 # Configure variables
 cp terraform.tfvars.example terraform.tfvars
@@ -145,7 +145,7 @@ Start with **single-cluster-path** (simplest configuration).
 ### Apply Terraform
 
 ```bash
-cd infrastructure/terraform/environments/single-cluster-path
+cd site-infrastructure/terraform/environments/single-cluster-path
 terraform apply
 ```
 
@@ -178,14 +178,14 @@ helm repo update
 helm install cert-manager jetstack/cert-manager \
   -n cert-manager --create-namespace \
   --set installCRDs=true \
-  -f infrastructure/helm/cert-manager/values.yaml
+  -f site-infrastructure/helm/cert-manager/values.yaml
 
 # Verify
 kubectl get pods -n cert-manager
 kubectl wait --for=condition=Ready pods --all -n cert-manager --timeout=120s
 
 # Apply ClusterIssuer
-kubectl apply -f infrastructure/helm/cert-manager/cluster-issuer.yaml
+kubectl apply -f site-infrastructure/helm/cert-manager/cluster-issuer.yaml
 ```
 
 ### Install Traefik (Path Routing)
@@ -196,11 +196,11 @@ helm repo update
 
 helm install traefik traefik/traefik \
   -n traefik --create-namespace \
-  -f infrastructure/helm/traefik/values.yaml \
-  -f infrastructure/helm/traefik/values-path-routing.yaml
+  -f site-infrastructure/helm/traefik/values.yaml \
+  -f site-infrastructure/helm/traefik/values-path-routing.yaml
 
 # Apply middlewares
-kubectl apply -f infrastructure/helm/traefik/middlewares-path-routing.yaml
+kubectl apply -f site-infrastructure/helm/traefik/middlewares-path-routing.yaml
 
 # Get Load Balancer IP
 kubectl get svc -n traefik traefik -w
@@ -215,8 +215,8 @@ helm repo update
 
 helm install external-dns bitnami/external-dns \
   -n external-dns --create-namespace \
-  -f infrastructure/helm/external-dns/values.yaml \
-  -f infrastructure/helm/external-dns/values-path-routing.yaml \
+  -f site-infrastructure/helm/external-dns/values.yaml \
+  -f site-infrastructure/helm/external-dns/values-path-routing.yaml \
   --set google.project=staging-092324 \
   --set domainFilters[0]=your-domain.com
 ```
@@ -413,7 +413,7 @@ kubectl delete namespace external-dns
 ### Destroy Infrastructure
 
 ```bash
-cd infrastructure/terraform/environments/single-cluster-path
+cd site-infrastructure/terraform/environments/single-cluster-path
 terraform destroy
 ```
 
