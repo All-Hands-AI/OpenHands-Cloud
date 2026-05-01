@@ -76,7 +76,7 @@ class TestBuildAppManifest:
         manifest = build_app_manifest("example.com")
         request_url = manifest["settings"]["event_subscriptions"]["request_url"]
         assert request_url == "https://app.example.com/slack/on-event"
-        assert request_url.startswith("https://")
+        assert request_url == "https://app.example.com/slack/on-event"
 
     def test_interactivity_request_url_uses_base_domain(self):
         manifest = build_app_manifest("example.com")
