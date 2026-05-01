@@ -566,6 +566,7 @@ postgresql:
   enabled: true
   auth:
     username: postgres
+    database: postgres
     existingSecret: postgres-password
   primary:
     initdb:
@@ -673,6 +674,7 @@ runtime-api:
   postgresql:
     auth:
       username: postgres
+      database: runtime_api_db
       existingSecret: postgres-password
   externalDatabase:
     enabled: false

@@ -272,6 +272,16 @@ warmRuntimes:
       run_as_user: 10001
       run_as_group: 10001
       fs_group: 10001
+      # Node scheduling configuration for runtime pods
+      # These are passed to dynamically-created runtime pods
+      # Uncomment and configure for sysbox nodes:
+      # node_selector:
+      #   sysbox-install: "yes"
+      # tolerations:
+      #   - key: "sysbox-runtime"
+      #     operator: "Equal"
+      #     value: "true"
+      #     effect: "NoSchedule"
 
 # Database cleanup CronJob configuration
 dbCleanup:
