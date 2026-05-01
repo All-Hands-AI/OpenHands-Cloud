@@ -36,7 +36,7 @@ spec:
             name: service-template
             port:
               number: 80
-      - path: /servicetemplate
+      - path: /service-template
         pathType: Prefix
         backend:
           service:
