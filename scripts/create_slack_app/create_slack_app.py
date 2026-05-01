@@ -29,8 +29,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=os.environ.get("SLACK_CONFIG_TOKEN"),
         help="Slack app configuration token (xoxe-...). "
         "Falls back to SLACK_CONFIG_TOKEN env var. "
-        "Obtain one from api.slack.com/apps → your workspace → App-Level Tokens "
-        "with apps:write and apps:read scopes.",
+        "Obtain one from https://api.slack.com/apps in the "
+        "Your App Configuration Tokens section.",
     )
     parser.add_argument(
         "--app-name",
