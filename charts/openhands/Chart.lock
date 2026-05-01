@@ -22,9 +22,15 @@ dependencies:
   version: 1.9.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.2.11
+  version: 0.3.1
 - name: automation
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.1.4
-digest: sha256:54d26fb32c65a2e553f3eb2131d910aab51245367f7ca8da0e9c9d092aef14a7
-generated: "2026-04-28T09:14:46.482928-07:00"
+  version: 0.1.5
+- name: crd-check
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  version: 0.1.0
+- name: plugin-directory
+  repository: oci://ghcr.io/all-hands-ai/helm-charts
+  version: 0.1.0
+digest: sha256:3cd6e34ff109856f45b96f468eaf96789b91a53c51b77b2032b3dd3ea66e61eb
+generated: "2026-05-01T14:52:20.150845-07:00"
