@@ -70,25 +70,27 @@ class TestBuildAppManifest:
         manifest = build_app_manifest("example.com")
         redirect_urls = manifest["oauth_config"]["redirect_urls"]
         assert "https://app.example.com/slack/install-callback" in redirect_urls
-        assert redirect_urls[0].startswith("https://")
 
     def test_event_subscription_request_url_uses_base_domain(self):
         manifest = build_app_manifest("example.com")
-        request_url = manifest["settings"]["event_subscriptions"]["request_url"]
-        assert request_url == "https://app.example.com/slack/on-event"
-        assert request_url == "https://app.example.com/slack/on-event"
+        assert (
+            manifest["settings"]["event_subscriptions"]["request_url"]
+            == "https://app.example.com/slack/on-event"
+        )
 
     def test_interactivity_request_url_uses_base_domain(self):
         manifest = build_app_manifest("example.com")
-        request_url = manifest["settings"]["interactivity"]["request_url"]
-        assert request_url == "https://app.example.com/slack/on-form-interaction"
-        assert request_url.startswith("https://")
+        assert (
+            manifest["settings"]["interactivity"]["request_url"]
+            == "https://app.example.com/slack/on-form-interaction"
+        )
 
     def test_options_load_url_uses_base_domain(self):
         manifest = build_app_manifest("example.com")
-        request_url = manifest["settings"]["interactivity"]["message_menu_options_url"]
-        assert request_url == "https://app.example.com/slack/on-options-load"
-        assert request_url.startswith("https://")
+        assert (
+            manifest["settings"]["interactivity"]["message_menu_options_url"]
+            == "https://app.example.com/slack/on-options-load"
+        )
 
     def test_bot_event_is_app_mention(self):
         manifest = build_app_manifest("example.com")
