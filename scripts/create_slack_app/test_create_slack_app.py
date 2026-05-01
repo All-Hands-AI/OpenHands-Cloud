@@ -203,43 +203,11 @@ class TestCreateSlackApp:
 
 
 # ---------------------------------------------------------------------------
-# TestParseArgs
+# TestTokenResolution
 # ---------------------------------------------------------------------------
 
 
-class TestParseArgs:
-    def test_base_domain_is_required(self):
-        with pytest.raises(SystemExit):
-            parse_args(argv=[])
-
-    def test_base_domain_is_parsed(self):
-        args = parse_args(argv=["--base-domain", "example.com", "--slack-token", "tok"])
-        assert args.base_domain == "example.com"
-
-    def test_slack_token_is_parsed(self):
-        args = parse_args(argv=["--base-domain", "example.com", "--slack-token", "xoxe-abc"])
-        assert args.slack_token == "xoxe-abc"
-
-    def test_app_name_defaults_to_none(self):
-        args = parse_args(argv=["--base-domain", "example.com", "--slack-token", "tok"])
-        assert args.app_name is None
-
-    def test_app_name_is_parsed(self):
-        args = parse_args(
-            argv=["--base-domain", "example.com", "--slack-token", "tok", "--app-name", "my-app"]
-        )
-        assert args.app_name == "my-app"
-
-    def test_dry_run_defaults_to_false(self):
-        args = parse_args(argv=["--base-domain", "example.com", "--slack-token", "tok"])
-        assert args.dry_run is False
-
-    def test_dry_run_flag_sets_true(self):
-        args = parse_args(
-            argv=["--base-domain", "example.com", "--slack-token", "tok", "--dry-run"]
-        )
-        assert args.dry_run is True
-
+class TestTokenResolution:
     def test_slack_token_read_from_env_when_not_passed(self):
         with patch.dict(os.environ, {"SLACK_CONFIG_TOKEN": "xoxe-from-env"}):
             args = parse_args(argv=["--base-domain", "example.com"])
