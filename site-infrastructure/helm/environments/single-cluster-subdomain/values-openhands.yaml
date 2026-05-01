@@ -20,9 +20,8 @@ ingress:
 env:
   RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
 
-# Use shared Keycloak (disabled in-cluster)
+# Use shared Keycloak (keycloak.enabled=false is already default)
 keycloak:
-  enabled: false
   url: "https://auth.ohe-staging.platform-team.all-hands.dev"
 
 enterpriseSSO:
@@ -41,14 +40,15 @@ litellm-helm:
 litellm:
   url: "http://litellm-helm:4000"
 
-# Ephemeral storage for testing
+# Ephemeral minio storage for testing (production would use GCS/S3)
 filestore:
   ephemeral: true
 
-# Enable embedded PostgreSQL with persistence
+# Enable database creation (chart default is false)
 databaseMigrations:
   createDatabases: true
 
+# PostgreSQL with persistence (chart default has persistence disabled)
 postgresql:
   fullnameOverride: openhands-postgresql
   primary:
@@ -56,6 +56,7 @@ postgresql:
       enabled: true
       size: 10Gi
 
+# Redis (persistence disabled by default, which is fine for staging)
 redis:
   fullnameOverride: openhands-redis
 
@@ -74,5 +75,6 @@ runtime-api:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-dns01
   env:
+    # Override DB_HOST to point to our postgresql instance
     DB_HOST: openhands-postgresql
     RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
