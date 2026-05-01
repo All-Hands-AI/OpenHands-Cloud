@@ -1,25 +1,4 @@
 {{- if and .Values.ingress.enabled (index .Values "service-template" "enabled") }}
----
-# Traefik middleware to strip /servicetemplate prefix
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: strip-servicetemplate-prefix
-spec:
-  stripPrefix:
-    prefixes:
-      - /servicetemplate
----
-# Traefik middleware to strip /api/service-template prefix
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: strip-api-service-template-prefix
-spec:
-  stripPrefix:
-    prefixes:
-      - /api/service-template
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -30,46 +9,6 @@ metadata:
     {{- else }}
     {{ .Values.ingress.annotations | toYaml | nindent 4 }}
     {{- end }}
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-strip-servicetemplate-prefix@kubernetescrd
-spec:
-  ingressClassName: {{ .Values.ingress.class }}
-  {{- if .Values.tls.enabled }}
-  tls:
-  - hosts:
-    {{- if .Values.ingress.prefixWithBranch }}
-    - {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
-    {{- else }}
-    - {{ .Values.ingress.host }}
-    {{- end }}
-    secretName: app-all-hands-{{ .Values.tls.env }}-tls
-  {{- end }}
-  rules:
-  {{- if .Values.ingress.prefixWithBranch }}
-  - host: {{ .Values.branchSanitized }}.{{ .Values.ingress.host }}
-  {{- else }}
-  - host: {{ .Values.ingress.host }}
-  {{- end }}
-    http:
-      paths:
-      - path: /servicetemplate
-        pathType: Prefix
-        backend:
-          service:
-            name: service-template
-            port:
-              number: 80
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: openhands-service-template-api-ingress
-  annotations:
-    {{- if .Values.ingress.root.annotations }}
-    {{ .Values.ingress.root.annotations | toYaml | nindent 4 }}
-    {{- else }}
-    {{ .Values.ingress.annotations | toYaml | nindent 4 }}
-    {{- end }}
-    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-strip-api-service-template-prefix@kubernetescrd
 spec:
   ingressClassName: {{ .Values.ingress.class }}
   {{- if .Values.tls.enabled }}
@@ -91,6 +30,13 @@ spec:
     http:
       paths:
       - path: /api/service-template
+        pathType: Prefix
+        backend:
+          service:
+            name: service-template
+            port:
+              number: 80
+      - path: /servicetemplate
         pathType: Prefix
         backend:
           service:
