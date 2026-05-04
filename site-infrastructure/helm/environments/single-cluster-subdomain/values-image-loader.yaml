@@ -1,0 +1,16 @@
+# =============================================================================
+# Image Loader Site-Specific Values: single-cluster-subdomain
+# =============================================================================
+# This file contains ONLY overrides from charts/image-loader/values.yaml
+# 
+# Usage:
+#   helm install image-loader ./charts/image-loader \
+#     -f site-infrastructure/helm/environments/single-cluster-subdomain/values-image-loader.yaml
+# =============================================================================
+
+# Override toleration to match our GKE sysbox node taint
+tolerations:
+- key: "sysbox-runtime"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"

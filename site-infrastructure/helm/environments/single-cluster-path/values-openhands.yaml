@@ -1,0 +1,104 @@
+# =============================================================================
+# OpenHands Site-Specific Values: single-cluster-path
+# =============================================================================
+# This file contains ONLY overrides from charts/openhands/values.yaml
+# 
+# Usage:
+#   helm install openhands ./charts/openhands \
+#     -f site-infrastructure/helm/environments/single-cluster-path/values-openhands.yaml
+# =============================================================================
+
+# Site-specific hostnames
+ingress:
+  enabled: true
+  host: "ohe-staging.platform-team.all-hands.dev"
+
+env:
+  RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+
+# Use shared Keycloak (disabled in-cluster, keycloak.enabled=false is already default)
+keycloak:
+  url: "https://auth.ohe-staging.platform-team.all-hands.dev"
+
+# Ephemeral minio storage for testing (production would use GCS/S3)
+filestore:
+  ephemeral: true
+
+# Enable database creation (chart default is false)
+databaseMigrations:
+  createDatabases: true
+
+# PostgreSQL with persistence (chart default has persistence disabled)
+postgresql:
+  fullnameOverride: openhands-postgresql
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Redis with persistence
+redis:
+  fullnameOverride: openhands-redis
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+
+# Runtime API site-specific config
+runtime-api:
+  imagePullSecrets:
+    - name: ghcr-login-secret
+  databaseMigrations:
+    createDatabases: true
+  ingress:
+    enabled: true
+    host: "ohe-staging.platform-team.all-hands.dev"
+    path: /runtime
+    pathType: Prefix
+  env:
+    # Override DB_HOST to point to our postgresql instance
+    DB_HOST: openhands-postgresql
+    RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
+    # Disable runtime pod probes - they require API key authentication which
+    # Kubernetes HTTP probes cannot provide, causing pods to never become Ready
+    INCLUDE_START_PROBE: "false"
+    INCLUDE_LIVENESS_PROBE: "false"
+    # Use sysbox runtime class for runtime pods
+    RUNTIME_CLASS: "sysbox-runc"
+  # Enable warm runtimes for faster conversation startup
+  warmRuntimes:
+    enabled: true
+    count: 1
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/agent-server:1.19.0-python"
+        working_dir: "/workspace"
+        environment:
+          LOG_JSON: "1"
+          LOG_JSON_LEVEL_KEY: "severity"
+          OH_ALLOW_CORS_ORIGINS_0: ""
+          OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+          OH_CONVERSATIONS_PATH: "/workspace/conversations"
+          OH_ENABLE_VNC: "0"
+          OH_VSCODE_PORT: "60001"
+          OH_WEBHOOKS_0_BASE_URL: ""
+          OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+          VSCODE_PORT: "60001"
+          WORKER_1: "12000"
+          WORKER_2: "12001"
+        command:
+          - /usr/local/bin/openhands-agent-server
+          - "--port"
+          - "60000"
+        run_as_user: 10001
+        run_as_group: 10001
+        fs_group: 10001
+        # Sysbox node scheduling - required for runtime pods to run
+        node_selector:
+          sysbox-install: "yes"
+        tolerations:
+          - key: "sysbox-runtime"
+            operator: "Equal"
+            value: "true"
+            effect: "NoSchedule"
+        runtime_class: "sysbox-runc"

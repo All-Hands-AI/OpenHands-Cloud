@@ -1,5 +1,11 @@
 allowedUsers: null
 
+# Branch-based routing configuration
+# When enabled, the ingress host becomes: {branchSanitized}.{ingress.host}
+# Example: saurya-prototype.app.example.com
+# Requires a wildcard TLS certificate (e.g., *.app.example.com)
+branchSanitized: ""  # Set to sanitized branch name (lowercase, alphanumeric, hyphens only)
+
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -123,16 +129,94 @@ ingress:
   # REQUIRED: Update to a hostname in a DNS domain you own
   # host: "app.example.com"
   class: traefik
+
+  # =============================================================================
+  # TWO-LEVEL ROUTING ARCHITECTURE
+  # =============================================================================
+  #
+  # Level 1: Branch Routing (routingMode)
+  # ─────────────────────────────────────
+  # Controls how different branches/deployments are differentiated:
+  #
+  #   routingMode: subdomain (default)
+  #     - Branch gets a subdomain prefix: my-branch.app.example.com
+  #     - Requires: Wildcard TLS cert (*.app.example.com) and wildcard DNS
+  #
+  #   routingMode: path
+  #     - Branch gets a path prefix: app.example.com/my-branch/
+  #     - Requires: Single-domain TLS cert, path prefix stripped by middleware
+  #
+  # Level 2: Service Routing (serviceRoutingMode)
+  # ─────────────────────────────────────────────
+  # Controls how services within a branch are routed (only applies when
+  # routingMode=subdomain):
+  #
+  #   serviceRoutingMode: path (default)
+  #     - Services use paths: my-branch.app.example.com/api/automation
+  #     - Standard setup, single wildcard cert covers all
+  #
+  #   serviceRoutingMode: subdomain
+  #     - Services get subdomains: automation.my-branch.app.example.com
+  #     - Requires: Double-wildcard TLS cert (*.*.app.example.com) OR
+  #       individual certs per branch
+  #
+  # Example Configurations:
+  # ─────────────────────────────────────────────────────────────────────────────
+  #
+  # Config A: Branch subdomain + Service paths (most common)
+  #   routingMode: subdomain
+  #   prefixWithBranch: true
+  #   branchSanitized: "my-feature"
+  #   serviceRoutingMode: path
+  #   → my-feature.app.example.com/
+  #   → my-feature.app.example.com/api/automation
+  #   → my-feature.app.example.com/integration/github/events
+  #
+  # Config B: Branch subdomain + Service subdomains
+  #   routingMode: subdomain
+  #   prefixWithBranch: true
+  #   branchSanitized: "my-feature"
+  #   serviceRoutingMode: subdomain
+  #   → my-feature.app.example.com
+  #   → automation.my-feature.app.example.com
+  #   → integrations.my-feature.app.example.com
+  #   → mcp.my-feature.app.example.com
+  #
+  # Config C: Path-based routing (single domain)
+  #   routingMode: path
+  #   pathPrefix: "my-feature"
+  #   → app.example.com/my-feature/
+  #   → app.example.com/my-feature/api/automation
+  #
+  # =============================================================================
+
+  # Level 1: Branch routing
+  routingMode: subdomain  # Options: "subdomain" | "path"
+
+  # For subdomain branch routing
+  prefixWithBranch: false
+  branchSanitized: ""
+
+  # For path branch routing
+  pathPrefix: ""
+
+  # Level 2: Service routing (only applies when routingMode=subdomain)
+  serviceRoutingMode: path  # Options: "path" | "subdomain"
+
   # Legacy annotations field - kept for backward compatibility
   annotations: {}
     # UPDATE: if you use cert-manager, enter your clusterIssuer may not match.
     # cert-manager.io/cluster-issuer: letsencrypt-production
 
-  # Separate annotations for each ingress
+  # Per-service annotations (allows service-specific ingress customization)
   root:
     annotations: {}
       # Example: Add specific annotations for the root ingress
       # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+
+  automation:
+    annotations: {}
+      # Example: Add specific annotations for automation ingress
 
   integrations:
     annotations: {}
@@ -274,6 +358,10 @@ uvicorn:
 keycloak:
   enabled: false
   url: "http://keycloak"
+  # authHost: Override AUTH_WEB_HOST for shared/external Keycloak (without https://)
+  # Use this when Keycloak is shared across branches and shouldn't get branch prefix
+  # Example: auth.ohe-staging.platform-team.all-hands.dev
+  authHost: ""
   fullnameOverride: keycloak
   replicaCount: 1
   production: true
@@ -478,6 +566,7 @@ postgresql:
   enabled: true
   auth:
     username: postgres
+    database: postgres
     existingSecret: postgres-password
   primary:
     initdb:
@@ -585,6 +674,7 @@ runtime-api:
   postgresql:
     auth:
       username: postgres
+      database: runtime_api_db
       existingSecret: postgres-password
   externalDatabase:
     enabled: false

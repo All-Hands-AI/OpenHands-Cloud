@@ -658,7 +658,7 @@ spec:
                     name: keycloak-realm
                     key: client-secret
               - name: AUTH_KEYCLOAK_ISSUER
-                value: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://auth.app.{{repl ConfigOption "base_domain"}}/realms/allhands{{repl else}}https://{{repl ConfigOption "auth_hostname"}}/realms/allhands{{repl end}}'
+                value: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://auth.app.{{repl ConfigOption "base_domain"}}/realms/{{repl ConfigOption "keycloak_realm_name"}}{{repl else}}https://{{repl ConfigOption "auth_hostname"}}/realms/{{repl ConfigOption "keycloak_realm_name"}}{{repl end}}'
             ingress:
               hostname: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
               className: "traefik"
