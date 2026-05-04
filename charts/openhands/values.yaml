@@ -386,7 +386,7 @@ laminar:
       tls:
         enabled: false
         secretName: "laminar-frontend-tls"
-        clusterIssuer: "letsencrypt"
+        clusterIssuer: ""
       annotations: {}
 
   appServer:
@@ -402,7 +402,7 @@ laminar:
       tls:
         enabled: false
         secretName: "laminar-app-server-tls"
-        clusterIssuer: "letsencrypt"
+        clusterIssuer: ""
       annotations: {}
 
 litellm-helm:
