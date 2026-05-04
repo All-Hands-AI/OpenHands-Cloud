@@ -356,6 +356,12 @@ keycloak:
 laminar:
   # Enable this if you want to use laminar
   enabled: false
+  global:
+    # Upstream laminar uses this to choose provider-specific defaults for
+    # frontend ingress, app-server exposure, and storage class settings.
+    # Set to "gcp" or "aws"; it is not auto-detected, and empty falls back
+    # to AWS defaults.
+    cloudProvider: ""
 
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
@@ -375,22 +381,35 @@ laminar:
 
   frontend:
     ingress:
-      # Hostname for the frontend ingress
-      # When set, creates an Ingress with TLS via cert-manager
+      enabled: true          # required gate in 0.1.8; must be true for any frontend ingress to render
       hostname: ""
-      # Ingress class name (defaults to "traefik")
       className: ""
-      # Additional annotations for the ingress
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-frontend-tls"
+        clusterIssuer: ""
       annotations: {}
+
   appServer:
-    ingress:
-      # Hostname for the app-server API ingress
-      # When set, creates an Ingress with TLS via cert-manager
-      # Used for trace ingestion from external services (e.g., runtime pods)
+    # loadBalancer creates an L4 Network Load Balancer Service for the app-server (OTLP trace ingestion).
+    # Use this on AWS (NLB) where runtimes send traces directly over TCP.
+    # On GCP, use appServer.ingress instead (L7 via traefik/GCE ingress).
+    loadBalancer:
+      enabled: false
+      # When set, external-dns will create a DNS record pointing to the LoadBalancer IP/hostname.
       hostname: ""
-      # Ingress class name (defaults to "traefik")
+      annotations: {}
+    ingress:
+      hostname: ""
       className: ""
-      # Additional annotations for the ingress
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-app-server-tls"
+        clusterIssuer: ""
       annotations: {}
 
 litellm-helm:
