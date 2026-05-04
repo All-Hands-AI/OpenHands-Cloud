@@ -635,6 +635,7 @@ spec:
       values:
         laminar:
           enabled: true
+          httpPort: 8000
           appServer:
             loadBalancer:
               enabled: false
