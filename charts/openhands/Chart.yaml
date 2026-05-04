@@ -1,8 +1,8 @@
 apiVersion: v2
 description: OpenHands is an AI-driven autonomous software engineer
 name: openhands
-appVersion: cloud-1.23.1
-version: 0.7.5
+appVersion: cloud-1.25.1
+version: 0.7.6
 maintainers:
   - name: rbren
   - name: xingyao
@@ -14,7 +14,7 @@ dependencies:
     condition: keycloak.enabled
   - name: laminar
     repository: https://lmnr-ai.github.io/lmnr-helm
-    version: 0.1.7
+    version: 0.1.8
     condition: laminar.enabled
   - name: litellm-helm
     repository: oci://ghcr.io/berriai

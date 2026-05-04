@@ -166,6 +166,7 @@
     secretKeyRef:
       name: github-app
       key: app-slug
+      optional: true
 {{- end }}
 {{- end }}
 {{- if .Values.gitlab.enabled }}

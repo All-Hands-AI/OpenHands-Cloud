@@ -34,7 +34,7 @@ Usage Example
         assert get_chart_value(temp_file, "appVersion") == NEW_APP_VERSION
 """
 
-import tempfile
+import base64
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -201,22 +201,18 @@ def assert_version_bumped(file_path: Path, original_version: str) -> None:
         >>> assert_version_bumped(chart_path, "1.2.3")  # passes
         >>> assert_version_bumped(chart_path, "1.2.2")  # fails: expected 1.2.3
     """
-    # Import here to avoid circular dependency
-    import sys
-    sys.path.insert(0, str(file_path.parent))
     from update_openhands_charts import bump_patch_version
-
     expected = bump_patch_version(original_version)
     actual = get_chart_value(file_path, "version")
     assert actual == expected, f"Expected version {expected}, got {actual}"
 
 
 @pytest.fixture
-def make_temp_yaml_file():
+def make_temp_yaml_file(tmp_path):
     """Factory fixture that creates temporary YAML files with cleanup.
 
     Returns a function that accepts YAML content and returns a Path to a
-    temporary file. The file is automatically cleaned up after the test.
+    temporary file. Cleanup is handled automatically by pytest's tmp_path fixture.
 
     Usage:
         def test_something(make_temp_yaml_file):
@@ -227,22 +223,15 @@ def make_temp_yaml_file():
             temp_file = make_temp_yaml_file(yaml_content)
             # Use temp_file...
     """
-    created_files = []
+    counter = [0]
 
     def _make_temp_file(content: str) -> Path:
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
-        f.write(content)
-        f.flush()
-        f.close()
-        path = Path(f.name)
-        created_files.append(path)
+        counter[0] += 1
+        path = tmp_path / f"test_{counter[0]}.yaml"
+        path.write_text(content)
         return path
 
-    yield _make_temp_file
-
-    # Cleanup all created files
-    for path in created_files:
-        path.unlink(missing_ok=True)
+    return _make_temp_file
 
 
 # =============================================================================
@@ -518,8 +507,6 @@ def make_workflow_response():
                                MagicMock(return_value=response))
             # ... test code ...
     """
-    import base64
-
     def _make_response(yaml_content: str) -> MagicMock:
         encoded = base64.b64encode(yaml_content.encode()).decode()
         mock_response = MagicMock()
