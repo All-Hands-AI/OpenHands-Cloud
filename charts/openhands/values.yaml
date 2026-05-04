@@ -378,7 +378,7 @@ laminar:
     ingress:
       enabled: true          # required gate in 0.1.8; must be true for any frontend ingress to render
       hostname: ""
-      className: ""          # set explicitly; cloudProvider=gcp does not auto-set this
+      className: ""
       externalDns:
         enabled: false
       tls:
