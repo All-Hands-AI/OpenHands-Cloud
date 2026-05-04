@@ -72,7 +72,8 @@ spec:
           - |
             echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
             for i in $(seq 1 60); do
-              if psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
+              # Try connecting and capture any error
+              if psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "SELECT 1;" 2>&1; then
                 echo "PostgreSQL is up!"
 
                 echo "Creating the database $DB_NAME if it doesn't exist..."
