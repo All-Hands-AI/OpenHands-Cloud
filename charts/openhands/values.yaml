@@ -373,6 +373,10 @@ laminar:
   # Useful for development/test environments without TLS
   forceHttp: true
 
+  # HTTP port for Laminar app server (default: 443)
+  # Set to 8000 for self-hosted environments where laminar exposes HTTP on port 8000
+  httpPort: null
+
   frontend:
     ingress:
       # Hostname for the frontend ingress
