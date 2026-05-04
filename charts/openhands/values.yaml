@@ -354,6 +354,7 @@ keycloak:
               key: password
 
 laminar:
+  # Enable this if you want to use laminar
   enabled: false
   global:
     cloudProvider: ""        # set to "gcp" or "aws" at deploy time
