@@ -357,7 +357,11 @@ laminar:
   # Enable this if you want to use laminar
   enabled: false
   global:
-    cloudProvider: ""        # set to "gcp" or "aws" at deploy time
+    # Upstream laminar uses this to choose provider-specific defaults for
+    # frontend ingress, app-server exposure, and storage class settings.
+    # Set to "gcp" or "aws"; it is not auto-detected, and empty falls back
+    # to AWS defaults.
+    cloudProvider: ""
 
   # Laminar project API key from K8s secret
   # Used for Laminar monitoring/analytics
