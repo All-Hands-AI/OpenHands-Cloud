@@ -9,6 +9,12 @@
 #     --set branchSanitized=my-branch
 # =============================================================================
 
+# Image override - using PR #14243 fix for SAML IdP token handling
+# PR: https://github.com/All-Hands-AI/OpenHands/pull/14243
+# TODO: Remove this override once PR is merged and included in a release
+image:
+  tag: sha-f50653f
+
 # Site-specific hostnames with subdomain routing
 ingress:
   enabled: true
@@ -51,6 +57,8 @@ databaseMigrations:
 # PostgreSQL with persistence (chart default has persistence disabled)
 postgresql:
   fullnameOverride: openhands-postgresql
+  auth:
+    database: openhands_db
   primary:
     persistence:
       enabled: true
