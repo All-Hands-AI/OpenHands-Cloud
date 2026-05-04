@@ -167,7 +167,6 @@
       key: app-slug
       optional: true
 {{- end }}
-{{- end }}
 {{- if .Values.gitlab.enabled }}
 - name: GITLAB_APP_CLIENT_ID
   valueFrom:
