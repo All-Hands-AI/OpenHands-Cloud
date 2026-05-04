@@ -393,8 +393,12 @@ laminar:
       annotations: {}
 
   appServer:
+    # loadBalancer creates an L4 Network Load Balancer Service for the app-server (OTLP trace ingestion).
+    # Use this on AWS (NLB) where runtimes send traces directly over TCP.
+    # On GCP, use appServer.ingress instead (L7 via traefik/GCE ingress).
     loadBalancer:
       enabled: false
+      # When set, external-dns will create a DNS record pointing to the LoadBalancer IP/hostname.
       hostname: ""
       annotations: {}
     ingress:
