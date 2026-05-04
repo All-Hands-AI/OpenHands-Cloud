@@ -59,9 +59,12 @@ spec:
           - sh
           - -c
           - |
+            # Install curl (not included in postgres:14 image)
+            apt-get update && apt-get install -y --no-install-recommends curl ca-certificates > /dev/null 2>&1
+
             # Download and start Cloud SQL Auth Proxy
             echo "Downloading Cloud SQL Auth Proxy..."
-            curl -o /tmp/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.15.2/cloud-sql-proxy.linux.amd64
+            curl -sL -o /tmp/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.15.2/cloud-sql-proxy.linux.amd64
             chmod +x /tmp/cloud-sql-proxy
 
             echo "Starting Cloud SQL Auth Proxy..."
