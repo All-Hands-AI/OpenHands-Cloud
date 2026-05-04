@@ -30,6 +30,8 @@ spec:
       # This runs as a background process and is terminated after database creation
       - name: create-db-user
         image: postgres:14
+        securityContext:
+          runAsUser: 0
         env:
           - name: PGPASSWORD
             valueFrom:
