@@ -1,0 +1,17 @@
+# SOPS configuration for OpenHands-Cloud
+# This file tells SOPS which encryption keys to use for different file patterns
+creation_rules:
+  # Staging path-route environment secrets - use GCP KMS
+  - path_regex: envs/staging-pathroute/.*secrets.*\.yaml$
+    gcp_kms: projects/global-432717/locations/global/keyRings/sops-key-ring/cryptoKeys/sops-key
+    encrypted_regex: "^(data|stringData|config)$"
+
+  # Staging subdomain environment secrets - use GCP KMS
+  - path_regex: envs/staging-subdomain/.*secrets.*\.yaml$
+    gcp_kms: projects/global-432717/locations/global/keyRings/sops-key-ring/cryptoKeys/sops-key
+    encrypted_regex: "^(data|stringData|config)$"
+
+  # Production environment secrets (future use)
+  - path_regex: envs/production/.*secrets.*\.yaml$
+    gcp_kms: projects/global-432717/locations/global/keyRings/sops-key-ring/cryptoKeys/sops-key
+    encrypted_regex: "^(data|stringData|config)$"

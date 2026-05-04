@@ -1,0 +1,11 @@
+# Staging (Path-Based Routing) environment values
+# Uses path-based routing: /api/automation, /integration/*, etc.
+# Base config: envs/common/values.yaml
+# Secrets: envs/staging-pathroute/secrets/
+
+ingress:
+  host: staging-pathroute.all-hands.dev
+
+automation:
+  openhandsApiUrl: "https://staging-pathroute.all-hands.dev"
+  automationBaseUrl: "https://staging-pathroute.all-hands.dev"

@@ -1,0 +1,11 @@
+# Staging (Subdomain-Based Routing) environment values
+# Uses subdomain-based routing: automation.staging-subdomain.all-hands.dev
+# Base config: envs/common/values.yaml
+# Secrets: envs/staging-subdomain/secrets/
+
+ingress:
+  host: staging-subdomain.all-hands.dev
+
+automation:
+  openhandsApiUrl: "https://staging-subdomain.all-hands.dev"
+  automationBaseUrl: "https://staging-subdomain.all-hands.dev"
