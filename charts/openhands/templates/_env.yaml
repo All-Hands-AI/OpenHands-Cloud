@@ -160,7 +160,6 @@
     secretKeyRef:
       name: github-app
       key: client-secret
-{{- if .Values.github.appSlugEnabled }}
 - name: GITHUB_APP_SLUG
   valueFrom:
     secretKeyRef:
