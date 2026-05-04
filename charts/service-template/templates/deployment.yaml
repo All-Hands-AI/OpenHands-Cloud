@@ -26,12 +26,24 @@ spec:
       initContainers:
       {{- if .Values.database.createDatabaseUser }}
       {{- if .Values.gcp.dbInstance }}
-      # Start Cloud SQL Auth Proxy for database creation
-      # This runs as a background process and is terminated after database creation
+      # Cloud SQL Auth Proxy as a native sidecar (Kubernetes 1.28+)
+      # restartPolicy: Always keeps it running while other init containers execute
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.15.2
+        restartPolicy: Always
+        args:
+          - "--port={{ .Values.database.port }}"
+          - "{{ .Values.gcp.project }}:{{ .Values.gcp.region }}:{{ .Values.gcp.dbInstance }}"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      # Create database and user using the Cloud SQL Auth Proxy sidecar
       - name: create-db-user
         image: postgres:14
-        securityContext:
-          runAsUser: 0
         env:
           - name: PGPASSWORD
             valueFrom:
@@ -51,28 +63,10 @@ spec:
               secretKeyRef:
                 name: {{ .Values.database.secretName }}
                 key: {{ .Values.database.secretKey }}
-          - name: GCP_PROJECT
-            value: {{ .Values.gcp.project | quote }}
-          - name: GCP_REGION
-            value: {{ .Values.gcp.region | quote }}
-          - name: GCP_DB_INSTANCE
-            value: {{ .Values.gcp.dbInstance | quote }}
         command:
           - sh
           - -c
           - |
-            # Install curl (not included in postgres:14 image)
-            apt-get update && apt-get install -y --no-install-recommends curl ca-certificates > /dev/null 2>&1
-
-            # Download and start Cloud SQL Auth Proxy
-            echo "Downloading Cloud SQL Auth Proxy..."
-            curl -sL -o /tmp/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.15.2/cloud-sql-proxy.linux.amd64
-            chmod +x /tmp/cloud-sql-proxy
-
-            echo "Starting Cloud SQL Auth Proxy..."
-            /tmp/cloud-sql-proxy --port $DB_PORT "${GCP_PROJECT}:${GCP_REGION}:${GCP_DB_INSTANCE}" &
-            PROXY_PID=$!
-
             echo "Waiting for Cloud SQL Auth Proxy to be ready..."
             for i in $(seq 1 60); do
               if psql -h $DB_HOST -p $DB_PORT -U postgres -d postgres -c "SELECT 1;" > /dev/null 2>&1; then
@@ -86,15 +80,13 @@ spec:
                 psql -h $DB_HOST -p $DB_PORT -U postgres -d $DB_NAME -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
                 (psql -h $DB_HOST -p $DB_PORT -U postgres -d $DB_NAME -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD'; GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER; GRANT USAGE ON SCHEMA public TO $DB_USER; GRANT CREATE ON SCHEMA public TO $DB_USER; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $DB_USER;")
 
-                echo "Database and user creation complete. Stopping Cloud SQL Auth Proxy..."
-                kill $PROXY_PID 2>/dev/null || true
+                echo "Database and user creation complete."
                 exit 0
               fi
               echo "Waiting for Cloud SQL Auth Proxy... ($i/60)"
               sleep 5
             done
             echo "Cloud SQL Auth Proxy did not become available in time."
-            kill $PROXY_PID 2>/dev/null || true
             exit 1
       {{- else }}
       # Create service database and user in an existing PostgreSQL instance (non-GCP)
