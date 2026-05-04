@@ -138,6 +138,7 @@ resource "helm_release" "keycloak" {
 # -----------------------------------------------------------------------------
 # ConfigMap for realm configuration template
 # This can be used by branch deployments to configure their clients
+# SAML SSO placeholders are substituted with terraform variables
 # -----------------------------------------------------------------------------
 
 resource "kubernetes_config_map" "realm_template" {
@@ -147,7 +148,15 @@ resource "kubernetes_config_map" "realm_template" {
   }
 
   data = {
-    "realm-template.json" = file("${path.module}/realm-template.json")
+    "realm-template.json" = replace(
+      replace(
+        file("${path.module}/realm-template.json"),
+        "$${SAML_SSO_URL}",
+        var.saml_sso_url
+      ),
+      "$${SAML_SIGNING_CERTIFICATE}",
+      var.saml_signing_certificate
+    )
   }
 }
 
@@ -249,7 +258,13 @@ resource "kubernetes_config_map" "realm_setup_script" {
         fi
       else
         echo "Realm '$REALM_NAME' already exists (HTTP $REALM_EXISTS)"
-        echo "Checking client configuration..."
+        echo "Syncing configuration from template..."
+        
+        # =====================================================================
+        # 1. Update client configuration (including protocol mappers)
+        # =====================================================================
+        echo ""
+        echo "--- Syncing client configuration ---"
         
         # Get client UUID
         CLIENT_RESPONSE=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM_NAME/clients?clientId=$CLIENT_ID" \
@@ -259,31 +274,134 @@ resource "kubernetes_config_map" "realm_setup_script" {
         
         if [ "$CLIENT_UUID" != "null" ] && [ -n "$CLIENT_UUID" ]; then
           echo "Found client '$CLIENT_ID' with UUID: $CLIENT_UUID"
-          echo "Updating client secret..."
           
-          # Get current client config and update secret
-          CURRENT_CLIENT=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM_NAME/clients/$CLIENT_UUID" \
-            -H "Authorization: Bearer $ACCESS_TOKEN")
-          
-          UPDATED_CLIENT=$(echo "$CURRENT_CLIENT" | jq --arg secret "$CLIENT_SECRET" '.secret = $secret')
+          # Use template client config with secret, not current config
+          # This ensures protocol mappers and other settings are synced
+          TEMPLATE_CLIENT=$(jq --arg secret "$CLIENT_SECRET" \
+            '.clients[0] | .secret = $secret' /tmp/realm.json)
           
           UPDATE_RESPONSE=$(curl -s -w "\n%%{http_code}" -X PUT \
             "$KEYCLOAK_URL/admin/realms/$REALM_NAME/clients/$CLIENT_UUID" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            --data "$UPDATED_CLIENT")
+            --data "$TEMPLATE_CLIENT")
           
           HTTP_CODE=$(echo "$UPDATE_RESPONSE" | tail -n1)
           
           if [ "$HTTP_CODE" = "204" ] || [ "$HTTP_CODE" = "200" ]; then
-            echo "Client secret updated successfully!"
+            echo "Client configuration synced successfully!"
           else
-            echo "WARNING: Failed to update client (HTTP $HTTP_CODE)"
+            BODY=$(echo "$UPDATE_RESPONSE" | sed '$d')
+            echo "WARNING: Failed to sync client (HTTP $HTTP_CODE): $BODY"
           fi
         else
           echo "WARNING: Client '$CLIENT_ID' not found in realm"
-          echo "You may need to configure the client manually"
+          echo "Creating client from template..."
+          
+          TEMPLATE_CLIENT=$(jq --arg secret "$CLIENT_SECRET" \
+            '.clients[0] | .secret = $secret' /tmp/realm.json)
+          
+          CREATE_RESPONSE=$(curl -s -w "\n%%{http_code}" -X POST \
+            "$KEYCLOAK_URL/admin/realms/$REALM_NAME/clients" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$TEMPLATE_CLIENT")
+          
+          HTTP_CODE=$(echo "$CREATE_RESPONSE" | tail -n1)
+          
+          if [ "$HTTP_CODE" = "201" ]; then
+            echo "Client created successfully!"
+          else
+            BODY=$(echo "$CREATE_RESPONSE" | sed '$d')
+            echo "ERROR: Failed to create client (HTTP $HTTP_CODE): $BODY"
+          fi
         fi
+        
+        # =====================================================================
+        # 2. Sync Identity Providers
+        # =====================================================================
+        echo ""
+        echo "--- Syncing identity providers ---"
+        
+        EXISTING_IDPS=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM_NAME/identity-provider/instances" \
+          -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[].alias')
+        
+        for alias in $(jq -r '.identityProviders[]?.alias // empty' /tmp/realm.json); do
+          IDP_CONFIG=$(jq --arg a "$alias" '.identityProviders[] | select(.alias == $a)' /tmp/realm.json)
+          
+          if echo "$EXISTING_IDPS" | grep -qx "$alias"; then
+            echo "Updating identity provider: $alias"
+            IDP_RESPONSE=$(curl -s -w "\n%%{http_code}" -X PUT \
+              "$KEYCLOAK_URL/admin/realms/$REALM_NAME/identity-provider/instances/$alias" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$IDP_CONFIG")
+          else
+            echo "Creating identity provider: $alias"
+            IDP_RESPONSE=$(curl -s -w "\n%%{http_code}" -X POST \
+              "$KEYCLOAK_URL/admin/realms/$REALM_NAME/identity-provider/instances" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$IDP_CONFIG")
+          fi
+          
+          HTTP_CODE=$(echo "$IDP_RESPONSE" | tail -n1)
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "204" ]; then
+            echo "  Identity provider '$alias' synced successfully"
+          else
+            BODY=$(echo "$IDP_RESPONSE" | sed '$d')
+            echo "  WARNING: Failed to sync identity provider '$alias' (HTTP $HTTP_CODE): $BODY"
+          fi
+        done
+        
+        # =====================================================================
+        # 3. Sync Identity Provider Mappers
+        # =====================================================================
+        echo ""
+        echo "--- Syncing identity provider mappers ---"
+        
+        for alias in $(jq -r '.identityProviders[]?.alias // empty' /tmp/realm.json); do
+          EXISTING_MAPPERS=$(curl -s "$KEYCLOAK_URL/admin/realms/$REALM_NAME/identity-provider/instances/$alias/mappers" \
+            -H "Authorization: Bearer $ACCESS_TOKEN")
+          
+          for mapper_name in $(jq -r --arg a "$alias" \
+            '.identityProviderMappers[]? | select(.identityProviderAlias == $a) | .name // empty' /tmp/realm.json); do
+            
+            MAPPER_CONFIG=$(jq --arg a "$alias" --arg n "$mapper_name" \
+              '.identityProviderMappers[] | select(.identityProviderAlias == $a and .name == $n)' /tmp/realm.json)
+            
+            EXISTING_ID=$(echo "$EXISTING_MAPPERS" | jq -r --arg n "$mapper_name" \
+              '.[] | select(.name == $n) | .id')
+            
+            if [ -n "$EXISTING_ID" ] && [ "$EXISTING_ID" != "null" ]; then
+              echo "Updating mapper: $alias/$mapper_name"
+              MAPPER_WITH_ID=$(echo "$MAPPER_CONFIG" | jq --arg id "$EXISTING_ID" '. + {id: $id}')
+              MAPPER_RESPONSE=$(curl -s -w "\n%%{http_code}" -X PUT \
+                "$KEYCLOAK_URL/admin/realms/$REALM_NAME/identity-provider/instances/$alias/mappers/$EXISTING_ID" \
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "$MAPPER_WITH_ID")
+            else
+              echo "Creating mapper: $alias/$mapper_name"
+              MAPPER_RESPONSE=$(curl -s -w "\n%%{http_code}" -X POST \
+                "$KEYCLOAK_URL/admin/realms/$REALM_NAME/identity-provider/instances/$alias/mappers" \
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "$MAPPER_CONFIG")
+            fi
+            
+            HTTP_CODE=$(echo "$MAPPER_RESPONSE" | tail -n1)
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "204" ]; then
+              echo "  Mapper '$mapper_name' synced successfully"
+            else
+              BODY=$(echo "$MAPPER_RESPONSE" | sed '$d')
+              echo "  WARNING: Failed to sync mapper '$mapper_name' (HTTP $HTTP_CODE): $BODY"
+            fi
+          done
+        done
+        
+        echo ""
+        echo "Configuration sync complete!"
       fi
       
       echo ""
@@ -326,7 +444,7 @@ resource "kubernetes_job" "realm_setup" {
 
           env {
             name  = "KEYCLOAK_URL"
-            value = "http://keycloak-http:80/auth"
+            value = "http://keycloak-http:80"
           }
 
           env {
