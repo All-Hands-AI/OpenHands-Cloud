@@ -39,6 +39,8 @@ jobs:
             path: charts/automation
           - name: plugin-directory
             path: charts/plugin-directory
+          - name: service-template
+            path: charts/service-template
           - name: openhands
             path: charts/openhands
           - name: openhands-secrets
