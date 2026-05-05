@@ -65,16 +65,19 @@ database:
   # Use an existing secret instead of auto-generating one
   # When true, the chart will not create the db secret
   existingSecret: false
-  # Create database and user in an existing PostgreSQL instance
+  # Create database and user in an existing PostgreSQL instance (non-GCP only)
   # When true, runs an init container to create the database and user
   # Useful when sharing a PostgreSQL instance with other services
+  # NOTE: For GCP Cloud SQL, database and user are created via Terraform in the infra repo
+  # This setting is ignored when gcp.dbInstance is set
   createDatabaseUser: false
   # Secret containing the postgres superuser password (for creating the service user)
-  # Only used when createDatabaseUser=true
+  # Only used when createDatabaseUser=true and gcp.dbInstance is not set
   superuserSecretName: "postgres-password"
   superuserSecretKey: "password"
 
 # GCP Cloud SQL (leave empty for non-GCP)
+# When gcp.dbInstance is set, the database and user must be pre-created via Terraform
 gcp:
   dbInstance: ""
   project: ""

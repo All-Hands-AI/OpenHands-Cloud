@@ -24,27 +24,9 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
-      {{- if .Values.database.createDatabaseUser }}
-      {{- if .Values.gcp.dbInstance }}
-      # Cloud SQL Auth Proxy as a native sidecar (Kubernetes 1.28+)
-      # restartPolicy: Always keeps it running while other init containers execute
-      - name: cloud-sql-proxy
-        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.15.2
-        restartPolicy: Always
-        args:
-          - "--port={{ .Values.database.port }}"
-          - "{{ .Values.gcp.project }}:{{ .Values.gcp.region }}:{{ .Values.gcp.dbInstance }}"
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
-      {{- end }}
-      # Create database and user in PostgreSQL
-      # For GCP: connects via Cloud SQL Auth Proxy sidecar at 127.0.0.1
-      # For non-GCP: connects directly to database.host
+      {{- if and .Values.database.createDatabaseUser (not .Values.gcp.dbInstance) }}
+      # Create database and user in PostgreSQL (non-GCP only)
+      # For GCP Cloud SQL, database and user are created via Terraform in the infra repo
       - name: create-db-user
         image: postgres:14
         env:
@@ -54,7 +36,7 @@ spec:
                 name: {{ .Values.database.superuserSecretName }}
                 key: {{ .Values.database.superuserSecretKey }}
           - name: DB_HOST
-            value: {{ if .Values.gcp.dbInstance }}"127.0.0.1"{{ else }}{{ .Values.database.host | quote }}{{ end }}
+            value: {{ .Values.database.host | quote }}
           - name: DB_PORT
             value: {{ .Values.database.port | quote }}
           - name: DB_NAME
