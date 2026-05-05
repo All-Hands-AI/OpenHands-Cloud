@@ -8,9 +8,18 @@
 #     -f site-infrastructure/helm/environments/single-cluster-subdomain/values-image-loader.yaml
 # =============================================================================
 
-# Override toleration to match our GKE sysbox node taint
+# Image: Inherits from base chart (ghcr.io/openhands/agent-server)
+# No override needed - base chart has the correct image
+
+# Node selector for GKE Sandbox nodes (overrides sysbox-install label)
+# GKE Sandbox nodes have this label set by GKE when enable_gke_sandbox=true
+nodeSelector:
+  sandbox.gke.io/runtime: "gvisor"
+
+# Tolerations for GKE Sandbox nodes (overrides sysbox tolerations)
+# GKE Sandbox nodes have this taint to prevent non-sandboxed workloads
 tolerations:
-- key: "sysbox-runtime"
+- key: "sandbox.gke.io/runtime"
   operator: "Equal"
-  value: "true"
+  value: "gvisor"
   effect: "NoSchedule"
