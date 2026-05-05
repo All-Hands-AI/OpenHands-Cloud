@@ -6,11 +6,35 @@
 # Usage:
 #   helm install image-loader ./charts/image-loader \
 #     -f site-infrastructure/helm/environments/single-cluster-path/values-image-loader.yaml
+#
+# NOTE: For GKE Sandbox (gVisor) deployments, you may NOT need the image-loader
+# at all. The image-loader is designed for sysbox deployments where pre-caching
+# the runtime image is critical for fast startup. With gVisor, the isolation
+# model is different and image caching behavior varies.
+#
+# Consider:
+# 1. Not deploying image-loader at all for gVisor environments
+# 2. If deploying, these values configure it to run on gVisor nodes
 # =============================================================================
 
-# Override toleration to match our GKE sysbox node taint
+# Override sysbox node selector - explicitly nullify the sysbox-install key
+# and set a benign selector for Linux nodes
+# Note: Helm merges maps, so we must explicitly set sysbox-install: null to remove it
+nodeSelector:
+  sysbox-install: null
+  kubernetes.io/os: linux
+
+# Override sysbox tolerations - add gVisor taint toleration
+# GKE Sandbox nodes are tainted with sandbox.gke.io/runtime=gvisor:NoSchedule
 tolerations:
-- key: "sysbox-runtime"
-  operator: "Equal"
-  value: "true"
-  effect: "NoSchedule"
+  - key: "sandbox.gke.io/runtime"
+    operator: "Equal"
+    value: "gvisor"
+    effect: "NoSchedule"
+
+# NOTE: The chart does not currently support runtimeClassName in its templates.
+# The runtimeClass value below is defined in values.yaml but not used.
+# If you need gVisor runtime for image-loader pods, the chart would need to be
+# updated to include: `runtimeClassName: {{ .Values.runtimeClass }}` in the
+# pod specs. For now, this setting has no effect.
+# runtimeClass: gvisor

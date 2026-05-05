@@ -53,6 +53,10 @@ providers:
     enabled: true
     publishedService:
       enabled: true
+  # Enable Gateway API provider for runtime pod routing
+  # Required for path-based routing where sandbox-gateway creates HTTPRoutes
+  kubernetesGateway:
+    enabled: true
 
 # Logs
 logs:

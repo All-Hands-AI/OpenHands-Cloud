@@ -181,6 +181,34 @@ spec:
                   number: 8000
 ```
 
+## Gateway API Support (Required for Path-Based Routing)
+
+Path-based routing for runtime sandboxes requires the Kubernetes Gateway API. The `values.yaml` 
+enables the `kubernetesGateway` provider in Traefik, but the Gateway API CRDs must be installed first.
+
+### Install Gateway API CRDs
+
+```bash
+# Install Gateway API CRDs (required before Traefik can process Gateway/HTTPRoute resources)
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+
+# Verify CRDs are installed
+kubectl get crd gateways.gateway.networking.k8s.io
+kubectl get crd httproutes.gateway.networking.k8s.io
+```
+
+### How It Works
+
+For path-based runtime routing:
+1. The `sandbox-gateway` (Gateway resource) is created by the runtime-api chart
+2. Runtime pods get an HTTPRoute created by runtime-api that routes `/runtime/{runtime_id}/*`
+3. Traefik's `kubernetesGateway` provider watches these resources and configures routing
+
+This is required because:
+- Standard Kubernetes Ingress doesn't support dynamic path-based routing for runtime pods
+- Gateway API HTTPRoutes can be created/deleted dynamically as runtime pods come and go
+- Path-based routing (vs subdomain) requires a single Gateway with multiple HTTPRoutes
+
 ## Troubleshooting
 
 ```bash
@@ -196,4 +224,11 @@ kubectl get ingressroute -A
 
 # List Middlewares
 kubectl get middleware -A
+
+# List Gateway API resources (for path-based routing)
+kubectl get gateways -A
+kubectl get httproutes -A
+
+# Check if Gateway is accepted by Traefik
+kubectl describe gateway sandbox-gateway -n openhands
 ```
