@@ -30,3 +30,6 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+# Sensitive files
+anthropic_api_key.txt
+workspace_cert.cert
