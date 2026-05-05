@@ -76,6 +76,7 @@ module "gke_cluster" {
 
   # Runtime node pool (for dedicated runtime nodes in single cluster)
   create_runtime_node_pool        = var.create_runtime_node_pool
+  enable_gke_sandbox              = var.enable_gke_sandbox
   runtime_node_machine_type       = var.runtime_node_machine_type
   runtime_node_disk_size_gb       = var.runtime_node_disk_size_gb
   runtime_node_pool_min_count     = var.runtime_node_pool_min_count

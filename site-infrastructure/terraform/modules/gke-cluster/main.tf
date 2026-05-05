@@ -159,11 +159,22 @@ resource "google_container_node_pool" "primary" {
 }
 
 # -----------------------------------------------------------------------------
-# Runtime Node Pool (optional, for dedicated sysbox runtime nodes)
+# Runtime Node Pool (optional, for dedicated runtime nodes)
 # -----------------------------------------------------------------------------
-# This node pool is designed to run OpenHands runtime containers with sysbox.
+# This node pool is designed to run OpenHands runtime containers.
+# Supports two isolation modes:
+#
+# 1. GKE Sandbox (gVisor) - enable_gke_sandbox = true
+#    - Native GKE sandbox feature using gVisor
+#    - No additional installation required
+#    - Better security isolation
+#
+# 2. Sysbox - enable_gke_sandbox = false
+#    - Uses Sysbox for nested container support
+#    - Requires sysbox DaemonSet installation
+#    - Labeled with sysbox-install=yes
+#
 # Key features:
-# - Labeled with sysbox-install=yes for sysbox DaemonSet targeting
 # - Tainted to prevent non-runtime workloads from scheduling
 # - Larger disk for runtime image caching (~10GB+ runtime images)
 # -----------------------------------------------------------------------------
@@ -198,19 +209,34 @@ resource "google_container_node_pool" "runtime" {
     ]
 
     # Labels for node selection
-    # - sysbox-install: Used by sysbox DaemonSet and image-loader to target these nodes
+    # - For gVisor: GKE automatically adds sandbox.gke.io/runtime=gvisor
+    # - For sysbox: sysbox-install=yes used by sysbox DaemonSet and image-loader
     # - openhands.ai/node-type: General classification label
-    labels = merge(var.node_labels, {
-      "sysbox-install"          = "yes"
-      "openhands.ai/node-type"  = "runtime"
-    })
+    labels = merge(
+      var.node_labels,
+      {
+        "openhands.ai/node-type" = "runtime"
+      },
+      # Only add sysbox-install label when NOT using GKE Sandbox
+      var.enable_gke_sandbox ? {} : {
+        "sysbox-install" = "yes"
+      }
+    )
 
     # Taint to prevent non-runtime workloads from scheduling on these nodes
     # Runtime pods, image-loader, and sysbox installer must tolerate this taint
     taint {
-      key    = "sysbox-runtime"
-      value  = "true"
+      key    = var.enable_gke_sandbox ? "sandbox.gke.io/runtime" : "sysbox-runtime"
+      value  = var.enable_gke_sandbox ? "gvisor" : "true"
       effect = "NO_SCHEDULE"
+    }
+
+    # GKE Sandbox (gVisor) configuration
+    dynamic "sandbox_config" {
+      for_each = var.enable_gke_sandbox ? [1] : []
+      content {
+        sandbox_type = "gvisor"
+      }
     }
 
     workload_metadata_config {

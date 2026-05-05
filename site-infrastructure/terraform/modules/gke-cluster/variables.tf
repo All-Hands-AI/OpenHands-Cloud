@@ -182,9 +182,30 @@ variable "node_tags" {
 # -----------------------------------------------------------------------------
 # Runtime Node Pool Configuration (optional)
 # -----------------------------------------------------------------------------
+# The runtime node pool provides isolated execution environments for OpenHands.
+# Two isolation options are supported:
+#
+# 1. GKE Sandbox (gVisor) - enable_gke_sandbox = true
+#    - Uses gVisor for kernel-level isolation
+#    - Native GKE feature, no additional installation required
+#    - Nodes labeled with sandbox.gke.io/runtime=gvisor
+#    - Set RUNTIME_CLASS="gvisor" in runtime-api helm values
+#
+# 2. Sysbox - enable_gke_sandbox = false (default)
+#    - Uses Sysbox for nested container isolation
+#    - Requires sysbox DaemonSet installation
+#    - Nodes labeled with sysbox-install=yes
+#    - Set RUNTIME_CLASS="sysbox-runc" in runtime-api helm values
+# -----------------------------------------------------------------------------
 
 variable "create_runtime_node_pool" {
   description = "Create a dedicated node pool for runtimes"
+  type        = bool
+  default     = false
+}
+
+variable "enable_gke_sandbox" {
+  description = "Enable GKE Sandbox (gVisor) on runtime nodes. When true, uses gVisor for isolation. When false, expects sysbox to be installed."
   type        = bool
   default     = false
 }

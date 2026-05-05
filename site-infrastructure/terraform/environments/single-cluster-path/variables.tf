@@ -127,6 +127,12 @@ variable "create_runtime_node_pool" {
   default     = true
 }
 
+variable "enable_gke_sandbox" {
+  description = "Enable GKE Sandbox (gVisor) on runtime nodes. Set RUNTIME_CLASS='gvisor' in helm values when true."
+  type        = bool
+  default     = true
+}
+
 variable "runtime_node_machine_type" {
   description = "Machine type for runtime nodes"
   type        = string
