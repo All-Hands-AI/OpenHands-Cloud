@@ -83,7 +83,7 @@ To use the shared Keycloak, update your branch deployment's helm values:
 ```yaml
 keycloak:
   enabled: false  # Disable embedded Keycloak
-  
+
   # External Keycloak configuration
   external:
     enabled: true
@@ -99,7 +99,9 @@ The client will be created with:
 - Client ID: `openhands-<branch-name>`
 - Valid Redirect URIs: `https://<branch>.ohe-staging.platform-team.all-hands.dev/*`
 
-## Configuring Google SAML
+## Configuring Google SAML (Manual)
+
+If you need to configure Google SAML manually via the admin console:
 
 1. Go to Keycloak Admin Console: https://auth.ohe-staging.platform-team.all-hands.dev/auth/admin
 2. Select the `allhands` realm
@@ -110,6 +112,117 @@ The client will be created with:
    - Single Sign-On Service URL: (from Google)
    - NameID Policy Format: Email
    - Principal Type: Subject NameID
+
+## Configuring Enterprise SSO via Terraform (Recommended)
+
+The shared-auth module supports Google Workspace SAML authentication through Terraform variables, which is the recommended approach for reproducible deployments.
+
+### Step 1: Create SAML App in Google Workspace
+
+1. Go to [Google Workspace Admin Console](https://admin.google.com)
+2. Navigate to **Apps** → **Web and mobile apps** → **Add App** → **Add custom SAML app**
+3. Enter app name: "OpenHands Staging" (or your preferred name)
+4. On the "Google Identity Provider details" page, copy:
+   - **SSO URL**: This is your `saml_sso_url` value (format: `https://accounts.google.com/o/saml2/idp?idpid=...`)
+   - **Certificate**: Download or copy the certificate content
+5. Configure Service Provider details:
+   - **ACS URL**: `https://auth.ohe-staging.platform-team.all-hands.dev/auth/realms/allhands/broker/enterprise_sso/endpoint`
+   - **Entity ID**: `openhands-allhands`
+   - **Name ID format**: `EMAIL`
+   - **Name ID**: `Basic Information > Primary email`
+6. Click through to complete the setup and enable the app for your users/groups
+
+### Step 2: Prepare the Certificate
+
+The SAML signing certificate must be formatted as a single line without headers:
+
+```bash
+# If you downloaded the certificate file:
+cat google_certificate.pem | grep -v "BEGIN\|END" | tr -d '\n'
+```
+
+### Step 3: Configure Terraform Variables
+
+In your `terraform.tfvars`:
+
+```hcl
+# SAML SSO URL from Google Workspace
+saml_sso_url = "https://accounts.google.com/o/saml2/idp?idpid=C01234567"
+
+# SAML signing certificate (base64 only, no BEGIN/END lines, single line)
+saml_signing_certificate = "MIIDdDCCAlygAwIBAgIGAY..."
+```
+
+### Step 4: Apply Terraform Changes
+
+```bash
+terraform plan   # Review the changes
+terraform apply  # Apply the configuration
+```
+
+The realm setup job will automatically run and configure the enterprise_sso identity provider.
+
+### Step 5: Delete Old Realm Setup Job (if updating)
+
+If you're updating an existing deployment, you may need to delete the old job first:
+
+```bash
+# Delete the completed job so terraform can recreate it
+kubectl delete job keycloak-realm-setup -n shared-auth
+
+# Re-apply terraform to recreate the job with new config
+terraform apply
+```
+
+### Step 6: Test Login
+
+Navigate to your deployment (e.g., `https://ohe-staging.platform-team.all-hands.dev`) and you should see the "Enterprise SSO (Google Workspace)" login option.
+
+## Troubleshooting
+
+### "At least one identity provider must be configured" Error
+
+This error occurs when the Keycloak realm doesn't have any identity providers configured. Check:
+
+1. Verify the realm was created with identity providers:
+   ```bash
+   kubectl logs -n shared-auth job/keycloak-realm-setup
+   ```
+
+2. Check if SAML variables are set in terraform.tfvars:
+   ```bash
+   grep saml_sso_url terraform.tfvars
+   grep saml_signing_certificate terraform.tfvars
+   ```
+
+3. If the realm already exists but needs identity providers added, you may need to:
+   - Delete the realm via Keycloak admin console and re-run terraform apply
+   - Or manually add the identity provider via the admin console
+
+### Realm Setup Job Fails
+
+Check the job logs:
+```bash
+kubectl logs -n shared-auth job/keycloak-realm-setup
+```
+
+Common issues:
+- Keycloak not ready yet (job will retry automatically)
+- Database connectivity issues
+- Invalid SAML certificate format (must be base64 without headers)
+
+### Certificate Format Issues
+
+The SAML signing certificate must be:
+- Base64 encoded (standard PEM certificate content)
+- Single line (no line breaks)
+- Without `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` headers
+
+Example conversion:
+```bash
+# From a downloaded .pem file
+cat certificate.pem | grep -v "BEGIN\|END" | tr -d '\n' > certificate_single_line.txt
+```
 
 ## Outputs
 

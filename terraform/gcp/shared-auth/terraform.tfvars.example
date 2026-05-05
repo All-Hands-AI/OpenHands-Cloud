@@ -20,3 +20,26 @@ postgres_password = "CHANGE_ME_DB_PASSWORD"
 # Ingress configuration
 ingress_class   = "traefik"
 tls_secret_name = "ohe-staging-wildcard-tls"
+
+# -----------------------------------------------------------------------------
+# Enterprise SSO (SAML) Configuration - Google Workspace
+# -----------------------------------------------------------------------------
+# These values come from the Google Workspace Admin Console:
+# 1. Go to Apps > Web and mobile apps > Add App > Add custom SAML app
+# 2. Enter app name: "OpenHands Staging"
+# 3. Download the IDP metadata or copy:
+#    - SSO URL (singleSignOnServiceUrl)
+#    - Certificate (copy just the base64 content, no BEGIN/END lines)
+# 4. Configure Service Provider:
+#    - ACS URL: https://auth.ohe-staging.platform-team.all-hands.dev/auth/realms/allhands/broker/enterprise_sso/endpoint
+#    - Entity ID: openhands-allhands
+#    - Name ID format: EMAIL
+# -----------------------------------------------------------------------------
+
+# SAML SSO URL from Google Workspace (format: https://accounts.google.com/o/saml2/idp?idpid=...)
+saml_sso_url = ""
+
+# SAML signing certificate (base64 content only, no headers/footers)
+# Remove "-----BEGIN CERTIFICATE-----" and "-----END CERTIFICATE-----" lines
+# and join all lines into a single string
+saml_signing_certificate = ""

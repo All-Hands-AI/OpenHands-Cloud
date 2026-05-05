@@ -71,9 +71,10 @@ proxy:
 
 # -----------------------------------------------------------------------------
 # HTTP Configuration
+# Serve from root path (OpenHands expects /realms/... not /auth/realms/...)
 # -----------------------------------------------------------------------------
 http:
-  relativePath: "/auth"
+  relativePath: "/"
 
 # -----------------------------------------------------------------------------
 # Ingress Configuration
@@ -86,7 +87,7 @@ ingress:
   rules:
     - host: "${hostname}"
       paths:
-        - path: /auth
+        - path: /
           pathType: Prefix
   tls:
     - hosts:
@@ -127,7 +128,7 @@ extraEnv: |
   - name: KC_PROXY_HEADERS
     value: xforwarded
   - name: KC_HTTP_RELATIVE_PATH
-    value: /auth
+    value: /
   - name: KC_HOSTNAME
     value: "${hostname}"
   - name: KC_HOSTNAME_STRICT
@@ -140,6 +141,10 @@ extraEnv: |
     value: "true"
   - name: KC_METRICS_ENABLED
     value: "true"
+  # Use local cache for single-replica deployment (not distributed Infinispan)
+  # This avoids cluster discovery overhead and potential hangs
+  - name: KC_CACHE
+    value: local
 
 # -----------------------------------------------------------------------------
 # Init Container - Wait for Database
@@ -170,9 +175,41 @@ resources:
 
 # -----------------------------------------------------------------------------
 # Health and Metrics
+# Keycloak 26.x exposes health on port 9000 at /health/ready and /health/live
 # -----------------------------------------------------------------------------
 health:
   enabled: true
 
 metrics:
   enabled: true
+
+# -----------------------------------------------------------------------------
+# Startup Probe - give Keycloak time to initialize
+# Keycloak can take 2-3 minutes on first start for DB migrations
+# -----------------------------------------------------------------------------
+startupProbe: |
+  httpGet:
+    path: /health/ready
+    port: 9000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+livenessProbe: |
+  httpGet:
+    path: /health/live
+    port: 9000
+  initialDelaySeconds: 0
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe: |
+  httpGet:
+    path: /health/ready
+    port: 9000
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3

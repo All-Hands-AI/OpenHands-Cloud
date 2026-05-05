@@ -65,7 +65,7 @@
       "addReadTokenRoleOnCreate": false,
       "authenticateByDefault": false,
       "linkOnly": false,
-      "firstBrokerLoginFlowAlias": "first broker login",
+      "firstBrokerLoginFlowAlias": "Auto-Link First Broker Login",
       "config": {
         "validateSignature": "true",
         "postBindingLogout": "true",
@@ -159,6 +159,42 @@
           }
         }
       ]
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "Auto-Link First Broker Login",
+      "description": "Auto-link IdP accounts to existing users by email without password verification. For trusted enterprise IdPs only.",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticatorConfig": "create unique user config",
+          "authenticator": "idp-create-user-if-unique",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "idp-auto-link",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "create unique user config",
+      "config": {
+        "require.password.update.after.registration": "false"
+      }
     }
   ],
   "browserFlow": "browser",
