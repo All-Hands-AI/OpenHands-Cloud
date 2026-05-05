@@ -67,6 +67,9 @@ postgresql:
 # Redis (persistence disabled by default, which is fine for staging)
 redis:
   fullnameOverride: openhands-redis
+  auth:
+    enabled: true
+    existingSecret: "redis"
 
 # Runtime API site-specific config
 runtime-api:
@@ -86,3 +89,42 @@ runtime-api:
     # Override DB_HOST to point to our postgresql instance
     DB_HOST: openhands-postgresql
     RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
+    # Use gVisor runtime class (GKE Sandbox) - matches enable_gke_sandbox=true in Terraform
+    RUNTIME_CLASS: "gvisor"
+  # Warm runtimes with gVisor tolerations for GKE Sandbox nodes
+  warmRuntimes:
+    enabled: true
+    count: 1
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/runtime:cloud-1.22.1-nikolaik"
+        working_dir: "/openhands/code/"
+        environment: {}
+        # Tolerations for scheduling on GKE Sandbox (gVisor) nodes
+        tolerations:
+          - key: "sandbox.gke.io/runtime"
+            operator: "Equal"
+            value: "gvisor"
+            effect: "NoSchedule"
+        command:
+          - /openhands/micromamba/bin/micromamba
+          - run
+          - -n
+          - openhands
+          - poetry
+          - run
+          - python
+          - -u
+          - -m
+          - openhands.runtime.action_execution_server
+          - "60000"
+          - --working-dir
+          - /workspace
+          - --plugins
+          - agent_skills
+          - jupyter
+          - vscode
+          - --username
+          - root
+          - --user-id
+          - "0"

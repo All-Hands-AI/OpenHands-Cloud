@@ -15,10 +15,16 @@ ingress:
 
 env:
   RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+  # Path-based routing mode for runtime pods
+  RUNTIME_ROUTING_MODE: "path"
 
 # Use shared Keycloak (disabled in-cluster, keycloak.enabled=false is already default)
 keycloak:
   url: "https://auth.ohe-staging.platform-team.all-hands.dev"
+
+# Enable Enterprise SSO (Google Workspace SAML via shared Keycloak)
+enterpriseSSO:
+  enabled: true
 
 # Ephemeral minio storage for testing (production would use GCS/S3)
 filestore:
@@ -39,6 +45,9 @@ postgresql:
 # Redis with persistence
 redis:
   fullnameOverride: openhands-redis
+  auth:
+    enabled: true
+    existingSecret: "redis"
   master:
     persistence:
       enabled: true
@@ -55,6 +64,16 @@ runtime-api:
     host: "ohe-staging.platform-team.all-hands.dev"
     path: /runtime
     pathType: Prefix
+  # Disable ingressBase - using Gateway API for path-based routing
+  ingressBase:
+    enabled: false
+  # Enable Gateway API for path-based runtime pod routing
+  sandboxGateway:
+    enabled: true
+    name: sandbox-gateway
+    hostname: "ohe-staging.platform-team.all-hands.dev"
+    tlsSecretName: openhands-tls
+    gatewayClassName: traefik
   env:
     # Override DB_HOST to point to our postgresql instance
     DB_HOST: openhands-postgresql
@@ -63,8 +82,14 @@ runtime-api:
     # Kubernetes HTTP probes cannot provide, causing pods to never become Ready
     INCLUDE_START_PROBE: "false"
     INCLUDE_LIVENESS_PROBE: "false"
-    # Use sysbox runtime class for runtime pods
-    RUNTIME_CLASS: "sysbox-runc"
+    # Use gVisor runtime class for runtime pods (GKE standard)
+    RUNTIME_CLASS: "gvisor"
+    # Path-based routing configuration for Gateway API
+    RUNTIME_ROUTING_MODE: "path"
+    RUNTIME_URL_SEPARATOR: "/"
+    USE_GATEWAY_API: "true"
+    GATEWAY_NAME: "sandbox-gateway"
+    RUNTIME_CERT_SECRET: "openhands-tls"
   # Enable warm runtimes for faster conversation startup
   warmRuntimes:
     enabled: true
@@ -93,12 +118,13 @@ runtime-api:
         run_as_user: 10001
         run_as_group: 10001
         fs_group: 10001
-        # Sysbox node scheduling - required for runtime pods to run
-        node_selector:
-          sysbox-install: "yes"
+        # gVisor scheduling - GKE sandbox runtime
+        # GKE Sandbox nodes are tainted with sandbox.gke.io/runtime=gvisor:NoSchedule
+        # Runtime pods need the toleration to be scheduled on these nodes
+        node_selector: {}
         tolerations:
-          - key: "sysbox-runtime"
+          - key: "sandbox.gke.io/runtime"
             operator: "Equal"
-            value: "true"
+            value: "gvisor"
             effect: "NoSchedule"
-        runtime_class: "sysbox-runc"
+        runtime_class: "gvisor"
