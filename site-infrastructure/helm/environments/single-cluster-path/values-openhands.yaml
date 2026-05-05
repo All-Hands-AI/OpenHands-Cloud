@@ -18,6 +18,11 @@ env:
   # Path-based routing mode for runtime pods
   RUNTIME_ROUTING_MODE: "path"
 
+# Runtime API endpoint for OpenHands server to communicate with runtime-api
+# This was MISSING - caused "Name or service not known" errors
+sandbox:
+  apiHostname: "http://openhands-runtime-api:5000"
+
 # Use shared Keycloak (disabled in-cluster, keycloak.enabled=false is already default)
 keycloak:
   url: "https://auth.ohe-staging.platform-team.all-hands.dev"
@@ -55,10 +60,16 @@ redis:
 
 # Runtime API site-specific config
 runtime-api:
+  # Use same release name prefix for service name
+  fullnameOverride: openhands-runtime-api
   imagePullSecrets:
     - name: ghcr-login-secret
   databaseMigrations:
     createDatabases: true
+  # PostgreSQL auth config (inherits from parent's postgres)
+  postgresql:
+    auth:
+      existingSecret: postgres-password
   ingress:
     enabled: true
     host: "ohe-staging.platform-team.all-hands.dev"
@@ -75,8 +86,13 @@ runtime-api:
     tlsSecretName: openhands-tls
     gatewayClassName: traefik
   env:
-    # Override DB_HOST to point to our postgresql instance
+    # Database connection - point to our postgresql instance
     DB_HOST: openhands-postgresql
+    DB_USER: postgres
+    DB_NAME: runtime_api_db
+    # Kubernetes namespace for runtime pods
+    K8S_NAMESPACE: "openhands"
+    # Runtime base URL for constructing runtime pod URLs
     RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
     # Disable runtime pod probes - they require API key authentication which
     # Kubernetes HTTP probes cannot provide, causing pods to never become Ready
