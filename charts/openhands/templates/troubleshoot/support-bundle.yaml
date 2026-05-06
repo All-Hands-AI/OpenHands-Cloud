@@ -6,12 +6,12 @@ metadata:
 spec:
   collectors: {{- include "troubleshoot.collectors.shared" .  | nindent 4 }}
     - secret:
-        name: {{ .Release.Name }}-postgresql
+        name: postgres-password
         namespace: {{ .Release.Namespace }}
         key: postgres-password
         includeValue: false
     - secret:
-        name: {{ .Release.Name }}-redis
+        name: redis
         namespace: {{ .Release.Namespace }}
         key: redis-password
         includeValue: false
@@ -126,23 +126,17 @@ spec:
         namespace: ingress-nginx
         limits:
           maxAge: 168h
-    {{- if .Values.postgresql.enabled }}
+    {{- if and .Values.postgresql.enabled .Values.replicated.enabled }}
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://postgres:@{{ .Release.Name }}-postgresql:5432/openhands?sslmode=disable
+        uri: postgresql://{{ .Values.replicated.postgresUsername | urlquery }}:{{ .Values.replicated.postgresPassword | urlquery }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.replicated.postgresDatabase }}?sslmode=disable
         tls:
           disabled: true
-        password:
-          secretName: {{ .Release.Name }}-postgresql
-          secretKey: postgres-password
     {{- end }}
-    {{- if .Values.redis.enabled }}
+    {{- if and .Values.redis.enabled .Values.replicated.enabled }}
     - redis:
         collectorName: redis
-        uri: redis://{{ .Release.Name }}-redis-master:6379
-        password:
-          secretName: {{ .Release.Name }}-redis
-          secretKey: redis-password
+        uri: redis://default:{{ .Values.replicated.redisPassword | urlquery }}@{{ .Release.Name }}-redis-master:6379
     {{- end }}
   analyzers: {{- include "troubleshoot.analyzers.shared" .  | nindent 4 }}
     - deploymentStatus:
@@ -263,7 +257,7 @@ spec:
           - pass:
               when: ">= 1"
               message: "Ingress NGINX controller deployment is ready"
-    {{- if .Values.postgresql.enabled }}
+    {{- if and .Values.postgresql.enabled .Values.replicated.enabled }}
     - postgresql:
         checkName: "PostgreSQL Database Health"
         collectorName: postgresql
@@ -281,7 +275,7 @@ spec:
               when: "connected == true"
               message: "PostgreSQL database is healthy"
     {{- end }}
-    {{- if .Values.redis.enabled }}
+    {{- if and .Values.redis.enabled .Values.replicated.enabled }}
     - redis:
         checkName: "Redis Cache Health"
         collectorName: redis
