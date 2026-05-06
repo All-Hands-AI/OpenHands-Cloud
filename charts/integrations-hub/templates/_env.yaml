@@ -1,19 +1,15 @@
 {{- define "integrations-hub.env.defaults" }}
-# Node.js environment
-- name: NODE_ENV
-  value: "production"
-- name: NEXT_TELEMETRY_DISABLED
-  value: "1"
-- name: HOSTNAME
+# Python/FastAPI service configuration
+- name: INTEGRATIONS_HUB_HOST
   value: "0.0.0.0"
-- name: PORT
-  value: {{ .Values.service.port | default 3000 | quote }}
+- name: INTEGRATIONS_HUB_SERVER_PORT
+  value: {{ .Values.service.port | default 8000 | quote }}
+- name: INTEGRATIONS_HUB_LOG_LEVEL
+  value: "info"
 
 # OpenHands authentication configuration
 {{- if .Values.openhands.baseUrl }}
-- name: OPENHANDS_BASE_URL
-  value: {{ .Values.openhands.baseUrl | quote }}
-- name: NEXT_PUBLIC_OPENHANDS_BASE_URL
+- name: INTEGRATIONS_HUB_OPENHANDS_BASE_URL
   value: {{ .Values.openhands.baseUrl | quote }}
 {{- else if .Values.global }}
 {{- if .Values.global.ingress }}
@@ -22,69 +18,37 @@
 {{- if and .Values.global.ingress.prefixWithBranch .Values.global.branchSanitized }}
 {{- $host = printf "%s.%s" .Values.global.branchSanitized .Values.global.ingress.host }}
 {{- end }}
-- name: OPENHANDS_BASE_URL
-  value: {{ printf "https://%s" $host | quote }}
-- name: NEXT_PUBLIC_OPENHANDS_BASE_URL
+- name: INTEGRATIONS_HUB_OPENHANDS_BASE_URL
   value: {{ printf "https://%s" $host | quote }}
 {{- end }}
 {{- end }}
+{{- end }}
+
+{{- if .Values.openhands.authCookieName }}
+- name: INTEGRATIONS_HUB_OPENHANDS_AUTH_COOKIE_NAME
+  value: {{ .Values.openhands.authCookieName | quote }}
 {{- end }}
 
 # Service base URL
 {{- if .Values.service.baseUrl }}
-- name: NEXTAUTH_URL
+- name: INTEGRATIONS_HUB_BASE_URL
   value: {{ .Values.service.baseUrl | quote }}
 {{- end }}
 
 # Credential encryption key
-- name: CREDENTIAL_ENCRYPTION_KEY
+- name: INTEGRATIONS_HUB_CREDENTIAL_ENCRYPTION_KEY
   valueFrom:
     secretKeyRef:
       name: {{ .Values.credentialEncryption.secretName }}
       key: {{ .Values.credentialEncryption.secretKey }}
 
-# Auth.js/NextAuth configuration
-- name: AUTH_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.auth.secretName }}
-      key: {{ .Values.auth.secretKey }}
-{{- if .Values.auth.github.clientIdSecretName }}
-- name: AUTH_GITHUB_ID
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.auth.github.clientIdSecretName }}
-      key: {{ .Values.auth.github.clientIdSecretKey }}
-- name: AUTH_GITHUB_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.auth.github.clientSecretSecretName }}
-      key: {{ .Values.auth.github.clientSecretSecretKey }}
-{{- end }}
-{{- if .Values.auth.redirectProxyUrl }}
-- name: AUTH_REDIRECT_PROXY_URL
-  value: {{ .Values.auth.redirectProxyUrl | quote }}
-{{- end }}
-
 # Admin configuration
 {{- if .Values.admin.emails }}
-- name: APP_ADMIN_EMAILS
+- name: INTEGRATIONS_HUB_APP_ADMIN_EMAILS
   value: {{ .Values.admin.emails | quote }}
 {{- end }}
 
 # PostgreSQL database configuration
-{{- if .Values.gcp.dbInstance }}
-# For GCP Cloud SQL, use the Cloud SQL connector format
-- name: POSTGRES_URL
-  value: ""
-- name: DATABASE_URL
-  value: ""
-{{- else }}
-- name: POSTGRES_URL
-  value: "postgresql://$(INTEGRATIONS_HUB_DB_USER):$(INTEGRATIONS_HUB_DB_PASS)@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
-- name: DATABASE_URL
-  value: "postgresql://$(INTEGRATIONS_HUB_DB_USER):$(INTEGRATIONS_HUB_DB_PASS)@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
-{{- end }}
 - name: INTEGRATIONS_HUB_DB_HOST
   value: {{ .Values.database.host | quote }}
 - name: INTEGRATIONS_HUB_DB_PORT
@@ -98,7 +62,13 @@
     secretKeyRef:
       name: {{ .Values.database.secretName }}
       key: {{ .Values.database.secretKey }}
+- name: INTEGRATIONS_HUB_DB_POOL_SIZE
+  value: {{ .Values.database.poolSize | default 10 | quote }}
+- name: INTEGRATIONS_HUB_DB_MAX_OVERFLOW
+  value: {{ .Values.database.maxOverflow | default 5 | quote }}
+
 {{- if .Values.gcp.dbInstance }}
+# GCP Cloud SQL configuration
 - name: INTEGRATIONS_HUB_GCP_DB_INSTANCE
   value: {{ .Values.gcp.dbInstance | quote }}
 - name: INTEGRATIONS_HUB_GCP_PROJECT
@@ -108,11 +78,17 @@
 {{- end }}
 
 # Cron job authentication
-- name: CRON_SECRET
+- name: INTEGRATIONS_HUB_CRON_SECRET
   valueFrom:
     secretKeyRef:
       name: {{ .Values.cron.secretName }}
       key: {{ .Values.cron.secretKey }}
+
+# CORS configuration
+{{- if .Values.cors.origins }}
+- name: INTEGRATIONS_HUB_CORS_ORIGINS
+  value: {{ .Values.cors.origins | quote }}
+{{- end }}
 
 {{- if .Values.datadog.enabled }}
 # Datadog configuration

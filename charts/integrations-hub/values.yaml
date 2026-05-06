@@ -42,12 +42,15 @@ service:
   # Public base URL where this service is reachable
   # Example: https://integrations.example.com or https://domain/integrations
   baseUrl: ""
-  port: 3000
+  # Port the container listens on (8000 for Python/FastAPI backend)
+  port: 8000
 
 # OpenHands authentication configuration
 openhands:
   # Base URL of the OpenHands instance for authentication
   baseUrl: ""
+  # Cookie name for OpenHands session authentication
+  authCookieName: "keycloak_auth"
 
 # Credential encryption key for stored provider credentials
 # Generate with: openssl rand -base64 32
@@ -55,21 +58,6 @@ credentialEncryption:
   # Secret containing the encryption key
   secretName: "integrations-hub-encryption-secret"
   secretKey: "encryption-key"
-
-# Auth.js/NextAuth configuration
-auth:
-  # Auth secret for session encryption
-  # Generate with: openssl rand -base64 32
-  secretName: "integrations-hub-auth-secret"
-  secretKey: "auth-secret"
-  # GitHub OAuth for dashboard authentication
-  github:
-    clientIdSecretName: ""
-    clientIdSecretKey: "client-id"
-    clientSecretSecretName: ""
-    clientSecretSecretKey: "client-secret"
-  # Redirect proxy URL for stable OAuth callbacks (optional)
-  redirectProxyUrl: ""
 
 # Admin configuration
 admin:
@@ -103,6 +91,9 @@ database:
   # Only used when createDatabaseUser=true and gcp.dbInstance is not set
   superuserSecretName: "postgres-password"
   superuserSecretKey: "password"
+  # Connection pool settings
+  poolSize: 10
+  maxOverflow: 5
 
 # GCP Cloud SQL (leave empty for non-GCP)
 # When gcp.dbInstance is set, the database and user must be pre-created via Terraform
@@ -122,6 +113,11 @@ cron:
   # Secret for cron job authentication
   secretName: "integrations-hub-cron-secret"
   secretKey: "cron-secret"
+
+# CORS configuration
+cors:
+  # Comma-separated list of allowed origins (defaults to openhands.baseUrl)
+  origins: ""
 
 # Env vars passed directly to the container
 env: {}
