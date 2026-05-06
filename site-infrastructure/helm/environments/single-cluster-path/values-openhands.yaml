@@ -18,7 +18,10 @@ ingress:
   host: "ohe-staging.platform-team.all-hands.dev"
 
 env:
-  RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"
+  # URL pattern must match the HTTPRoute path created by runtime-api
+  # Runtime-api creates routes at: /{runtime_id}/runtime/
+  # NOT at: /runtime/{runtime_id}  (that path hits runtime-api management API!)
+  RUNTIME_URL_PATTERN: "https://ohe-staging.platform-team.all-hands.dev/{runtime_id}/runtime"
   # Path-based routing mode for runtime pods
   RUNTIME_ROUTING_MODE: "path"
 
