@@ -14,11 +14,15 @@ spec:
       labels:
         app: openhands
       annotations:
+        {{- if .Values.keycloak.enabled }}
         checksum/keycloak-config: {{ include (print $.Template.BasePath "/keycloak-config-script.yaml") . | sha256sum }}
+        checksum/keycloak-realm-template: {{ include (print $.Template.BasePath "/keycloak-realm-template.yaml") . | sha256sum }}
+        {{- end }}
         checksum/litellm-config: {{ include (print $.Template.BasePath "/litellm-config-script.yaml") . | sha256sum }}
         {{- if .Values.allowedUsers }}
         checksum/user-waitlist: {{ include (print $.Template.BasePath "/user-waitlist-configmap.yaml") . | sha256sum }}
         {{- end }}
+        {{- include "openhands.caBundle.checksumAnnotation" . | nindent 8 }}
     spec:
       terminationGracePeriodSeconds: 60
       serviceAccountName: {{ .Values.serviceAccount.name }}
@@ -31,21 +35,28 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
+        {{- include "openhands.caBundle.volume" . | nindent 8 }}
         {{- if .Values.allowedUsers }}
         - name: user-waitlist
           configMap:
             name: user-waitlist
         {{- end }}
+        {{- if .Values.keycloak.enabled }}
         - name: keycloak-config-script
           configMap:
             name: keycloak-config-script
             defaultMode: 0755
+        - name: keycloak-realm-template
+          configMap:
+            name: keycloak-realm-template
+        {{- end }}
         - name: litellm-config-script
           configMap:
             name: litellm-config-script
             defaultMode: 0755
       initContainers:
       {{- include "openhands.dbInitContainers" . | nindent 6 }}
+      {{- if .Values.keycloak.enabled }}
       - name: keycloak-config
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
@@ -54,9 +65,12 @@ spec:
         volumeMounts:
         - name: keycloak-config-script
           mountPath: /scripts
+        - name: keycloak-realm-template
+          mountPath: /realm-template
         command:
           - sh
           - /scripts/keycloak-config.sh
+      {{- end }}
       - name: litellm-config
         imagePullPolicy: Always
         image: '{{.Values.image.repository}}:{{.Values.image.tag | default .Chart.AppVersion }}'
@@ -101,9 +115,11 @@ spec:
           periodSeconds: 10
           failureThreshold: 3
         volumeMounts:
+          {{- include "openhands.caBundle.volumeMount" . | nindent 10 }}
           {{- if .Values.allowedUsers }}
           - name: user-waitlist
             mountPath: /app/user-waitlist
           {{- end }}
         env:
         {{- include "openhands.env" . | nindent 8 }}
+        {{- include "openhands.caBundle.env" . | nindent 8 }}

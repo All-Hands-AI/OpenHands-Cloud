@@ -12,3 +12,6 @@ __pycache__/
 
 # Build outputs (Makefile)
 build/
+
+# create_github_app script
+scripts/create_github_app/keys/

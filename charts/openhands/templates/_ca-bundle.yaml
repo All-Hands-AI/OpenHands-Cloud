@@ -1,0 +1,37 @@
+{{- /*
+Helpers for mounting the trust-manager Bundle ConfigMap into workloads.
+Each template is a no-op when .Values.caBundle.enabled is false, so callers
+can include them unconditionally. Apply the volumeMount + env helpers only on
+containers that actually make outbound HTTPS calls.
+*/ -}}
+
+{{- define "openhands.caBundle.volume" -}}
+{{- if .Values.caBundle.enabled -}}
+- name: openhands-ca-bundle
+  configMap:
+    name: {{ .Values.caBundle.name }}
+{{- end }}
+{{- end -}}
+
+{{- define "openhands.caBundle.volumeMount" -}}
+{{- if .Values.caBundle.enabled -}}
+- name: openhands-ca-bundle
+  mountPath: {{ .Values.caBundle.mountPath }}
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{- define "openhands.caBundle.env" -}}
+{{- if .Values.caBundle.enabled -}}
+- name: SSL_CERT_FILE
+  value: {{ .Values.caBundle.mountPath }}/{{ .Values.caBundle.key }}
+- name: REQUESTS_CA_BUNDLE
+  value: {{ .Values.caBundle.mountPath }}/{{ .Values.caBundle.key }}
+{{- end }}
+{{- end -}}
+
+{{- define "openhands.caBundle.checksumAnnotation" -}}
+{{- if .Values.caBundle.enabled -}}
+checksum/ca-bundle: {{ .Values.caBundle.userCA | sha256sum }}
+{{- end }}
+{{- end -}}

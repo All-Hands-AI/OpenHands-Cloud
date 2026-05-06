@@ -33,6 +33,13 @@ spec:
           default: "app.example.com"
           when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
           required: true
+        - name: analytics_hostname
+          title: Analytics Hostname
+          help_text: The hostname for the Analytics service
+          type: text
+          default: "analytics.example.com"
+          when: 'repl{{ ConfigOptionEquals "hostname_mode" "custom" }}'
+          required: true
         - name: auth_hostname
           title: Authentication Hostname
           help_text: The hostname for Keycloak authentication service
@@ -75,8 +82,8 @@ spec:
           type: file
           required: true
         - name: tls_ca_certificate
-          title: TLS CA Certificate (Recommended)
-          help_text: Upload your CA certificate or certificate chain file (.crt or .pem) - recommended for proper certificate validation
+          title: Additional Trusted CA Certificates
+          help_text: Upload a root CA certificate in PEM format. Concatenate multiple PEM-encoded certificates in the same file to add them all to the cluster's default trust store. If the TLS certificate provided above is self-signed, include the CA that signed it here so components inside the cluster can validate it.
           type: file
           required: false
           recommended: true
@@ -102,7 +109,7 @@ spec:
             - name: "mistral"
               title: "Mistral AI"
             - name: "azure"
-              title: "Azure OpenAI"
+              title: "Azure"
             - name: "groq"
               title: "Groq"
             - name: "openrouter"
@@ -169,15 +176,58 @@ spec:
           type: password
           when: 'repl{{ ConfigOptionEquals "llm_provider" "mistral" }}'
           required: true
+        - name: azure_auth_method
+          title: Azure Authentication Method
+          help_text: Authentication method for Azure OpenAI. Service Principal (Microsoft Entra ID) is recommended for production.
+          type: select_one
+          default: "api_key"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+          items:
+            - name: "api_key"
+              title: "API Key"
+            - name: "service_principal"
+              title: "Microsoft Entra ID — Service Principal"
         - name: azure_api_key
           title: Azure OpenAI API Key
           help_text: Your Azure OpenAI API key
           type: password
-          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "api_key") }}'
+          required: true
+        - name: azure_tenant_id
+          title: Microsoft Entra Tenant ID
+          help_text: The Microsoft Entra directory (tenant) ID (under Microsoft Entra ID → Overview in the Azure portal).
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
+          required: true
+        - name: azure_client_id
+          title: Microsoft Entra Application (Client) ID
+          help_text: The Application (client) ID of the Entra app registration. Grant it the "Cognitive Services OpenAI User" role on your Azure OpenAI resource.
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
+          required: true
+        - name: azure_client_secret
+          title: Microsoft Entra Client Secret
+          help_text: The client secret for the Entra ID app registration.
+          type: password
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "service_principal") }}'
           required: true
         - name: azure_endpoint
           title: Azure OpenAI Endpoint
-          help_text: Your Azure OpenAI endpoint URL
+          help_text: Your Azure OpenAI endpoint URL (e.g., https://my-resource.openai.azure.com). Regional endpoints (e.g., https://eastus2.api.cognitive.microsoft.com) only work with API Key auth, not Microsoft Entra ID.
+          type: text
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_api_version
+          title: Azure OpenAI API Version
+          help_text: The API version for your Azure OpenAI deployment
+          type: text
+          default: "2024-10-21"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
+          required: true
+        - name: azure_deployment_name
+          title: Azure OpenAI Deployment Name
+          help_text: The name of your Azure OpenAI model deployment (set when you deployed the model in Azure)
           type: text
           when: 'repl{{ ConfigOptionEquals "llm_provider" "azure" }}'
           required: true
@@ -292,6 +342,16 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
+        - name: plugin_directory_identity_shared_secret
+          title: Plugin Directory Identity Shared Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: plugin_directory_session_secret
+          title: Plugin Directory Session Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication
@@ -323,22 +383,22 @@ spec:
 
     - name: github_authentication
       title: GitHub Authentication
-      description: Configure GitHub OAuth and App integration for user authentication
+      description: Configure GitHub App integration for user authentication. Note that this is a GitHub App and NOT a GitHub OAuth app.
       items:
         - name: github_auth_enabled
           title: Enable GitHub Authentication
-          help_text: Enable GitHub OAuth for user authentication
+          help_text: Enable GitHub App authentication for user sign-in
           type: bool
           default: "0"
         - name: github_oauth_client_id
-          title: GitHub OAuth Client ID
-          help_text: Client ID from your GitHub OAuth App
+          title: GitHub App Client ID
+          help_text: Client ID from your GitHub App
           type: text
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
         - name: github_oauth_client_secret
-          title: GitHub OAuth Client Secret
-          help_text: Client Secret from your GitHub OAuth App
+          title: GitHub App Client Secret
+          help_text: Client Secret from your GitHub App
           type: password
           when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
           required: true
@@ -352,6 +412,12 @@ spec:
             regex:
               pattern: ^[0-9]+$
               message: Must be a numeric value
+        - name: github_app_slug
+          title: GitHub App Slug
+          help_text: Slug of your GitHub App (the human-readable identifier in the app's URL)
+          type: text
+          when: 'repl{{ ConfigOptionEquals "github_auth_enabled" "1" }}'
+          required: true
         - name: github_app_webhook_secret
           title: GitHub App Webhook Secret
           help_text: Webhook secret from your GitHub App
@@ -374,6 +440,12 @@ spec:
           help_text: Enable GitLab OAuth for user authentication
           type: bool
           default: "0"
+        - name: gitlab_host
+          title: GitLab Host
+          help_text: Hostname of your GitLab instance (e.g. gitlab.example.com). Leave blank to use gitlab.com.
+          type: text
+          default: "gitlab.com"
+          when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
         - name: gitlab_oauth_client_id
           title: GitLab OAuth Client ID
           help_text: Client ID from your GitLab OAuth App
@@ -385,6 +457,34 @@ spec:
           help_text: Client Secret from your GitLab OAuth App
           type: password
           when: 'repl{{ ConfigOptionEquals "gitlab_auth_enabled" "1" }}'
+          required: true
+
+    - name: slack_configuration
+      title: Enable Slack
+      description: Enable Slack
+      items:
+        - name: slack_enabled
+          title: Enable Slack Integration
+          help_text: Configure to allow the use of @OpenHands in Slack
+          type: bool
+          default: "0"
+        - name: slack_client_id
+          title: Slack Client ID
+          help_text: Client ID from your Slack App
+          type: text
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+        - name: slack_client_secret
+          title: Slack Client Secret
+          help_text: Client Secret from your Slack App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
+          required: true
+        - name: slack_signing_secret
+          title: Slack Signing Secret
+          help_text: Signing Secret from your Slack App
+          type: password
+          when: 'repl{{ ConfigOptionEquals "slack_enabled" "1" }}'
           required: true
 
     - name: database_configuration
@@ -462,6 +562,19 @@ spec:
       title: Sandbox Configuration
       description: OpenHands conversations run in isolated sandboxes. Configure sandbox resources and lifecycle settings here. Adjust these settings based on your expected workload and the size of your cluster.
       items:
+        - name: runtime_routing_mode
+          title: Sandbox Routing Mode
+          help_text: |
+            How sandbox URLs are constructed.
+            Subdomain routes each sandbox at `{id}.{runtime_base}`. The uploaded TLS cert must have a SAN for `*.{runtime_base}`.
+            Path-based routes every sandbox at `{runtime_base}/{id}`. The uploaded TLS cert must have a SAN for `{runtime_base}`.
+          type: select_one
+          default: "subdomain"
+          items:
+            - name: "subdomain"
+              title: "Subdomain"
+            - name: "path"
+              title: "Path-based"
         - name: sandbox_idle_seconds
           title: Idle Time (seconds)
           help_text: How long (in seconds) before idle conversations are paused. Pausing a conversation frees up memory and CPU resources.
@@ -525,6 +638,15 @@ spec:
             regex:
               pattern: ^[1-9][0-9]*m$
               message: Must be a CPU value in millicores (e.g., 500m, 1000m)
+        - name: sandbox_warm_runtime_count
+          title: Warm Runtime Count
+          help_text: Number of warm runtime sandboxes to keep ready so new conversations start instantly. Set to 0 to disable and cold-start each sandbox.
+          type: text
+          default: "1"
+          validation:
+            regex:
+              pattern: ^(0|[1-9][0-9]*)$
+              message: Must be a non-negative integer
 
     - name: proxy_configuration
       title: Proxy Configuration
@@ -572,8 +694,28 @@ spec:
             - name: "DEBUG"
               title: "Debug"
 
+    - name: experimental
+      title: Experimental
+      description: Preview features that are still in development. Enable at your own risk.
+      items:
+        - name: plugin_directory_enabled
+          title: Enable Plugin Directory
+          help_text: Deploy the Plugin Directory marketplace, accessible at /plugins on your application hostname.
+          type: bool
+          default: "0"
+        - name: plugin_directory_marketplace_source
+          title: Marketplace Source
+          help_text: "URI of the plugin catalog to load. Supports github://owner/repo[@ref], https:// URLs to a catalog JSON file, or file:// paths."
+          type: text
+          when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
+          required: true
+
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
-      when: false
       items:
+        - name: analytics_enabled
+          title: Enable Analytics
+          help_text: Enable analytics for LLM observability and tracing
+          type: bool
+          default: "0"
