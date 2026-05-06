@@ -9,11 +9,12 @@
 #     --set branchSanitized=my-branch
 # =============================================================================
 
-# Image override - using PR #14243 fix for SAML IdP token handling
-# PR: https://github.com/All-Hands-AI/OpenHands/pull/14243
+# Image override - using PR #14243 fix for SAML IdP token handling + agent_kind validation
+# PR: https://github.com/OpenHands/OpenHands/pull/14243
+# Includes fix for legacy agent_kind 'llm' validation in org settings
 # TODO: Remove this override once PR is merged and included in a release
 image:
-  tag: sha-f50653f
+  tag: sha-115237fd0
 
 # Site-specific hostnames with subdomain routing
 ingress:
