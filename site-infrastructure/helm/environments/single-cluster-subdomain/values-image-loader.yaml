@@ -11,15 +11,17 @@
 # Image: Inherits from base chart (ghcr.io/openhands/agent-server)
 # No override needed - base chart has the correct image
 
-# Node selector for GKE Sandbox nodes (overrides sysbox-install label)
-# GKE Sandbox nodes have this label set by GKE when enable_gke_sandbox=true
+# Node selector for runtime nodes
+# Matches label on runtime node pool: openhands.ai/node-type=runtime
+# Note: sysbox-install explicitly set to null to override base chart default
 nodeSelector:
-  sandbox.gke.io/runtime: "gvisor"
+  openhands.ai/node-type: "runtime"
+  sysbox-install: null
 
-# Tolerations for GKE Sandbox nodes (overrides sysbox tolerations)
-# GKE Sandbox nodes have this taint to prevent non-sandboxed workloads
+# Tolerations for runtime nodes  
+# Matches taint on runtime node pool: openhands.ai/runtime=true:NoSchedule
 tolerations:
-- key: "sandbox.gke.io/runtime"
+- key: "openhands.ai/runtime"
   operator: "Equal"
-  value: "gvisor"
+  value: "true"
   effect: "NoSchedule"

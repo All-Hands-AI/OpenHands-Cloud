@@ -9,12 +9,10 @@
 #     --set branchSanitized=my-branch
 # =============================================================================
 
-# Image override - using PR #14243 fix for SAML IdP token handling + agent_kind validation
-# PR: https://github.com/OpenHands/OpenHands/pull/14243
-# Includes fix for legacy agent_kind 'llm' validation in org settings
-# TODO: Remove this override once PR is merged and included in a release
+# Image override - use sha-115237f which has migrations up to 112
+# (chart default cloud-1.25.1 only has migrations up to 110)
 image:
-  tag: sha-115237fd0
+  tag: sha-115237f
 
 # Site-specific hostnames with subdomain routing
 ingress:
@@ -33,8 +31,10 @@ sandbox:
   apiHostname: "http://openhands-runtime-api:5000"
 
 # Use shared Keycloak (keycloak.enabled=false is already default)
+# authHost overrides the per-branch auth URL pattern so all branches share one Keycloak
 keycloak:
   url: "https://auth.ohe-staging.platform-team.all-hands.dev"
+  authHost: "auth.ohe-staging.platform-team.all-hands.dev"
 
 enterpriseSSO:
   enabled: true
@@ -106,42 +106,41 @@ runtime-api:
     K8S_NAMESPACE: "openhands"
     # Runtime base URL for constructing runtime pod URLs
     RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
-    # Use gVisor runtime class (GKE Sandbox) - matches enable_gke_sandbox=true in Terraform
-    RUNTIME_CLASS: "gvisor"
-  # Warm runtimes with gVisor tolerations for GKE Sandbox nodes
+    # No special runtime class needed - standard containerd
+    RUNTIME_CLASS: ""
+  # Warm runtimes with tolerations for runtime nodes
+  # Using chart defaults for image/command, only adding tolerations
   warmRuntimes:
     enabled: true
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.22.1-nikolaik"
-        working_dir: "/openhands/code/"
-        environment: {}
-        # Tolerations for scheduling on GKE Sandbox (gVisor) nodes
-        tolerations:
-          - key: "sandbox.gke.io/runtime"
-            operator: "Equal"
-            value: "gvisor"
-            effect: "NoSchedule"
+        image: "ghcr.io/openhands/agent-server:1.19.0-python"
+        working_dir: "/workspace"
+        environment:
+          LOG_JSON: "1"
+          LOG_JSON_LEVEL_KEY: "severity"
+          OH_ALLOW_CORS_ORIGINS_0: ""
+          OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+          OH_CONVERSATIONS_PATH: "/workspace/conversations"
+          OH_ENABLE_VNC: "0"
+          OH_VSCODE_PORT: "60001"
+          OH_WEBHOOKS_0_BASE_URL: ""
+          OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+          VSCODE_PORT: "60001"
+          WORKER_1: "12000"
+          WORKER_2: "12001"
         command:
-          - /openhands/micromamba/bin/micromamba
-          - run
-          - -n
-          - openhands
-          - poetry
-          - run
-          - python
-          - -u
-          - -m
-          - openhands.runtime.action_execution_server
+          - /usr/local/bin/openhands-agent-server
+          - "--port"
           - "60000"
-          - --working-dir
-          - /workspace
-          - --plugins
-          - agent_skills
-          - jupyter
-          - vscode
-          - --username
-          - root
-          - --user-id
-          - "0"
+        run_as_user: 10001
+        run_as_group: 10001
+        fs_group: 10001
+        # Tolerations for scheduling on runtime nodes
+        # Matches existing node pool taint: openhands.ai/runtime=true:NoSchedule
+        tolerations:
+          - key: "openhands.ai/runtime"
+            operator: "Equal"
+            value: "true"
+            effect: "NoSchedule"

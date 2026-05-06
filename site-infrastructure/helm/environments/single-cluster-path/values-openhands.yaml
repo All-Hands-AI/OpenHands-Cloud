@@ -92,6 +92,10 @@ runtime-api:
     hostname: "ohe-staging.platform-team.all-hands.dev"
     tlsSecretName: openhands-runtime-api-tls  # Use existing cert for this hostname
     gatewayClassName: traefik
+    # IMPORTANT: Gateway listener port must match Traefik's INTERNAL entrypoint port.
+    # Traefik's websecure entrypoint listens on 8443 internally (exposed as 443 via LoadBalancer).
+    # The Gateway API operates inside the cluster, so it needs the internal port (8443).
+    listenerPort: 8443
   env:
     # Database connection - point to our postgresql instance
     DB_HOST: openhands-postgresql
@@ -114,9 +118,44 @@ runtime-api:
     USE_GATEWAY_API: "true"
     GATEWAY_NAME: "sandbox-gateway"
     RUNTIME_CERT_SECRET: "openhands-runtime-api-tls"  # Use existing cert for this hostname
-  # Warm runtimes - inherits config from chart defaults (charts/openhands/values.yaml)
-  # Only override count here; image, command, environment come from chart defaults
+    # SSL configuration - must be false (use https) to match RUNTIME_URL_PATTERN
+    # Default is "true" (use http), but we're behind TLS-terminating ingress
+    RUNTIME_DISABLE_SSL: "false"
+  # Warm runtimes configuration
+  # Must override configs[] to add node_selector for dedicated runtime nodes
   warmRuntimes:
     enabled: true
     count: 1
-    # NOTE: Not overriding configs[] - using chart defaults which don't require gVisor
+    configs:
+      - name: default
+        image: "ghcr.io/openhands/agent-server:1.19.0-python"
+        working_dir: "/workspace"
+        environment:
+          LOG_JSON: "1"
+          LOG_JSON_LEVEL_KEY: "severity"
+          OH_ALLOW_CORS_ORIGINS_0: ""
+          OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+          OH_CONVERSATIONS_PATH: "/workspace/conversations"
+          OH_ENABLE_VNC: "0"
+          OH_VSCODE_PORT: "60001"
+          OH_WEBHOOKS_0_BASE_URL: ""
+          OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+          VSCODE_PORT: "60001"
+          WORKER_1: "12000"
+          WORKER_2: "12001"
+        command:
+          - /usr/local/bin/openhands-agent-server
+          - "--port"
+          - "60000"
+        run_as_user: 10001
+        run_as_group: 10001
+        fs_group: 10001
+        # Schedule on dedicated runtime nodes (where image is pre-cached)
+        node_selector:
+          openhands.ai/node-type: runtime
+        # Tolerate the runtime node taint
+        tolerations:
+          - key: "openhands.ai/runtime"
+            operator: "Equal"
+            value: "true"
+            effect: "NoSchedule"
