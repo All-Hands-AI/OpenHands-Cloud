@@ -35,6 +35,9 @@ on:
       openhands-secrets-publishable:
         description: 'Whether openhands-secrets chart is publishable (no changes or version bumped)'
         value: ${{ jobs.validate-chart-versions.outputs.openhands-secrets-publishable }}
+      service-template-publishable:
+        description: 'Whether service-template chart is publishable (no changes or version bumped)'
+        value: ${{ jobs.validate-chart-versions.outputs.service-template-publishable }}
 
 jobs:
   validate-chart-versions:
@@ -49,6 +52,7 @@ jobs:
       plugin-directory-publishable: ${{ steps.validate.outputs.plugin-directory-publishable }}
       openhands-publishable: ${{ steps.validate.outputs.openhands-publishable }}
       openhands-secrets-publishable: ${{ steps.validate.outputs.openhands-secrets-publishable }}
+      service-template-publishable: ${{ steps.validate.outputs.service-template-publishable }}
 
     steps:
       - name: Checkout

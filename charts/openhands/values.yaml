@@ -62,6 +62,8 @@ filestore:
 
 github:
   enabled: false
+  # Set to true if you have configured github_app_slug in the github-app Secret
+  appSlugEnabled: false
 
 enrichUserInteractionData:
   enabled: false
@@ -862,6 +864,91 @@ automation:
   postgresql:
     enabled: false
 
+# Service Template subchart configuration
+# When enabled, deploys the service-template service as a subchart
+# Routing is handled by parent chart via /servicetemplate subpath
+service-template:
+  enabled: false
+
+  image:
+    repository: ghcr.io/openhands/service-template
+    # tag: set via helm args or override
+
+  imagePullSecrets: []
+
+  deployment:
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+  securityContext:
+    runAsUser: 42420
+    runAsGroup: 42420
+    runAsNonRoot: true
+
+  serviceAccount:
+    create: true
+    name: service-template-sa
+    annotations: {}
+
+  probes:
+    startup:
+      failureThreshold: 30
+      periodSeconds: 10
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      failureThreshold: 3
+
+  # Service configuration
+  service:
+    baseUrl: ""
+    corsOrigins: ""
+
+  # Authentication API URL for validating credentials
+  authApiBaseUrl: ""
+
+  # PostgreSQL database configuration
+  database:
+    host: ""
+    port: "5432"
+    user: "service_template_user"
+    name: "service_template"
+    secretName: "service-template-db-secret"
+    secretKey: "db-password"
+    existingSecret: false
+    createDatabaseUser: false
+    superuserSecretName: "postgres-password"
+    superuserSecretKey: "password"
+
+  # GCP Cloud SQL (leave empty for non-GCP)
+  gcp:
+    dbInstance: ""
+    project: ""
+    region: ""
+
+  # Datadog configuration
+  datadog:
+    enabled: false
+    env: "dev"
+    serviceName: "service-template"
+
+  # Env vars passed directly to the container
+  env: {}
+
+  # PostgreSQL subchart - disabled when using parent's PostgreSQL
+  postgresql:
+    enabled: false
+
 replicated:
   enabled: false
 
@@ -870,6 +957,12 @@ global:
     # This allows using the bitnamilegacy image repo.
     # See: https://github.com/bitnami/containers/issues/83267
     allowInsecureImages: true
+  # Ingress configuration shared with subcharts (for service-template auth URL)
+  # These should match the parent chart's ingress config
+  ingress:
+    host: ""  # Set to ingress.host value (e.g., "app.all-hands.dev")
+    prefixWithBranch: false  # Set to ingress.prefixWithBranch value
+  branchSanitized: ""  # Set to branchSanitized value for feature envs
 
 vertexAI:
   enabled: false
