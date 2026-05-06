@@ -25,6 +25,9 @@ spec:
     - openhands/deployment/openhands-mcp
     - openhands/service/openhands-mcp-service
     - openhands/ingress/openhands-mcp-ingress
+    - openhands/deployment/automation
+    - openhands/service/automation
+    - openhands/ingress/openhands-automation-ingress
 
     # keycloak
     - openhands/statefulset/keycloak
