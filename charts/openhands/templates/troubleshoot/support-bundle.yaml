@@ -156,11 +156,8 @@ spec:
           - fail:
               when: "< 1"
               message: "OpenHands integrations deployment is not ready"
-          - warn:
-              when: "< 2"
-              message: "OpenHands integrations deployment is ready but not at full capacity"
           - pass:
-              when: ">= 2"
+              when: ">= 1"
               message: "OpenHands integrations deployment is ready"
     - deploymentStatus:
         name: openhands-mcp
@@ -169,11 +166,8 @@ spec:
           - fail:
               when: "< 1"
               message: "OpenHands MCP deployment is not ready"
-          - warn:
-              when: "< 2"
-              message: "OpenHands MCP deployment is ready but not at full capacity"
           - pass:
-              when: ">= 2"
+              when: ">= 1"
               message: "OpenHands MCP deployment is ready"
     {{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
     - deploymentStatus:
