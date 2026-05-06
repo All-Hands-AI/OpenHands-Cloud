@@ -251,6 +251,20 @@ spec:
           - pass:
               when: ">= 1"
               message: "Ingress NGINX controller deployment is ready"
+    # No `name` => all-deployments mode: auto-fails any deployment whose ready
+    # count doesn't match desired. Named blocks above guard "must exist at all".
+    - deploymentStatus:
+        namespaces:
+          - {{ .Release.Namespace }}
+          - ingress-nginx
+    - clusterPodStatuses:
+        namespaces:
+          - {{ .Release.Namespace }}
+          - ingress-nginx
+        outcomes:
+          - fail:
+              when: "!= Healthy"
+              message: "Pod {{`{{ .Namespace }}/{{ .Name }}`}} is not Healthy: {{`{{ .Status.Reason }}`}}"
     {{- if and .Values.postgresql.enabled .Values.replicated.enabled }}
     - postgresql:
         checkName: "PostgreSQL Database Health"
