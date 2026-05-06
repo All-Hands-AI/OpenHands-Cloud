@@ -1,0 +1,173 @@
+{{- define "integrations-hub.env.defaults" }}
+# Node.js environment
+- name: NODE_ENV
+  value: "production"
+- name: NEXT_TELEMETRY_DISABLED
+  value: "1"
+- name: HOSTNAME
+  value: "0.0.0.0"
+- name: PORT
+  value: {{ .Values.service.port | default 3000 | quote }}
+
+# OpenHands authentication configuration
+{{- if .Values.openhands.baseUrl }}
+- name: OPENHANDS_BASE_URL
+  value: {{ .Values.openhands.baseUrl | quote }}
+- name: NEXT_PUBLIC_OPENHANDS_BASE_URL
+  value: {{ .Values.openhands.baseUrl | quote }}
+{{- else if .Values.global }}
+{{- if .Values.global.ingress }}
+{{- if .Values.global.ingress.host }}
+{{- $host := .Values.global.ingress.host }}
+{{- if and .Values.global.ingress.prefixWithBranch .Values.global.branchSanitized }}
+{{- $host = printf "%s.%s" .Values.global.branchSanitized .Values.global.ingress.host }}
+{{- end }}
+- name: OPENHANDS_BASE_URL
+  value: {{ printf "https://%s" $host | quote }}
+- name: NEXT_PUBLIC_OPENHANDS_BASE_URL
+  value: {{ printf "https://%s" $host | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# Service base URL
+{{- if .Values.service.baseUrl }}
+- name: NEXTAUTH_URL
+  value: {{ .Values.service.baseUrl | quote }}
+{{- end }}
+
+# Credential encryption key
+- name: CREDENTIAL_ENCRYPTION_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.credentialEncryption.secretName }}
+      key: {{ .Values.credentialEncryption.secretKey }}
+
+# Auth.js/NextAuth configuration
+- name: AUTH_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.auth.secretName }}
+      key: {{ .Values.auth.secretKey }}
+{{- if .Values.auth.github.clientIdSecretName }}
+- name: AUTH_GITHUB_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.auth.github.clientIdSecretName }}
+      key: {{ .Values.auth.github.clientIdSecretKey }}
+- name: AUTH_GITHUB_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.auth.github.clientSecretSecretName }}
+      key: {{ .Values.auth.github.clientSecretSecretKey }}
+{{- end }}
+{{- if .Values.auth.redirectProxyUrl }}
+- name: AUTH_REDIRECT_PROXY_URL
+  value: {{ .Values.auth.redirectProxyUrl | quote }}
+{{- end }}
+
+# Admin configuration
+{{- if .Values.admin.emails }}
+- name: APP_ADMIN_EMAILS
+  value: {{ .Values.admin.emails | quote }}
+{{- end }}
+
+# PostgreSQL database configuration
+{{- if .Values.gcp.dbInstance }}
+# For GCP Cloud SQL, use the Cloud SQL connector format
+- name: POSTGRES_URL
+  value: ""
+- name: DATABASE_URL
+  value: ""
+{{- else }}
+- name: POSTGRES_URL
+  value: "postgresql://$(INTEGRATIONS_HUB_DB_USER):$(INTEGRATIONS_HUB_DB_PASS)@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+- name: DATABASE_URL
+  value: "postgresql://$(INTEGRATIONS_HUB_DB_USER):$(INTEGRATIONS_HUB_DB_PASS)@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+{{- end }}
+- name: INTEGRATIONS_HUB_DB_HOST
+  value: {{ .Values.database.host | quote }}
+- name: INTEGRATIONS_HUB_DB_PORT
+  value: {{ .Values.database.port | quote }}
+- name: INTEGRATIONS_HUB_DB_USER
+  value: {{ .Values.database.user | quote }}
+- name: INTEGRATIONS_HUB_DB_NAME
+  value: {{ .Values.database.name | quote }}
+- name: INTEGRATIONS_HUB_DB_PASS
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
+{{- if .Values.gcp.dbInstance }}
+- name: INTEGRATIONS_HUB_GCP_DB_INSTANCE
+  value: {{ .Values.gcp.dbInstance | quote }}
+- name: INTEGRATIONS_HUB_GCP_PROJECT
+  value: {{ .Values.gcp.project | quote }}
+- name: INTEGRATIONS_HUB_GCP_REGION
+  value: {{ .Values.gcp.region | quote }}
+{{- end }}
+
+# Cron job authentication
+- name: CRON_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.cron.secretName }}
+      key: {{ .Values.cron.secretKey }}
+
+{{- if .Values.datadog.enabled }}
+# Datadog configuration
+- name: DD_AGENT_HOST
+  value: "datadog-agent.all-hands-system.svc.cluster.local"
+- name: DD_TRACE_AGENT_PORT
+  value: "8126"
+- name: DD_SERVICE
+  value: {{ .Values.datadog.serviceName | quote }}
+- name: DD_ENV
+  value: {{ .Values.datadog.env | quote }}
+- name: DD_TRACE_ENABLED
+  value: "true"
+{{- end }}
+{{- end }}
+
+{{/*
+  integrations-hub.env — Deduplicated environment variable list.
+
+  This wrapper renders the default env vars from "integrations-hub.env.defaults",
+  then removes any entries whose name conflicts with a key in .Values.env,
+  and finally appends the .Values.env overrides. The result is a clean list
+  with no duplicate names, which prevents:
+    - Helm warnings about duplicate env vars
+    - Strategic Merge Patch conflicts during helm upgrade
+      ("The order in patch list doesn't match $setElementOrder list")
+
+  How it works:
+    1. Render "integrations-hub.env.defaults" via include (evaluates all conditionals)
+    2. Parse the rendered YAML list into Go objects with fromYamlArray
+    3. Filter out any default entries whose name appears in .Values.env
+    4. Append .Values.env entries (user overrides always win)
+    5. Re-render the deduplicated list with toYaml
+*/}}
+{{- define "integrations-hub.env" }}
+{{- $defaults := include "integrations-hub.env.defaults" . | fromYamlArray }}
+{{- /* Build a lookup dict of override keys for O(1) membership checks */}}
+{{- $overrideKeys := dict }}
+{{- if .Values.env }}
+{{- range $key, $_ := .Values.env }}
+{{- $_ := set $overrideKeys $key true }}
+{{- end }}
+{{- end }}
+{{- /* Keep only default entries that are NOT overridden by .Values.env */}}
+{{- $filtered := list }}
+{{- range $entry := $defaults }}
+{{- if not (hasKey $overrideKeys (get $entry "name")) }}
+{{- $filtered = append $filtered $entry }}
+{{- end }}
+{{- end }}
+{{- /* Append user overrides from .Values.env (these take precedence) */}}
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+{{- $filtered = append $filtered (dict "name" $key "value" ($value | toString)) }}
+{{- end }}
+{{- end }}
+{{- $filtered | toYaml }}
+{{- end }}
