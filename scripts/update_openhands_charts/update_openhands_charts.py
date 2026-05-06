@@ -22,6 +22,7 @@ from ruamel.yaml import YAML
 logging.getLogger("github").setLevel(logging.WARNING)
 
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
+FULL_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
 DEPLOY_REPO = "OpenHands/deploy"
@@ -47,7 +48,7 @@ RUNTIME_API_TAG_PATTERN = (
     r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
 )
 AUTOMATION_TAG_PATTERN = (
-    r'(image:\n\s+repository: ghcr\.io/openhands/automation\n\s+tag: )(\d+\.\d+\.\d+)'
+    r'(image:\n\s+repository: ghcr\.io/openhands/automation\n\s+tag: )(\S+)'
 )
 
 
@@ -134,11 +135,19 @@ def format_sha_tag(sha: str) -> str:
     return f"sha-{get_short_sha(sha)}"
 
 
+def format_deploy_image_tag(tag_or_sha: str) -> str:
+    """Format a deploy config ref as the image tag used by deployment."""
+    if FULL_SHA_PATTERN.fullmatch(tag_or_sha):
+        return f"sha-{tag_or_sha}"
+    return tag_or_sha
+
+
 @dataclass
 class DeployConfig:
     """Configuration values from the deploy workflow."""
 
     runtime_api_sha: str
+    automation_sha: str
     openhands_runtime_image_tag: str
 
 
@@ -185,6 +194,7 @@ def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> Dep
         env = workflow.get("env", {})
         return DeployConfig(
             runtime_api_sha=env.get("RUNTIME_API_SHA", ""),
+            automation_sha=env.get("AUTOMATION_SHA", ""),
             openhands_runtime_image_tag=env.get("OPENHANDS_RUNTIME_IMAGE_TAG", ""),
         )
     except Exception as e:
@@ -459,14 +469,14 @@ def update_runtime_api_values(
 
 def update_automation_values(
     values_path: Path,
-    openhands_version: str,
+    automation_sha: str,
     dry_run: bool = False,
 ) -> UpdateResult:
     """Update image tag in automation values.yaml.
 
     Args:
         values_path: Path to the values.yaml file
-        openhands_version: The OpenHands semver version (e.g., '1.21.0')
+        automation_sha: The automation deploy ref (40-char SHA or direct tag)
         dry_run: If True, don't write changes to file
 
     Returns UpdateResult containing changes made.
@@ -477,7 +487,7 @@ def update_automation_values(
     content = update_tag_in_content(
         content,
         AUTOMATION_TAG_PATTERN,
-        openhands_version,
+        format_deploy_image_tag(automation_sha),
         "automation image tag",
         result,
     )
@@ -596,7 +606,7 @@ def update_openhands_workflow(
 
 
 def update_automation_workflow(
-    version_number: str,
+    deploy_config: DeployConfig,
     dry_run: bool,
 ) -> str:
     """Update automation chart values and bump chart version. Returns new chart version."""
@@ -605,7 +615,7 @@ def update_automation_workflow(
     print("Updating automation values.yaml...")
     values_result = update_automation_values(
         AUTOMATION_VALUES_PATH,
-        version_number,
+        deploy_config.automation_sha,
         dry_run=dry_run,
     )
     values_result.print_summary()
@@ -651,13 +661,14 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     print(f"Deploy config (from {version_number}):")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
+    print(f"  AUTOMATION_SHA: {deploy_config.automation_sha}")
     print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
 
     print()
     runtime_api_version = update_runtime_api_workflow(deploy_config, dry_run)
 
     print()
-    automation_version = update_automation_workflow(version_number, dry_run)
+    automation_version = update_automation_workflow(deploy_config, dry_run)
 
     print()
     update_openhands_workflow(deploy_config, openhands_version, runtime_api_version, automation_version, dry_run)

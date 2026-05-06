@@ -592,6 +592,7 @@ class TestGetDeployConfig:
     VALID_WORKFLOW_YAML = """\
 env:
   RUNTIME_API_SHA: abc123def456
+  AUTOMATION_SHA: 1234567890abcdef1234567890abcdef12345678
   OPENHANDS_RUNTIME_IMAGE_TAG: "cloud-1.21.0-nikolaik"
   OTHER_VAR: value
 """
@@ -617,6 +618,7 @@ env:
         assert result is not None
         assert isinstance(result, DeployConfig)
         assert result.runtime_api_sha == "abc123def456"
+        assert result.automation_sha == "1234567890abcdef1234567890abcdef12345678"
         assert result.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
     def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
@@ -667,6 +669,7 @@ env:
 
         assert result is not None
         assert result.runtime_api_sha == ""
+        assert result.automation_sha == ""
         assert result.openhands_runtime_image_tag == ""
 
     def test_returns_empty_string_when_env_section_missing(self, monkeypatch, make_workflow_response):
@@ -686,6 +689,7 @@ env:
 
         assert result is not None
         assert result.runtime_api_sha == ""
+        assert result.automation_sha == ""
         assert result.openhands_runtime_image_tag == ""
 
     # =========================================================================
@@ -1416,8 +1420,8 @@ class TestUpdateRuntimeApiValues:
 class TestUpdateAutomationValues:
     """Tests for update_automation_values function.
 
-    The automation chart uses a semver tag (e.g., '1.21.0') that should be
-    updated to match the OpenHands version when the chart is updated.
+    The automation chart now uses the deploy-config automation SHA, which is
+    published as a full `sha-<40 hex>` image tag.
     """
 
     @pytest.fixture
@@ -1426,21 +1430,23 @@ class TestUpdateAutomationValues:
         return make_temp_yaml_file(sample_automation_values)
 
     def test_updates_automation_image_tag(self, temp_automation_values_file):
-        """Test that automation image tag is updated to the new version."""
+        """Test that automation image tag is updated from deploy-config SHA."""
         result = update_automation_values(
             temp_automation_values_file,
-            openhands_version="1.21.0",
+            automation_sha="1234567890abcdef1234567890abcdef12345678",
         )
 
-        assert_file_contains(temp_automation_values_file, "tag: 1.21.0")
+        assert_file_contains(
+            temp_automation_values_file,
+            "tag: sha-1234567890abcdef1234567890abcdef12345678",
+        )
         assert result.has_changes is True
 
     def test_idempotent_when_reapplying_same_values(self, temp_automation_values_file):
-        """Test that reapplying the same version reports no changes."""
-        # Step 1: Apply initial values (1.20.0 is already in fixture)
+        """Test that reapplying the same automation SHA reports no changes."""
         result = update_automation_values(
             temp_automation_values_file,
-            openhands_version="1.20.0",
+            automation_sha="1.20.0",
         )
 
         # Verify: Boolean flag correctly indicates no changes
@@ -1451,7 +1457,7 @@ class TestUpdateAutomationValues:
         """Test that other content is preserved."""
         update_automation_values(
             temp_automation_values_file,
-            openhands_version="1.21.0",
+            automation_sha="1234567890abcdef1234567890abcdef12345678",
         )
 
         assert_file_contains_all(temp_automation_values_file, [
@@ -1466,7 +1472,7 @@ class TestUpdateAutomationValues:
 
         update_automation_values(
             temp_automation_values_file,
-            openhands_version="1.21.0",
+            automation_sha="1234567890abcdef1234567890abcdef12345678",
             dry_run=True,
         )
 
