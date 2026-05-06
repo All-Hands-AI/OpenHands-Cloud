@@ -8,6 +8,10 @@
 #     -f site-infrastructure/helm/environments/single-cluster-path/values-openhands.yaml
 # =============================================================================
 
+# TODO: Remove this tag override once PR in ~/Code/OpenHands is merged
+image:
+  tag: sha-f50653f
+
 # Site-specific hostnames
 ingress:
   enabled: true
@@ -83,7 +87,7 @@ runtime-api:
     enabled: true
     name: sandbox-gateway
     hostname: "ohe-staging.platform-team.all-hands.dev"
-    tlsSecretName: openhands-tls
+    tlsSecretName: openhands-runtime-api-tls  # Use existing cert for this hostname
     gatewayClassName: traefik
   env:
     # Database connection - point to our postgresql instance
@@ -106,7 +110,7 @@ runtime-api:
     RUNTIME_URL_SEPARATOR: "/"
     USE_GATEWAY_API: "true"
     GATEWAY_NAME: "sandbox-gateway"
-    RUNTIME_CERT_SECRET: "openhands-tls"
+    RUNTIME_CERT_SECRET: "openhands-runtime-api-tls"  # Use existing cert for this hostname
   # Warm runtimes - inherits config from chart defaults (charts/openhands/values.yaml)
   # Only override count here; image, command, environment come from chart defaults
   warmRuntimes:

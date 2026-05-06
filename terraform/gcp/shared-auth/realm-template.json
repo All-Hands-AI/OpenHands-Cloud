@@ -30,7 +30,7 @@
   "clientSessionMaxLifespan": 0,
   "clientOfflineSessionIdleTimeout": 0,
   "clientOfflineSessionMaxLifespan": 0,
-  "accessCodeLifespan": 60,
+  "accessCodeLifespan": 120,
   "accessCodeLifespanUserAction": 300,
   "accessCodeLifespanLogin": 1800,
   "actionTokenGeneratedByAdminLifespan": 43200,
@@ -48,8 +48,43 @@
         "name": "offline_access",
         "description": "${role_offline-access}",
         "composite": false
+      },
+      {
+        "name": "default-roles-allhands",
+        "description": "${role_default-roles}",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "offline_access",
+            "uma_authorization"
+          ],
+          "client": {
+            "broker": [
+              "read-token"
+            ],
+            "account": [
+              "manage-account",
+              "view-profile"
+            ]
+          }
+        }
       }
-    ]
+    ],
+    "client": {
+      "broker": [
+        {
+          "name": "read-token",
+          "description": "${role_read-token}",
+          "composite": false,
+          "clientRole": true
+        }
+      ]
+    }
+  },
+  "defaultRole": {
+    "name": "default-roles-allhands",
+    "description": "${role_default-roles}",
+    "composite": true
   },
   "attributes": {
     "frontendUrl": "https://auth.ohe-staging.platform-team.all-hands.dev"
@@ -61,8 +96,8 @@
       "providerId": "saml",
       "enabled": true,
       "trustEmail": true,
-      "storeToken": false,
-      "addReadTokenRoleOnCreate": false,
+      "storeToken": true,
+      "addReadTokenRoleOnCreate": true,
       "authenticateByDefault": false,
       "linkOnly": false,
       "firstBrokerLoginFlowAlias": "Auto-Link First Broker Login",
@@ -97,6 +132,28 @@
     }
   ],
   "clients": [
+    {
+      "clientId": "broker",
+      "name": "${client_broker}",
+      "description": "Broker client for identity provider token retrieval",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "redirectUris": [],
+      "webOrigins": [],
+      "bearerOnly": true,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "true"
+      },
+      "fullScopeAllowed": false
+    },
     {
       "clientId": "allhands",
       "name": "OpenHands Staging Client",
