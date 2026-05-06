@@ -220,7 +220,7 @@ spec:
         RUNTIME_IMAGE_PULL_SECRETS: '{{repl ImagePullSecretName }}'
         STORAGE_CLASS: "openebs-hostpath"
         INGRESS_CLASS: "traefik"
-        RUNTIME_CLASS: ""
+        RUNTIME_CLASS: "sysbox-runc"
         RUNTIME_DISABLE_SSL: "false"
         PERSISTENT_STORAGE_SIZE: 'repl{{ ConfigOption "sandbox_storage_size" }}'
         MEMORY_REQUEST: 'repl{{ ConfigOption "sandbox_memory_request" }}'
