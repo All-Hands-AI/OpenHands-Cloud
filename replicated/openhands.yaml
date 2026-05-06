@@ -301,10 +301,6 @@ spec:
     slack:
       enabled: repl{{ ConfigOptionEquals "slack_enabled" "1" }}
 
-    automation:
-      image:
-        tag: "sha-36b5df4"
-
     replicated:
       enabled: true
       image:
