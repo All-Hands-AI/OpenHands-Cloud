@@ -2,6 +2,9 @@
 # This chart creates all the required secrets for OpenHands
 
 # Configuration values will be passed from the parent chart
+automation:
+  enabled: false
+
 config:
   # Security secrets
   admin_password: ""

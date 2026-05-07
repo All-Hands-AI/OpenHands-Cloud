@@ -726,6 +726,11 @@ spec:
       title: Advanced Options
       description: Optional components and advanced configuration settings
       items:
+        - name: automations_enabled
+          title: Enable Automations
+          help_text: Deploy the Automations UI and backend. If you use an external PostgreSQL instance, make sure the automations database requirements are satisfied before enabling this option.
+          type: bool
+          default: "0"
         - name: analytics_enabled
           title: Enable Analytics
           help_text: Enable analytics for LLM observability and tracing
