@@ -17,6 +17,7 @@ spec:
 
     image:
       repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/enterprise-server'
+      tag: 'sha-60f5c1c'
     imagePullSecrets:
       - name: '{{repl ImagePullSecretName }}'
 
@@ -134,9 +135,13 @@ spec:
       # Migrations run automatically when litellm starts. This disables running them separately as a job.
       migrationJob:
         enabled: false
+      args:
+        - --config
+        - /etc/litellm/config.yaml
+        - --use_v2_migration_resolver
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
-        tag: "v1.82.3-stable.patch.3"
+        tag: "v1.83.14-stable"
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
@@ -175,6 +180,14 @@ spec:
           OR_APP_NAME: "OpenHands"
           OR_SITE_URL: "https://docs.all-hands.dev"
         model_list:
+          # LiteLLM 1.83.14 workaround: expose this model through the
+          # proxy for openhands/claude-opus-4-7 because direct Anthropic calls
+          # break thinking translation in this release. Can consider removing after LiteLLM
+          # ships https://github.com/BerriAI/litellm/pull/27074.
+          - model_name: "claude-opus-4-7"
+            litellm_params:
+              model: "anthropic/claude-opus-4-7"
+              api_key: os.environ/ANTHROPIC_API_KEY
           - model_name: "claude-sonnet-4-5-20250929"
             litellm_params:
               model: "anthropic/claude-sonnet-4-5-20250929"
