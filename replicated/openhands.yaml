@@ -134,6 +134,10 @@ spec:
       # Migrations run automatically when litellm starts. This disables running them separately as a job.
       migrationJob:
         enabled: false
+      args:
+        - --config
+        - /etc/litellm/config.yaml
+        - --use_v2_migration_resolver
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
         tag: "v1.83.14-stable"
