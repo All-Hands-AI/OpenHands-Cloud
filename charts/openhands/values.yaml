@@ -362,6 +362,49 @@ keycloak:
   # Use this when Keycloak is shared across branches and shouldn't get branch prefix
   # Example: auth.ohe-staging.platform-team.all-hands.dev
   authHost: ""
+  
+  # =============================================================================
+  # Redirect URI Registration (for shared Keycloak with branch deployments)
+  # =============================================================================
+  # When using a shared Keycloak instance across multiple branch deployments,
+  # each branch needs to register its specific redirect URI. Keycloak doesn't
+  # support wildcard subdomains (e.g., https://*.example.com/*), so we must
+  # register exact URIs like https://branch.example.com/*.
+  #
+  # This hook runs automatically after helm install/upgrade to register the
+  # branch's redirect URI with the shared Keycloak instance.
+  #
+  # Prerequisites:
+  #   1. Shared Keycloak must be deployed and accessible
+  #   2. The 'allhands' client must exist in the realm
+  #   3. Admin credentials must be available in a Kubernetes secret
+  #
+  # Example configuration for ohe-staging.platform-team.all-hands.dev:
+  #   redirectUriRegistration:
+  #     enabled: true
+  #     keycloakUrl: "https://auth.ohe-staging.platform-team.all-hands.dev"
+  #     realmName: "allhands"
+  #     clientId: "allhands"
+  #     adminUser: "admin"
+  #     adminPasswordSecret:
+  #       name: "keycloak-admin"
+  #       key: "admin-password"
+  # =============================================================================
+  redirectUriRegistration:
+    enabled: false
+    # URL of the shared Keycloak instance (with /auth suffix if applicable)
+    keycloakUrl: ""
+    # Keycloak realm name
+    realmName: "allhands"
+    # Client ID to update
+    clientId: "allhands"
+    # Admin username for Keycloak
+    adminUser: "admin"
+    # Secret containing the admin password
+    adminPasswordSecret:
+      name: "keycloak-admin"
+      key: "admin-password"
+  
   fullnameOverride: keycloak
   replicaCount: 1
   production: true
