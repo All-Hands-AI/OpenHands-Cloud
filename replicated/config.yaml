@@ -247,7 +247,7 @@ spec:
           required: true
         - name: aws_auth_method
           title: AWS Authentication Method
-          help_text: How LiteLLM authenticates to AWS Bedrock. "EC2 Instance Profile" requires OpenHands to be running on an EC2 instance with an attached IAM role that has bedrock:InvokeModel* permissions. Note: in containerized deployments, the EC2 instance metadata service hop limit must be 2 or higher so pods can reach IMDS.
+          help_text: How LiteLLM authenticates to AWS Bedrock. "EC2 Instance Profile" requires OpenHands to be running on an EC2 instance with an attached IAM role that has bedrock:InvokeModel* permissions. In containerized deployments, the EC2 instance metadata service hop limit must be at least 2 so pods can reach IMDS.
           type: select_one
           default: "static_keys"
           when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
