@@ -1,17 +1,21 @@
 # =============================================================================
 # OpenHands Site-Specific Values: platform-team-sandbox
 # =============================================================================
-# Runtime Isolation Status: DISABLED (no gVisor or sysbox)
+# Runtime Isolation Status: SYSBOX ENABLED
 #
 # CURRENT STATE:
-# - Runtime pods run WITHOUT special isolation (standard containerd)
-# - This is a temporary configuration until infrastructure enables gVisor
+# - Runtime pods run with sysbox-runc RuntimeClass for container-in-container isolation
+# - Matches production configuration
 #
-# TO ENABLE GVISOR LATER:
-# 1. In site-infrastructure/terraform: set enable_gke_sandbox = true for runtime node pool
-# 2. Apply terraform to recreate nodes with gVisor support
-# 3. In this file: uncomment RUNTIME_CLASS: "gvisor" lines
-# 4. Verify: kubectl get runtimeclass gvisor && kubectl get nodes -l sandbox.gke.io/runtime=gvisor
+# PREREQUISITES (before deploying):
+# 1. Terraform creates runtime node pool with Ubuntu nodes (runtime_node_image_type = UBUNTU_CONTAINERD)
+# 2. Apply sysbox-install.yaml: kubectl apply -f site-infrastructure/k8s/sysbox/sysbox-install.yaml
+# 3. Deploy image-loader for pre-caching runtime images
+#
+# VERIFICATION:
+#   kubectl get runtimeclass sysbox-runc
+#   kubectl get nodes -l sysbox-install=yes
+#   kubectl get pods -n sysbox
 #
 # Usage:
 #   helm install openhands ./charts/openhands \
@@ -87,15 +91,10 @@ redis:
 # =============================================================================
 # RUNTIME CONFIGURATION
 # =============================================================================
-# Runtime isolation: DISABLED
-# - RUNTIME_CLASS is set to empty string (no gVisor/sysbox)
-# - Runtime pods run with standard containerd
-# - Pods schedule on nodes with openhands.ai/node-type=runtime label
-#
-# TO ENABLE GVISOR LATER (requires infrastructure changes first):
-# 1. Uncomment RUNTIME_CLASS: "gvisor" below
-# 2. Remove the explicit RUNTIME_NODE_SELECTOR and RUNTIME_TOLERATIONS
-#    (gVisor RuntimeClass has built-in scheduling constraints)
+# Runtime isolation: SYSBOX ENABLED
+# - RUNTIME_CLASS is set to "sysbox-runc" for container-in-container isolation
+# - Runtime pods schedule on nodes labeled: sysbox-install=yes
+# - Nodes are tainted: sysbox-runtime=true:NoSchedule
 # =============================================================================
 
 runtime-api:
@@ -125,15 +124,13 @@ runtime-api:
     # Runtime base URL
     RUNTIME_BASE_URL: "ohe-staging.platform-team.all-hands.dev"
     # ============================================================
-    # RUNTIME ISOLATION: DISABLED
-    # Empty string = no RuntimeClass = standard containerd
-    # To enable gVisor: uncomment below and ensure infra has gVisor nodes
+    # RUNTIME ISOLATION: SYSBOX ENABLED
+    # Uses sysbox-runc RuntimeClass for secure container-in-container
     # ============================================================
-    RUNTIME_CLASS: ""
-    # RUNTIME_CLASS: "gvisor"  # Uncomment when infra enables gVisor
-    # Runtime node scheduling - schedule on runtime nodes
-    RUNTIME_NODE_SELECTOR: '{"openhands.ai/node-type": "runtime"}'
-    RUNTIME_TOLERATIONS: '[{"key": "openhands.ai/runtime", "operator": "Equal", "value": "true", "effect": "NoSchedule"}]'
+    RUNTIME_CLASS: "sysbox-runc"
+    # Runtime node scheduling - schedule on sysbox-enabled nodes
+    RUNTIME_NODE_SELECTOR: '{"sysbox-install": "yes"}'
+    RUNTIME_TOLERATIONS: '[{"key": "sysbox-runtime", "operator": "Equal", "value": "true", "effect": "NoSchedule"}]'
 
   # Warm runtimes pre-create runtime pods for faster conversation startup
   warmRuntimes:
@@ -168,12 +165,14 @@ runtime-api:
           - root
           - --user-id
           - "0"
-        # Node selector to schedule on runtime nodes
-        nodeSelector:
-          openhands.ai/node-type: "runtime"
-        # Tolerations to allow scheduling on tainted runtime nodes
+        # Node selector to schedule on sysbox-enabled nodes (snake_case required by template)
+        node_selector:
+          sysbox-install: "yes"
+        # Tolerations to allow scheduling on sysbox-tainted nodes (snake_case required by template)
         tolerations:
-          - key: "openhands.ai/runtime"
+          - key: "sysbox-runtime"
             operator: "Equal"
             value: "true"
             effect: "NoSchedule"
+        # Runtime class for sysbox isolation (snake_case required by template)
+        runtime_class: "sysbox-runc"
