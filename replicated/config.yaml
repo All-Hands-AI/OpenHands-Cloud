@@ -114,6 +114,8 @@ spec:
               title: "Groq"
             - name: "openrouter"
               title: "OpenRouter"
+            - name: "bedrock"
+              title: "AWS Bedrock"
             - name: "custom"
               title: "Custom/Local LLM"
         - name: anthropic_api_key
@@ -242,6 +244,44 @@ spec:
           help_text: Your OpenRouter API key
           type: password
           when: 'repl{{ ConfigOptionEquals "llm_provider" "openrouter" }}'
+          required: true
+        - name: aws_auth_method
+          title: AWS Authentication Method
+          help_text: How LiteLLM authenticates to AWS Bedrock. "EC2 Instance Profile" requires OpenHands to be running on an EC2 instance with an attached IAM role that has bedrock:InvokeModel* permissions.
+          type: select_one
+          default: "static_keys"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
+          required: true
+          items:
+            - name: "static_keys"
+              title: "Access Key + Secret"
+            - name: "instance_profile"
+              title: "EC2 Instance Profile"
+        - name: aws_access_key_id
+          title: AWS Access Key ID
+          help_text: AWS access key with bedrock:InvokeModel and bedrock:InvokeModelWithResponseStream permissions.
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "bedrock") (ConfigOptionEquals "aws_auth_method" "static_keys") }}'
+          required: true
+        - name: aws_secret_access_key
+          title: AWS Secret Access Key
+          help_text: Secret access key paired with the AWS Access Key ID above.
+          type: password
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "bedrock") (ConfigOptionEquals "aws_auth_method" "static_keys") }}'
+          required: true
+        - name: aws_region_name
+          title: AWS Region
+          help_text: AWS region where Bedrock model access has been granted (e.g., us-west-2, us-east-1). Cross-region inference profile IDs (us.anthropic.*) work in any US region.
+          type: text
+          default: "us-west-2"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
+          required: true
+        - name: bedrock_model_id
+          title: Bedrock Model ID
+          help_text: Bedrock model ID or cross-region inference profile ID. Most current Claude models on Bedrock require the cross-region inference profile (prefix with `us.`), e.g. `us.anthropic.claude-sonnet-4-5-20250929-v1:0`.
+          type: text
+          default: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
           required: true
         - name: custom_base_url
           title: Custom LLM Base URL
