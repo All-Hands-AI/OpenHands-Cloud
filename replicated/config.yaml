@@ -247,7 +247,7 @@ spec:
           required: true
         - name: aws_auth_method
           title: AWS Authentication Method
-          help_text: How LiteLLM authenticates to AWS Bedrock. "EC2 Instance Profile" requires OpenHands to be running on an EC2 instance with an attached IAM role that has bedrock:InvokeModel* permissions.
+          help_text: How LiteLLM authenticates to AWS Bedrock. "EC2 Instance Profile" requires OpenHands to be running on an EC2 instance with an attached IAM role that has bedrock:InvokeModel* permissions. Note: in containerized deployments, the EC2 instance metadata service hop limit must be 2 or higher so pods can reach IMDS.
           type: select_one
           default: "static_keys"
           when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
@@ -278,7 +278,7 @@ spec:
           required: true
         - name: bedrock_model_id
           title: Bedrock Model ID
-          help_text: Bedrock model ID or cross-region inference profile ID. Most current Claude models on Bedrock require the cross-region inference profile (prefix with `us.`), e.g. `us.anthropic.claude-sonnet-4-5-20250929-v1:0`.
+          help_text: Bedrock model ID or cross-region inference profile ID. Cross-region profiles (prefix `us.`) work in any US region; standard model IDs are region-specific. Most current Claude models on Bedrock are inference-profile only (e.g., `us.anthropic.claude-sonnet-4-5-20250929-v1:0`).
           type: text
           default: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
           when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
