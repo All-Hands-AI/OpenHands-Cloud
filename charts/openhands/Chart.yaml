@@ -38,18 +38,18 @@ dependencies:
     condition: replicated.enabled
   - name: runtime-api
     repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.3.1
+    version: 0.3.2
     condition: runtime-api.enabled
   - name: automation
     repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.5
+    version: 0.1.6
     condition: automation.enabled
   - name: crd-check
     repository: oci://ghcr.io/all-hands-ai/helm-charts
     version: 0.1.0
   - name: plugin-directory
     repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.0
+    version: 0.1.1
     condition: plugin-directory.enabled
   - name: integrations-hub
     repository: oci://ghcr.io/all-hands-ai/helm-charts
