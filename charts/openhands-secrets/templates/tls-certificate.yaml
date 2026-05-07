@@ -1,0 +1,37 @@
+{{- if and (.Values.config.tls_certificate) (.Values.config.tls_private_key) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openhands-tls
+  namespace: {{ .Release.Namespace }}
+type: kubernetes.io/tls
+data:
+  {{- if .Values.config.tls_certificate }}
+  tls.crt: {{ .Values.config.tls_certificate | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.tls_private_key }}
+  tls.key: {{ .Values.config.tls_private_key | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.tls_ca_certificate }}
+  ca.crt: {{ .Values.config.tls_ca_certificate | b64enc | quote }}
+  {{- end }}
+{{- end }}
+---
+{{- if and (.Values.config.tls_certificate) (.Values.config.tls_private_key) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-all-hands-{{ .Values.config.tls_env }}-tls
+  namespace: {{ .Release.Namespace }}
+type: kubernetes.io/tls
+data:
+  {{- if .Values.config.tls_certificate }}
+  tls.crt: {{ .Values.config.tls_certificate | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.tls_private_key }}
+  tls.key: {{ .Values.config.tls_private_key | b64enc | quote }}
+  {{- end }}
+  {{- if .Values.config.tls_ca_certificate }}
+  ca.crt: {{ .Values.config.tls_ca_certificate | b64enc | quote }}
+  {{- end }}
+{{- end }}

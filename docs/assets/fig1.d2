@@ -23,15 +23,10 @@ app-cluster: Kubernetes Cluster {
   postgres: PostgreSQL {
     shape: cylinder
   }
-  langfuse: LangFuse
   litellm: LiteLLM Proxy
   redis: Redis {
     shape: cylinder
   }
-  clickhouse: Clickhouse {
-    shape: cylinder
-  }
-
   runtimes: Runtimes {
     class: all-hands
   }
@@ -59,8 +54,6 @@ app-cluster.openhands -> app-cluster.keycloak
 app-cluster.openhands -> app-cluster.redis
 app-cluster.openhands -> convo-bucket
 app-cluster.runtime-api -> app-cluster.runtimes
-app-cluster.litellm -> app-cluster.langfuse
-app-cluster.langfuse -> app-cluster.clickhouse
 app-cluster.openhands -> app-cluster.litellm
 
 app-cluster.openhands -> app-cluster.postgres

@@ -1,28 +1,24 @@
 apiVersion: v2
 description: OpenHands is an AI-driven autonomous software engineer
 name: openhands
-appVersion: 0.62.0
-version: 0.1.35
+appVersion: cloud-1.26.1
+version: 0.7.8
 maintainers:
   - name: rbren
   - name: xingyao
   - name: tofarr
 dependencies:
-  - name: clickhouse
-    repository: oci://registry-1.docker.io/bitnamicharts
-    version: 9.2.5
-    condition: clickhouse.enabled
   - name: keycloak
-    version: 24.5.2
+    version: 24.7.5
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: keycloak.enabled
-  - name: langfuse
-    repository: https://langfuse.github.io/langfuse-k8s
-    version: 1.2.13
-    condition: langfuse.enabled
+  - name: laminar
+    repository: https://lmnr-ai.github.io/lmnr-helm
+    version: 0.1.8
+    condition: laminar.enabled
   - name: litellm-helm
     repository: oci://ghcr.io/berriai
-    version: 0.1.781
+    version: 0.1.831
     condition: litellm-helm.enabled
   - name: minio
     version: 5.0.10
@@ -36,7 +32,22 @@ dependencies:
     version: 20.3.0
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: redis.enabled
+  - name: replicated
+    repository: oci://charts.shortrib.io/library
+    version: 1.9.0
+    condition: replicated.enabled
   - name: runtime-api
     repository: oci://ghcr.io/all-hands-ai/helm-charts
-    version: 0.1.20
+    version: 0.3.2
     condition: runtime-api.enabled
+  - name: automation
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.6
+    condition: automation.enabled
+  - name: crd-check
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.0
+  - name: plugin-directory
+    repository: oci://ghcr.io/all-hands-ai/helm-charts
+    version: 0.1.1
+    condition: plugin-directory.enabled

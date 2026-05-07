@@ -8,8 +8,11 @@ metadata:
 spec:
   schedule: {{ .Values.podStatusLogger.schedule | quote }}
   concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
         spec:
           {{- with .Values.securityContext }}
@@ -39,5 +42,7 @@ spec:
               - name: ingress-base-config
                 mountPath: /ingress-base
             {{- end }}
+            resources:
+              {{- toYaml .Values.jobSettings.resources | nindent 14 }}
           restartPolicy: OnFailure
 {{- end }}

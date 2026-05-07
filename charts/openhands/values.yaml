@@ -14,31 +14,10 @@ appConfig:
   OPENHANDS_GITLAB_SERVICE_CLS: "integrations.gitlab.gitlab_service.SaaSGitLabService"
   OPENHANDS_BITBUCKET_SERVICE_CLS: "integrations.bitbucket.bitbucket_service.SaaSBitBucketService"
   OPENHANDS_AZURE_DEVOPS_SERVICE_CLS: "integrations.azure_devops.azure_devops_service.SaaSAzureDevOpsService"
+  OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS: "integrations.bitbucket_data_center.bitbucket_dc_service.SaaSBitbucketDCService"
   OPENHANDS_MCP_CONFIG_CLS: "server.mcp.mcp_config.SaaSOpenHandsMCPConfig"
   OPENHANDS_EXPERIMENT_MANAGER_CLS: "experiments.experiment_manager.SaaSExperimentManager"
   POSTHOG_CLIENT_KEY: "1234abcd"
-
-commonRoomSync:
-  enabled: false
-  schedule: "0 3 * * *" # Daily at 3 AM
-  concurrencyPolicy: Forbid
-  failedJobsHistoryLimit: 3
-  successfulJobsHistoryLimit: 3
-  backoffLimit: 3
-  batchSize: "100"
-  maxRetries: "3"
-  initialBackoffSeconds: "1"
-  maxBackoffSeconds: "60"
-  backoffFactor: "2"
-  rateLimit: "2"
-  keycloakBatchSize: "20"
-  resources:
-    requests:
-      memory: 256Mi
-      cpu: 100m
-    limits:
-      memory: 512Mi
-      cpu: 200m
 
 datadog:
   enabled: false
@@ -49,12 +28,17 @@ datadog:
 debuggingRoutes:
   enabled: false
 
+databaseMigrations:
+  waitForDatabase: true
+  createDatabases: false
+  migrate: true
+
 deployment:
   replicas: 1
   resources:
     requests:
-      memory: 3Gi
-      cpu: 1
+      memory: 1200Mi
+      cpu: 100m
     limits:
       memory: 3Gi
 
@@ -101,11 +85,20 @@ githubProxy:
 
 gitlab:
   enabled: false
+  # Host for self-hosted GitLab (e.g. gitlab.example.com). Defaults to gitlab.com.
+  host: ""
 
 bitbucket:
   enabled: false
   auth:
     existingSecret: bitbucket-app
+
+enterpriseSSO:
+  enabled: false
+
+bitbucketDataCenter:
+  enabled: false
+  host: ""
 
 gitlabWebhookInstallation:
   enabled: false
@@ -124,7 +117,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: sha-4ea3e4b
+  tag: cloud-1.26.1
 
 ingress:
   enabled: false
@@ -154,11 +147,11 @@ ingress:
 
 integrationEvents:
   deployment:
-    replicas: 2
+    replicas: 1
     resources:
       requests:
-        memory: 1.5Gi
-        cpu: 1000m
+        memory: 800Mi
+        cpu: 100m
       limits:
         memory: 1.5Gi
         cpu: 1000m
@@ -166,25 +159,20 @@ integrationEvents:
     workers: 2
 
 litellm:
-  enabled: true
   # NOTE: to set the LLM model, set the LITELLM_DEFAULT_MODEL variable in the env section above.
   # REQUIRED: Update to match the hostname set in the litellm-helm ingress section
   url: "https://llm-proxy.example.com"
-  # REQUIRED: Update this AFTER you initially install the chart and login to litellm to create the team.
-  # teamId: ""
+  # Team ID for LiteLLM. If the team ID doesn't exist, it will automatically be created.
+  # Set this to use an existing team.
+  teamId: "openhands"
   auth:
     existingSecret: lite-llm-api-key
 
 mcpEvents:
   deployment:
-    replicas: 2
+    replicas: 1
   uvicorn:
     workers: 2
-
-migrationJob:
-  enabled: true
-  initContainer:
-    enabled: true
 
 proactiveConvoClean:
   enabled: false
@@ -225,9 +213,8 @@ resendSync:
 
 runtime:
   image:
-    repository: ghcr.io/openhands/runtime
-    tag: 4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik
-  runAsRoot: true
+    repository: ghcr.io/openhands/agent-server
+    tag: 1.19.1-python
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -243,12 +230,18 @@ sessions:
 
 slack:
   enabled: false
+  clientId: ""
 
 stripe:
   enabled: false
   requirePayment: false
   auth:
     existingSecret: stripe-secret
+
+resend:
+  enabled: false
+  auth:
+    existingSecret: resend-api-key
 
 tavily:
   enabled: false
@@ -279,20 +272,6 @@ uvicorn:
 
 ## Chart dependency configurations
 
-clickhouse:
-  # Enable this if you enable langfuse, as it will use clickhouse for storage
-  enabled: false
-  shards: 2
-  replicaCount: 1
-  keeper:
-    enabled: true
-  auth:
-    username: default
-    existingSecret: clickhouse-password
-    existingSecretKey: password
-  image:
-    repository: bitnamilegacy/clickhouse
-
 keycloak:
   enabled: false
   url: "http://keycloak"
@@ -322,48 +301,117 @@ keycloak:
     enabled: false
   externalDatabase:
     host: oh-main-postgresql
+    database: bitnami_keycloak
     existingSecret: postgres-password
     existingSecretUserKey: username
     existingSecretPasswordKey: password
   extraEnvVars:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz
+    - name: KC_HTTP_ENABLED
+      value: "true"
+    - name: KC_PROXY_HEADERS
+      value: "xforwarded"
+    - name: KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI
+      value: "true"
   image:
     repository: bitnamilegacy/keycloak
+  waitForDb:
+    image: "bitnamilegacy/postgresql:latest"
+  initContainers:
+    - name: wait-for-db
+      # The Bitnami Keycloak subchart renders initContainers through common.tplvalues.render,
+      # so this template expression is evaluated at deploy time rather than being treated as
+      # a literal string. This lets us override just the image (e.g. for Replicated proxy)
+      # without duplicating the entire init container.
+      image: '{{ .Values.waitForDb.image }}'
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Waiting for database \"$KEYCLOAK_DATABASE_NAME\" at $KEYCLOAK_DATABASE_HOST:$KEYCLOAK_DATABASE_PORT..."
+          until PGPASSWORD=$DB_PASS pg_isready -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" > /dev/null 2>&1; do
+            echo "PostgreSQL is unavailable - sleeping 5s"
+            sleep 5
+          done
+          echo "PostgreSQL is ready, checking database exists..."
+          until PGPASSWORD=$DB_PASS psql -h "$KEYCLOAK_DATABASE_HOST" -p "$KEYCLOAK_DATABASE_PORT" -U "$DB_USER" -d "$KEYCLOAK_DATABASE_NAME" -c "SELECT 1" > /dev/null 2>&1; do
+            echo "Database \"$KEYCLOAK_DATABASE_NAME\" not ready - sleeping 5s"
+            sleep 5
+          done
+          echo "Database \"$KEYCLOAK_DATABASE_NAME\" is ready!"
+      envFrom:
+        - configMapRef:
+            name: keycloak-env-vars
+      env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-password
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: postgres-password
+              key: password
 
-langfuse:
-  # Enable this if you want to use langfuse for tracing
+laminar:
+  # Enable this if you want to use laminar
   enabled: false
-  langfuse:
-    salt:
-      secretKeyRef:
-        name: langfuse-salt
-        key: salt
-    nextauth:
-      secret:
-        secretKeyRef:
-          name: langfuse-nextauth
-          key: nextauth-secret
-  clickhouse:
-    deploy: false
-    host: oh-main-clickhouse
-    auth:
-      username: default
-      existingSecret: clickhouse-password
-      existingSecretKey: password
-  postgresql:
-    deploy: false
-    host: oh-main-postgresql
-    auth:
-      username: postgres
-      existingSecret: postgres-password
-      existingSecretKey: password
-  redis:
-    deploy: false
-    host: oh-main-redis
-    auth:
-      existingSecret: redis
-      existingSecretPasswordKey: redis-password
+  global:
+    # Upstream laminar uses this to choose provider-specific defaults for
+    # frontend ingress, app-server exposure, and storage class settings.
+    # Set to "gcp" or "aws"; it is not auto-detected, and empty falls back
+    # to AWS defaults.
+    cloudProvider: ""
+
+  # Laminar project API key from K8s secret
+  # Used for Laminar monitoring/analytics
+  apiKeyFromSecret:
+    name: lmnr-project-api-key
+    key: LMNR_PROJECT_API_KEY
+
+  # Laminar base URL from K8s secret
+  # Used for Laminar monitoring/analytics
+  baseUrlFromSecret:
+    name: lmnr-base-url
+    key: LMNR_BASE_URL
+
+  # Force HTTP instead of HTTPS for Laminar connections
+  # Useful for development/test environments without TLS
+  forceHttp: true
+
+  frontend:
+    ingress:
+      enabled: true          # required gate in 0.1.8; must be true for any frontend ingress to render
+      hostname: ""
+      className: ""
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-frontend-tls"
+        clusterIssuer: ""
+      annotations: {}
+
+  appServer:
+    # loadBalancer creates an L4 Network Load Balancer Service for the app-server (OTLP trace ingestion).
+    # Use this on AWS (NLB) where runtimes send traces directly over TCP.
+    # On GCP, use appServer.ingress instead (L7 via traefik/GCE ingress).
+    loadBalancer:
+      enabled: false
+      # When set, external-dns will create a DNS record pointing to the LoadBalancer IP/hostname.
+      hostname: ""
+      annotations: {}
+    ingress:
+      hostname: ""
+      className: ""
+      externalDns:
+        enabled: false
+      tls:
+        enabled: false
+        secretName: "laminar-app-server-tls"
+        clusterIssuer: ""
+      annotations: {}
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
@@ -374,9 +422,9 @@ litellm-helm:
   masterkeySecretName: lite-llm-api-key
   masterkeySecretKey: lite-llm-api-key
   environmentSecrets: [litellm-env-secrets]
-  # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
-  # envVars:
-  #   LANGFUSE_HOST: "http://oh-main-langfuse"
+  # Migrations run automatically when litellm starts. This disables running them separately as a job.
+  migrationJob:
+    enabled: false
   db:
     deployStandalone: false
     useExisting: true
@@ -421,10 +469,6 @@ litellm-helm:
     litellm_settings:
       num_retries: 3
       request_timeout: 600
-      # Uncomment this if you want to use langfuse for tracing (and enable langfuse below)
-      # success_callback: ["langfuse"]
-      # failure_callback: ["langfuse"]
-      # langfuse_default_tags: ["cache_hit", "cache_key", "proxy_base_url", "user_api_key_alias", "user_api_key_user_id", "user_api_key_team_alias"]
       context_window_fallbacks: []
       allowed_fails: 3
 
@@ -444,7 +488,7 @@ minio:
   rootUser: "root"
   resources:
     requests:
-      memory: 512Mi
+      memory: 100Mi
       cpu: 100m
     limits:
       memory: 512Mi
@@ -457,7 +501,7 @@ postgresql:
     existingSecret: postgres-password
   primary:
     initdb:
-      scriptsConfigMap: oh-psql-scripts-configmap
+      scriptsConfigMap: ""
     persistence:
       enabled: false
     # Add the following if using Karpenter with persistence
@@ -486,7 +530,7 @@ redis:
     replicaCount: 0
   resources:
     requests:
-      memory: 512Mi
+      memory: 100Mi
       cpu: 100m
     limits:
       memory: 512Mi
@@ -503,8 +547,8 @@ maintenanceTasks:
   backoffLimit: 3
   resources:
     requests:
-      memory: "512Mi"
-      cpu: "200m"
+      memory: "100Mi"
+      cpu: "100m"
     limits:
       memory: "1Gi"
       cpu: "500m"
@@ -513,8 +557,6 @@ runtime-api:
   enabled: true
   replicaCount: 1
   runtimeInSameCluster: true
-  image:
-    tag: sha-0c907c9
   imagePullSecrets: []
   securityContext:
     runAsUser: 1000
@@ -524,8 +566,8 @@ runtime-api:
     runAsNonRoot: true
   resources:
     requests:
-      cpu: 500m
-      memory: 1.5Gi
+      cpu: 100m
+      memory: 100Mi
     limits:
       cpu: null
       memory: 1.5Gi
@@ -534,33 +576,33 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
-        working_dir: "/openhands/code/"
-        environment: {}
+        image: "ghcr.io/openhands/agent-server:1.19.1-python"
+        working_dir: "/workspace"
+        environment:
+          LOG_JSON: "1"
+          LOG_JSON_LEVEL_KEY: "severity"
+          OH_ALLOW_CORS_ORIGINS_0: ""
+          OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+          OH_CONVERSATIONS_PATH: "/workspace/conversations"
+          OH_ENABLE_VNC: "0"
+          OH_VSCODE_PORT: "60001"
+          OH_WEBHOOKS_0_BASE_URL: ""
+          OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+          VSCODE_PORT: "60001"
+          WORKER_1: "12000"
+          WORKER_2: "12001"
         command:
-          - /openhands/micromamba/bin/micromamba
-          - run
-          - -n
-          - openhands
-          - poetry
-          - run
-          - python
-          - -u
-          - -m
-          - openhands.runtime.action_execution_server
+          - /usr/local/bin/openhands-agent-server
+          - "--port"
           - "60000"
-          - --working-dir
-          - /workspace
-          - --plugins
-          - agent_skills
-          - jupyter
-          - vscode
-          - --username
-          - root
-          - --user-id
-          - "0"
+        run_as_user: 10001
+        run_as_group: 10001
+        fs_group: 10001
+  databaseMigrations:
+    waitForDatabase: true
+    createDatabases: false
+    migrate: true
   postgresql:
-    postMigrate: true
     auth:
       username: postgres
       existingSecret: postgres-password
@@ -606,8 +648,297 @@ azureDevOps:
   auth:
     existingSecret: azuredevops-app
 
+# Plugin Directory subchart configuration
+# When enabled, deploys the plugin directory marketplace as a subchart
+# The plugin directory allows users to discover, browse, and review agent plugins
+# Routing is handled by parent chart via /plugins subpath
+plugin-directory:
+  enabled: false
+
+  databaseMigrations:
+    waitForDatabase: true
+    createDatabases: false
+    migrate: true
+
+  client:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-client
+      # tag: set via helm args or override
+
+  server:
+    image:
+      repository: ghcr.io/openhands/plugin-directory-server
+      # tag: set via helm args or override
+
+  imagePullSecrets: []
+
+  deployment:
+    replicas: 1
+
+  # Application environment variables
+  appEnv:
+    MARKETPLACE_SOURCE: ""
+    FEATURED_PLUGIN_IDS: ""
+    LOG_LEVEL: "INFO"
+
+  # App URL - set by parent chart based on ingress configuration
+  appUrl: ""
+
+  # PostgreSQL database configuration
+  database:
+    # Full hostname of the PostgreSQL server
+    # When deployed as subchart, this is set by parent chart
+    host: ""
+    port: "5432"
+    user: "postgres"
+    name: "plugindir"
+    secretName: "postgres-password"
+    secretKey: "password"
+
+  # Authentication configuration
+  auth:
+    existingSecret: plugin-directory-secrets
+    identitySharedSecretKey: identity-shared-secret
+    sessionSecretKey: session-secret
+
+  # OIDC configuration — reuses the allhands Keycloak client via the
+  # shared keycloak-realm secret (same client the main app uses).
+  oidc:
+    issuerUrl: ""
+    realmSecretName: "keycloak-realm"
+    realmSecretKey: "realm-name"
+    clientIdKey: "client-id"
+    clientSecretKey: "client-secret"
+
+  # Datadog configuration
+  datadog:
+    enabled: false
+    env: "dev"
+
+  # Env vars passed directly to containers (overrides defaults)
+  env: {}
+
+automationServiceKey:
+  enabled: false
+  existingSecret: automation-service-key
+  secretKey: automation-service-key
+
+# Automation service configuration for event forwarding
+automationService:
+  # URL of the automation service (e.g., https://staging.all-hands.dev/api/automation)
+  url: ""
+  # Enable forwarding events to the automation service
+  eventForwardingEnabled: false
+
+# Automation webhook secret for verifying webhook signatures
+automationWebhookSecret:
+  enabled: false
+  existingSecret: automation-webhook-secret
+  secretKey: webhook-secret
+
+# Automation subchart configuration
+# When enabled, deploys the automation service as a subchart
+# The automation service handles scheduled and event-driven automation execution
+# Routing is handled by parent chart via /api/automation subpath
+automation:
+  enabled: false
+  
+  image:
+    repository: ghcr.io/openhands/automation
+    # tag: set via helm args or override
+  
+  imagePullSecrets: []
+  
+  deployment:
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  
+  # Separate deployment for handling webhook events
+  # Routes /v1/events/* traffic to dedicated pods for better isolation and scalability
+  events:
+    enabled: false
+    deployment:
+      replicas: 2
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 100m
+        limits:
+          memory: 512Mi
+          cpu: 500m
+    uvicorn:
+      workers: 2
+  
+  securityContext:
+    runAsUser: 42420
+    runAsGroup: 42420
+    runAsNonRoot: true
+  
+  serviceAccount:
+    create: true
+    name: automation-sa
+    annotations: {}
+  
+  probes:
+    startup:
+      failureThreshold: 30
+      periodSeconds: 10
+    liveness:
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      failureThreshold: 3
+  
+  # URL configuration
+  # OpenHands API URL for dispatching sandbox runs (e.g., https://staging.all-hands.dev)
+  openhandsApiUrl: ""
+  # Automation service base URL for completion callbacks (e.g., https://staging.all-hands.dev/api/automation)
+  automationBaseUrl: ""
+  
+  # PostgreSQL database configuration
+  database:
+    # Full hostname of the PostgreSQL server
+    # Examples:
+    #   - Cloud SQL: "my-project:us-central1:my-instance"
+    #   - In-cluster: "openhands-main-postgresql"
+    #   - Feature env: "openhands-feature-branch-postgresql"
+    host: ""
+    port: "5432"
+    user: "automation_user"
+    name: "automations"
+    # Secret containing the automation database password
+    secretName: "automation-db-secret"
+    secretKey: "db-password"
+    # Create database and user in an existing PostgreSQL instance
+    # When true, runs an init container to create the database and user
+    # Useful when sharing a PostgreSQL instance with other services
+    createDatabaseUser: false
+    # Secret containing the postgres superuser password (for creating the automation user)
+    # Only used when createDatabaseUser=true
+    superuserSecretName: "postgres-password"
+    superuserSecretKey: "password"
+  
+  # GCP Cloud SQL (leave empty for non-GCP)
+  gcp:
+    dbInstance: ""
+    project: ""
+    region: ""
+  
+  # File storage configuration (aligned with openhands chart pattern)
+  # Supports multiple backends: gcs, s3, or in-cluster minio for ephemeral environments
+  filestore:
+    # When true, uses S3-compatible storage (minio) for ephemeral/feature environments
+    # When false, uses cloud storage specified by 'type' (for production)
+    ephemeral: false
+    # Bucket name for storing automation data
+    bucket: automation-data
+    # Storage type when ephemeral=false (e.g., gcs, s3)
+    type: gcs
+  
+  # Minio configuration for ephemeral storage
+  # When deployed as subchart of openhands, automation uses parent's minio instance
+  minio:
+    # Don't deploy minio as subchart - use parent's minio instance
+    enabled: false
+    # External minio configuration (points to parent chart's minio)
+    external:
+      endpoint: "http://minio:9000"
+      accessKey: "default"
+      secretKey: "notasecret"
+  
+  # Service key from K8s secret
+  serviceKeyFromSecret:
+    name: automation-service-key
+    key: automation-service-key
+  
+  # Datadog configuration
+  datadog:
+    env: "dev"
+  
+  # Env vars passed directly to the container (overrides defaults)
+  env: {}
+  
+  # PostgreSQL subchart - disabled when using parent's PostgreSQL
+  postgresql:
+    enabled: false
+
+replicated:
+  enabled: false
+
 global:
   security:
     # This allows using the bitnamilegacy image repo.
     # See: https://github.com/bitnami/containers/issues/83267
     allowInsecureImages: true
+
+vertexAI:
+  enabled: false
+  project: ""
+
+# Trust-manager Bundle that fans a CA bundle (public CAs + an optional
+# operator-supplied CA certificate) out as a ConfigMap into the release
+# namespace. Consumers (openhands deployments + outbound-HTTPS cronjobs,
+# litellm, keycloak) mount this ConfigMap to trust the operator's internal
+# CAs.
+#
+# REQUIRES trust-manager (https://cert-manager.io/docs/projects/trust-manager/)
+# to be installed in the cluster. Disabled by default; set enabled: true only
+# if you have trust-manager. When enabling, you must also pass these subchart
+# overrides (the parent chart can't template them through subchart values):
+#
+#   keycloak:
+#     extraEnvVars:
+#       - { name: KC_TRUSTSTORE_PATHS, value: /etc/openhands/ca-bundle/ca-bundle.crt }
+#     extraVolumes:
+#       - { name: openhands-ca-bundle, configMap: { name: openhands-ca-bundle } }
+#     extraVolumeMounts:
+#       - { name: openhands-ca-bundle, mountPath: /etc/openhands/ca-bundle, readOnly: true }
+#   litellm-helm:
+#     envVars:
+#       SSL_CERT_FILE:      /etc/openhands/ca-bundle/ca-bundle.crt
+#       REQUESTS_CA_BUNDLE: /etc/openhands/ca-bundle/ca-bundle.crt
+#     volumes:
+#       - { name: openhands-ca-bundle, configMap: { name: openhands-ca-bundle } }
+#     volumeMounts:
+#       - { name: openhands-ca-bundle, mountPath: /etc/openhands/ca-bundle, readOnly: true }
+caBundle:
+  enabled: false
+  name: openhands-ca-bundle
+  key: ca-bundle.crt
+  mountPath: /etc/openhands/ca-bundle
+  includeDefaultCAs: true
+  # Populated from the Replicated TLS CA certificate config option when
+  # running under Replicated. Optional otherwise.
+  userCA: ""
+
+# Pre-install/pre-upgrade hook that waits for required CRDs to be Established
+# before the openhands chart renders its own traefik/cert-manager resources.
+# Disabled by default — enable only if you've installed cert-manager,
+# trust-manager, traefik, etc. in the cluster, and supply the CRD list to
+# wait on. The Replicated layer enables this and supplies the list.
+crdCheck:
+  enabled: false
+  timeout: 120s
+  backoffLimit: 6
+  crds: []
+  image:
+    repository: docker.io/rancher/kubectl
+    tag: v1.33.0
+    pullPolicy: IfNotPresent
+  imagePullSecrets: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  location: ""

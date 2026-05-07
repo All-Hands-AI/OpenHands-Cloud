@@ -18,6 +18,10 @@ This Helm chart deploys the complete OpenHands stack, including all required dep
 See the [values.yaml](values.yaml) file for the full list of configurable parameters.
 Make sure to update all values marked with "REQUIRED" comments.
 
+### Email (Resend)
+
+To enable organization invitation emails via Resend, set `resend.enabled: true` and create a Kubernetes secret named `resend-api-key` with key `resend-api-key` containing your Resend API key. The secret name can be overridden with `resend.auth.existingSecret`.
+
 ### TLS and Certificate Configuration
 
 The chart supports two methods for TLS configuration:
@@ -76,7 +80,6 @@ kubectl create secret generic jwt-secret -n openhands --from-literal=jwt-secret=
 
 kubectl create secret generic keycloak-realm -n openhands \
   --from-literal=realm-name=allhands \
-  --from-literal=provider-name=email \
   --from-literal=server-url=http://keycloak \
   --from-literal=client-id=allhands \
   --from-literal=client-secret=$GLOBAL_SECRET \
@@ -97,15 +100,6 @@ kubectl create secret generic redis -n openhands \
 kubectl create secret generic lite-llm-api-key -n openhands \
   --from-literal=lite-llm-api-key=$GLOBAL_SECRET
 
-kubectl create secret generic langfuse-salt -n openhands \
-  --from-literal=salt=$GLOBAL_SECRET
-
-kubectl create secret generic langfuse-nextauth -n openhands \
-  --from-literal=nextauth-secret=$GLOBAL_SECRET
-
-kubectl create secret generic clickhouse-password -n openhands \
-  --from-literal=password=$GLOBAL_SECRET
-
 kubectl create secret generic admin-password -n openhands \
   --from-literal=admin-password=$GLOBAL_SECRET
 
@@ -123,11 +117,8 @@ You should now have these secrets in the openhands namespace:
 kubectl get secret -n openhands
 
 NAME                  TYPE     DATA   AGE
-clickhouse-password   Opaque   1      13s
 default-api-key       Opaque   1      7s
 jwt-secret            Opaque   1      44s
-langfuse-nextauth     Opaque   1      18s
-langfuse-salt         Opaque   1      23s
 lite-llm-api-key      Opaque   1      28s
 litellm-env-secrets   Opaque   1      2m8s
 postgres-password     Opaque   3      39s
@@ -158,14 +149,21 @@ authentication as well.
    - In "Permissions":
 
      - Open "Account permissions" and select "Access: Read-only" to "Email addresses".
-     - In "Repository permissions" add "Access: Read and Write" to "Projects".
+     - In "Repository permissions" add "Access: Read and Write" to:
+
+      - Actions
+      - Contents
+      - Commit Statuses
+      - Issues
+      - Pull Requests
+      - Workflows
 
    - If you want to get webhooks:
 
      - Generate a webhook secret `export WEBHOOK_SECRET=head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32`.
      - Check the "Active" checkbox.
      - Set the "Webhook URL" `https://openhands.example.com/integration/github/events`.
-     - Go to "Permissions", click in "Organization permissions" and add "Access: Read-only" to "Events".
+     - Go to "Permissions", click in "Organization permissions" and add "Access: Read-only" to "Events". Click in "Repository permissions" and add "Access: Read and Write" to "Webhooks".
      - Set the "Secret" to `$WEBHOOK_SECRET`.
 
    - Create the App.
@@ -277,51 +275,47 @@ authentication as well.
 
 When the chart is deployed, a job will run to configure the Keycloak realm with the identity provider credentials you provided.
 
-### Install OpenHands
+#### Bitbucket Data Center
 
-Now we can install the helm chart.
+Bitbucket Data Center is the self-hosted version of Bitbucket. The setup is different from the cloud version. 
 
-```bash
-helm dependency update
-helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
-```
+1. Create a Bitbucket Data Center Application Link:
 
-This installation won't complete successfully the first time because we need to set up LiteLLM.
+   - Follow the instructions in Bitbucket Data Center to create an [OAuth2 Application Link](https://confluence.atlassian.com/enterprise/link-to-atlassian-products-using-oauth-2-0-1688928427.html)
+   - Grant repository read and write scopes.
+   - Set the application URL to `https://auth.openhands.example.com/realms/openhands/broker/bitbucket_data_center
+   - Note the Client ID and Client Secret provided by Bitbucket Data Center
 
-> [!NOTE]
-> This process will be automated in the near future.
->
+2. Create a Bitbucket Data Center App secret:
+
+   ```bash
+   kubectl create secret generic bitbucket-data-center-app -n openhands \
+     --from-literal=client-id=<your-client-id> \
+     --from-literal=client-secret=<your-client-secret> \
+   ```
+
+3. Update site-values.yaml file:
+
+   ```yaml
+   bitbucketDataCenter:
+     # Set this to true if you are using Bitbucket Data Center as your identity provider
+     enabled: true
+     host: <your-bitbucket-data-center-host>
+   ```
+
+### LiteLLM configuration
+
 > [!IMPORTANT]
 > We recommend using the provided LiteLLM instance rather than bringing your
 > own. The provided LiteLLM instance uses an admin key for automated user
 > management, which is the most extensively tested scenario. Our automation
 > relies on this admin key to create and delete users automatically.
 
-To set up LiteLLM, first use port-forward to connect:
+#### Configure LiteLLM Models
 
-```bash
-kubectl port-forward svc/openhands-litellm 4000:4000 -n openhands
-```
-
-Next, create a new Team in LiteLLM:
-
-- Navigate to <http://localhost:4000/ui> in your browser.
-- login using the username `admin` password $GLOBAL_SECRET (set above).
-- go to Teams -> Create New Team.
-- Name it whatever you want.
-- Get the team id (e.g. `e0a62105-9c6c-4167-b5be-16674a99d502`), and add it to site-values.yaml:
+You'll need to set your model list for LiteLLM, using the LLM secrets you set above:
 
 ```yaml
-litellm:
-  teamId: "<TEAM_ID>"
-```
-
-You'll also need to set your model list for LiteLLM, using the LLM secrets you set above:
-
-```yaml
-litellm:
-  teamId: "<TEAM_ID>"
-
 litellm-helm:
   proxy_config:
     model_list:
@@ -331,25 +325,38 @@ litellm-helm:
           api_key: os.environ/ANTHROPIC_API_KEY
 ```
 
-Finally you will need to set the default LLM model to use in your site-values.yaml. Find the "env:" section below in your site-values.yaml and uncomment the LITELLM_DEFAULT_MODEL. Set "your-model" to one of the models you configured:
+You will also need to set the default LLM model to use in your site-values.yaml. Find the "env:" section in your site-values.yaml and uncomment the LITELLM_DEFAULT_MODEL. Set "your-model" to one of the models you configured:
 
 ```yaml
 env:
-  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
-  LITE_LLM_TEAM_NAME: openhands
   # replace <your-model> with your LLM model and uncomment this variable
-  # LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
+  LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
+```
+
+#### LiteLLM Team Configuration
+
+To use an existing team, provide the team ID.
+
+If you do not set a team ID, a new team with ID `openhands` will be created. If the team ID you provide doesn't
+already exist, a new team with that ID will be created.
+
+```yaml
+litellm:
+  teamId: "<TEAM_ID>"
+```
+
+### Install OpenHands
+
+Now we can install the helm chart.
+
+```bash
+helm dependency update
+helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
 ```
 
 ### Verify your Setup
 
-Finally, upgrade the release:
-
-```bash
-helm upgrade --install openhands --namespace openhands oci://ghcr.io/all-hands-ai/helm-charts/openhands -f site-values.yaml
-```
-
-You should now be able to see OpenHands running with:
+After installation, you should be able to see OpenHands running with:
 
 ```bash
 kubectl port-forward svc/openhands-service 3000:3000 -n openhands
@@ -548,6 +555,44 @@ parameters:
 volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
+### VolumeSnapshotClass Configuration (Optional)
+
+To enable PVC snapshots for cost optimization (snapshotting paused runtime PVCs instead of keeping them active), you need to create a VolumeSnapshotClass. This is optional but recommended for production deployments to reduce storage costs.
+
+```bash
+# For AWS EKS
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: ebs-snapshot-class
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+EOF
+
+# For GKE
+kubectl apply -f - <<EOF
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: pd-snapshot-class
+driver: pd.csi.storage.gke.io
+deletionPolicy: Delete
+parameters:
+  storage-locations: us-central1  # Replace with your cluster's region
+EOF
+```
+
+Then configure the runtime-api to use the snapshot class:
+
+```yaml
+runtime-api:
+  env:
+    VOLUME_SNAPSHOT_CLASS: "pd-snapshot-class"  # or "ebs-snapshot-class" for AWS
+```
+
+> **Note:** The VolumeSnapshot CRDs must be installed in your cluster. Most managed Kubernetes services (GKE, EKS) include these by default. If not, see the [Kubernetes VolumeSnapshot documentation](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
 
 ## Upgrading
 

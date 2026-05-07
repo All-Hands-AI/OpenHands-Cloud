@@ -3,9 +3,14 @@ fullnameOverride: ""
 
 replicaCount: 1
 
+databaseMigrations:
+  waitForDatabase: true
+  createDatabases: false
+  migrate: true
+
 image:
   repository: ghcr.io/openhands/runtime-api
-  tag: sha-0c907c9
+  tag: sha-ba6c9e4
   pullPolicy: Always
 
 imagePullSecrets:
@@ -19,6 +24,17 @@ serviceAccount:
 
 runtimeInSameCluster: false
 defaultAPIKeySecretName: default-api-key
+
+# Mount a trust-manager / user-supplied CA bundle into the runtime-api pod and
+# point the Python TLS stack (httpx + requests) at it. Required when the
+# runtime ingress serves a cert signed by a CA that isn't in the OS trust
+# store — `runtimes.check_alive_with_ingress` uses requests.get and silently
+# returns False on TLS failures, leaving runtimes stuck in `starting`.
+caBundle:
+  enabled: false
+  name: openhands-ca-bundle
+  key: ca-bundle.crt
+  mountPath: /etc/openhands/ca-bundle
 
 service:
   type: ClusterIP
@@ -41,15 +57,55 @@ resources:
     cpu: 1
     memory: 4Gi
   requests:
-    cpu: 1
-    memory: 4Gi
+    cpu: 100m
+    memory: 100Mi
 
-# Security context settings for all pods
-securityContext:
-  runAsUser: 1000
-  runAsNonRoot: true
+deployment:
+  minReadySeconds: 10
+  strategy:
+    maxUnavailable: 0
+    maxSurge: 1
+
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /health
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  startup:
+    enabled: true
+    path: /health
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 12
+
+# Unified job settings for both jobs and cronjobs
+jobSettings:
+  # Resource configuration
+  resources:
+    limits:
+      cpu: 1
+      memory: 3Gi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+  # Timeout settings (30 minutes)
+  activeDeadlineSeconds: 1800
+  # History limits
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
 
 nodeSelector: {}
+
+securityContext: {}
 
 tolerations: []
 
@@ -128,6 +184,22 @@ ingressBase:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
 
+# Shared Gateway API Gateway for path-based sandbox routing.
+# When enabled, renders a gateway.networking.k8s.io/v1 Gateway that the
+# runtime-api attaches HTTPRoutes to (one per sandbox). The name must match
+# the GATEWAY_NAME env var passed to the runtime-api container.
+sandboxGateway:
+  enabled: false
+  name: sandbox-gateway
+  gatewayClassName: traefik
+  hostname: ""
+  # Internal port the Gateway listener binds to. Must match the gateway
+  # controller's entrypoint port — NOT the external port clients dial.
+  # Traefik's websecure entrypoint listens on 8443 by default (NodePort/
+  # Service 443 maps to container 8443), so 8443 is the right default here.
+  listenerPort: 8443
+  tlsSecretName: openhands-tls
+
 autoscaling:
   enabled: true
   minReplicas: 3
@@ -137,7 +209,7 @@ autoscaling:
 cleanup:
   enabled: true
   schedule: "*/5 * * * *"
-  idle_seconds: 1800 # Default to 30 minutes
+  idle_seconds: 1200 # Default to 20 minutes
   dead_seconds: 86400 # Default to 1 day
 
 warmRuntimes:
@@ -146,48 +218,55 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:4ea3e4b1fd850ae07e7b972feb36fca6e789d7eb-nikolaik"
-      working_dir: "/openhands/code/"
-      environment: {}
+      image: "ghcr.io/openhands/agent-server:1.19.1-python"
+      working_dir: "/workspace"
+      environment:
+        LOG_JSON: "1"
+        LOG_JSON_LEVEL_KEY: "severity"
+        OH_ALLOW_CORS_ORIGINS_0: ""
+        OH_BASH_EVENTS_DIR: "/workspace/bash_events"
+        OH_CONVERSATIONS_PATH: "/workspace/conversations"
+        OH_ENABLE_VNC: "0"
+        OH_VSCODE_PORT: "60001"
+        OH_WEBHOOKS_0_BASE_URL: ""
+        OPENVSCODE_SERVER_ROOT: "/openhands/.openvscode-server"
+        VSCODE_PORT: "60001"
+        WORKER_1: "12000"
+        WORKER_2: "12001"
       command:
-        - /openhands/micromamba/bin/micromamba
-        - run
-        - -n
-        - openhands
-        - poetry
-        - run
-        - python
-        - -u
-        - -m
-        - openhands.runtime.action_execution_server
+        - /usr/local/bin/openhands-agent-server
+        - "--port"
         - "60000"
-        - --working-dir
-        - /workspace
-        - --plugins
-        - agent_skills
-        - jupyter
-        - vscode
-        - --username
-        - root
-        - --user-id
-        - "0"
+      run_as_user: 10001
+      run_as_group: 10001
+      fs_group: 10001
 
 # Database cleanup CronJob configuration
 dbCleanup:
   enabled: true
   schedule: "0 0 * * *" # Run daily at midnight
   retentionDays: 90 # Number of days to retain runtime objects
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 1
+
+# Test API Keys cleanup CronJob configuration
+testKeysCleanup:
+  enabled: false # Disabled by default, enabled only in feature and staging environments
+  schedule: "0 0 * * *" # Run daily at midnight
+  retentionDays: 2 # Number of days to retain test API keys
 
 # Pod Status Logger configuration
 podStatusLogger:
   enabled: true
   schedule: "*/5 * * * *" # Run every 5 minutes
 
+monitoring:
+  enabled: false
+
 datadog:
   enabled: false
   env: "dev"
+
+replicated:
+  enabled: false
 
 global:
   security:

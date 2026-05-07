@@ -1,4 +1,4 @@
-{{- define "openhands.env" }}
+{{- define "openhands.env.defaults" }}
 - name: RUNTIME
   value: remote
 - name: OPENHANDS_CONFIG_CLS
@@ -10,6 +10,10 @@
 {{- if .Values.bitbucket.enabled }}
 - name: OPENHANDS_BITBUCKET_SERVICE_CLS
   value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_SERVICE_CLS }}
+{{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+- name: OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS
+  value: {{ .Values.appConfig.OPENHANDS_BITBUCKET_DATA_CENTER_SERVICE_CLS }}
 {{- end }}
 - name: OPENHANDS_MCP_CONFIG_CLS
   value: {{ .Values.appConfig.OPENHANDS_MCP_CONFIG_CLS }}
@@ -40,7 +44,7 @@
 - name: AWS_SECRET_ACCESS_KEY
   value: {{ (index .Values.minio.svcaccts 0).secretKey }}
 - name: AWS_S3_ENDPOINT
-  value: {{ printf "%s-%s" $.Release.Name "minio:9000" }}
+  value: {{ printf "http://%s-minio:9000" $.Release.Name }}
 - name: AWS_S3_BUCKET
   value: {{ .Values.filestore.bucket }}
 - name: AWS_S3_SECURE
@@ -48,6 +52,10 @@
 {{- else }}
 - name: FILE_STORE
   value: {{ .Values.filestore.type }}
+{{- end }}
+{{- if .Values.filestore.provider }}
+- name: SHARED_EVENT_STORAGE_PROVIDER
+  value: {{ .Values.filestore.provider }}
 {{- end }}
 {{- if .Values.runtime.runAsRoot }}
 - name: SANDBOX_USER_ID
@@ -62,8 +70,10 @@
 {{- end }}
 - name: NO_SETUP
   value: 'true'
-- name: SANDBOX_RUNTIME_CONTAINER_IMAGE
-  value: "{{ .Values.runtime.image.repository }}:{{ .Values.runtime.image.tag | default (printf "%s-nikolaik" (.Values.image.tag | default .Chart.AppVersion)) }}"
+- name: AGENT_SERVER_IMAGE_REPOSITORY
+  value: "{{ .Values.runtime.image.repository }}"
+- name: AGENT_SERVER_IMAGE_TAG
+  value: "{{ .Values.runtime.image.tag }}"
 - name: SANDBOX_REMOTE_RUNTIME_API_URL
   value: {{ .Values.sandbox.apiHostname }}
 - name: SANDBOX_API_KEY
@@ -104,11 +114,6 @@
     secretKeyRef:
       name: keycloak-realm
       key: realm-name
-- name: KEYCLOAK_PROVIDER_NAME
-  valueFrom:
-    secretKeyRef:
-      name: keycloak-realm
-      key: provider-name
 - name: KEYCLOAK_CLIENT_ID
   valueFrom:
     secretKeyRef:
@@ -155,6 +160,12 @@
     secretKeyRef:
       name: github-app
       key: client-secret
+- name: GITHUB_APP_SLUG
+  valueFrom:
+    secretKeyRef:
+      name: github-app
+      key: app-slug
+      optional: true
 {{- end }}
 {{- if .Values.gitlab.enabled }}
 - name: GITLAB_APP_CLIENT_ID
@@ -167,6 +178,8 @@
     secretKeyRef:
       name: gitlab-app
       key: client-secret
+- name: GITLAB_HOST
+  value: {{ .Values.gitlab.host | default "gitlab.com" | quote }}
 {{- end }}
 {{- if .Values.bitbucket.enabled }}
 - name: BITBUCKET_APP_CLIENT_ID
@@ -194,27 +207,42 @@
 - name: AZURE_DEVOPS_TENANT_ID
   value: {{ .Values.azureDevOps.tenantId | quote }}
 {{- end }}
-{{- if and .Values.litellm.enabled .Values.litellm.useDependentInstall }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+- name: BITBUCKET_DATA_CENTER_HOST
+  value: {{ .Values.bitbucketDataCenter.host }}
+- name: BITBUCKET_DATA_CENTER_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-id
+- name: BITBUCKET_DATA_CENTER_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: bitbucket-data-center-app
+      key: client-secret
+{{- end }}
+{{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
 - name: LITE_LLM_API_URL
-  value: http://{{ .Release.Name }}-litellm
-{{- else if .Values.litellm.enabled }}
+  value: http://{{ .Release.Name }}-litellm:4000
+{{- else }}
 - name: LITE_LLM_API_URL
   value: {{ .Values.litellm.url }}
-- name: LITE_LLM_TEAM_ID
-  value: {{ .Values.litellm.teamId }}
+{{- end }}
+{{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
+- name: LITE_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ index .Values "litellm-helm" "masterkeySecretName" }}
+      key: {{ index .Values "litellm-helm" "masterkeySecretKey" }}
+{{- else }}
 - name: LITE_LLM_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ .Values.litellm.auth.existingSecret }}
       key: lite-llm-api-key
 {{- end }}
-{{- if index .Values "litellm-helm" "enabled" }}
-- name: LITE_LLM_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ index .Values "litellm-helm" "masterkeySecretName" }}
-      key: {{ index .Values "litellm-helm" "masterkeySecretKey" }}
-{{- end }}
+- name: LITE_LLM_TEAM_ID
+  value: {{ .Values.litellm.teamId }}
 {{- if .Values.stripe.enabled }}
 - name: STRIPE_API_KEY
   valueFrom:
@@ -228,6 +256,13 @@
       key: stripe-webhook-secret
 - name: REQUIRE_PAYMENT
   value: "{{ .Values.stripe.requirePayment | default false }}"
+{{- end }}
+{{- if .Values.resend.enabled }}
+- name: RESEND_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.resend.auth.existingSecret }}
+      key: resend-api-key
 {{- end }}
 {{- if .Values.tavily.enabled }}
 - name: TAVILY_API_KEY
@@ -275,7 +310,7 @@
       name: slack-auth
       key: signing-secret
 - name: SLACK_WEBHOOKS_ENABLED
-  value: "1"
+  value: "true"
 {{- end }}
 
 {{- if .Values.githubProxy.enabled }}
@@ -299,12 +334,13 @@
   value: "{{ .Values.postgresql.auth.username }}"
 - name: DB_NAME
   value: "{{ .Values.postgresql.auth.database }}"
-{{- end }}
-{{- if .Values.env }}
-{{- range $key, $value := .Values.env }}
-- name: {{ $key }}
-  value: {{ $value | quote }}
-{{- end }}
+{{- else }}
+- name: DB_HOST
+  value: "{{ .Values.externalDatabase.host }}"
+- name: DB_USER
+  value: "{{ .Values.externalDatabase.username }}"
+- name: DB_NAME
+  value: "{{ .Values.externalDatabase.database }}"
 {{- end }}
 {{- if .Values.datadog.enabled }}
 # Datadog configuration
@@ -324,6 +360,28 @@
   value: "true"
 - name: DD_TRACE_SAMPLING_RULES
   value: '[{"service":"deploy","name":"fastapi.request","resource":"/integration/*","sample_rate":0.05}, {"service":"deploy","name":"fastapi.request","resource":"/slack/on-*","sample_rate":0.05}]'
+{{- end }}
+{{- if .Values.laminar.enabled }}
+{{- if .Values.laminar.apiKeyFromSecret }}
+- name: LMNR_PROJECT_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.laminar.apiKeyFromSecret.name }}
+      key: {{ .Values.laminar.apiKeyFromSecret.key }}
+      optional: true
+{{- end }}
+{{- if .Values.laminar.baseUrlFromSecret }}
+- name: LMNR_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.laminar.baseUrlFromSecret.name }}
+      key: {{ .Values.laminar.baseUrlFromSecret.key }}
+      optional: true
+{{- end }}
+{{- if .Values.laminar.forceHttp }}
+- name: LMNR_FORCE_HTTP
+  value: {{ .Values.laminar.forceHttp | quote }}
+{{- end }}
 {{- end }}
 - name: DB_PASS
   valueFrom:
@@ -379,4 +437,119 @@
       name: linear-app
       key: client-secret
 {{- end }}
+
+{{- if .Values.automationServiceKey.enabled }}
+- name: AUTOMATIONS_SERVICE_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationServiceKey.existingSecret }}
+      key: {{ .Values.automationServiceKey.secretKey }}
+{{- end }}
+
+{{- if .Values.automationService.url }}
+- name: AUTOMATION_SERVICE_URL
+  value: {{ .Values.automationService.url | quote }}
+{{- end }}
+{{- if .Values.automationService.eventForwardingEnabled }}
+- name: AUTOMATION_EVENT_FORWARDING_ENABLED
+  value: "true"
+{{- end }}
+
+{{- if .Values.automationWebhookSecret.enabled }}
+- name: AUTOMATION_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.automationWebhookSecret.existingSecret }}
+      key: {{ .Values.automationWebhookSecret.secretKey }}
+{{- end }}
+
+{{- $providers := list }}
+{{- if .Values.github.enabled }}
+{{- $providers = append $providers "github" }}
+{{- end }}
+{{- if .Values.gitlab.enabled }}
+{{- $providers = append $providers "gitlab" }}
+{{- end }}
+{{- if .Values.bitbucket.enabled }}
+{{- $providers = append $providers "bitbucket" }}
+{{- end }}
+{{- if .Values.bitbucketDataCenter.enabled }}
+{{- $providers = append $providers "bitbucket_data_center" }}
+{{- end }}
+{{- if .Values.enterpriseSSO.enabled }}
+{{- $providers = append $providers "enterprise_sso" }}
+{{- end }}
+{{- if $providers }}
+- name: OH_WEB_CLIENT_PROVIDERS_CONFIGURED
+  value: {{ $providers | toJson | quote }}
+{{- end }}
+- name: OH_APP_MODE
+  value: "saas"
+- name: OH_APP_CONVERSATION_INFO_KIND
+  value: server.utils.saas_app_conversation_info_injector.SaasAppConversationInfoServiceInjector
+- name: CONVERSATION_MANAGER_CLASS
+  value: server.saas_nested_conversation_manager.SaasNestedConversationManager
+{{- if (index .Values "plugin-directory").enabled }}
+- name: PLUGIN_DIRECTORY_HOST
+  value: {{ (index .Values "plugin-directory").appUrl | quote }}
+- name: PLUGIN_DIRECTORY_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ (index .Values "plugin-directory").oidc.realmSecretName }}
+      key: {{ (index .Values "plugin-directory").oidc.clientSecretKey }}
+{{- else }}
+# Empty values for Keycloak envsubst when plugin-directory is disabled
+- name: PLUGIN_DIRECTORY_HOST
+  value: ""
+- name: PLUGIN_DIRECTORY_CLIENT_SECRET
+  value: ""
+{{- end }}
+{{- end }}
+
+{{/*
+  openhands.env — Deduplicated environment variable list.
+
+  This wrapper renders the default env vars from "openhands.env.defaults",
+  then removes any entries whose name conflicts with a key in .Values.env,
+  and finally appends the .Values.env overrides. The result is a clean list
+  with no duplicate names, which prevents:
+    - Helm warnings about duplicate env vars
+    - Strategic Merge Patch conflicts during helm upgrade
+      ("The order in patch list doesn't match $setElementOrder list")
+
+  How it works:
+    1. Render "openhands.env.defaults" via include (evaluates all conditionals)
+    2. Parse the rendered YAML list into Go objects with fromYamlArray
+       (handles both "value:" and "valueFrom:" entries transparently)
+    3. Filter out any default entries whose name appears in .Values.env
+    4. Append .Values.env entries (user overrides always win)
+    5. Re-render the deduplicated list with toYaml
+
+  Note: The fromYamlArray/toYaml round-trip may normalize formatting
+  (e.g., comment removal, quote style changes). This is cosmetic only
+  and does not affect Kubernetes behavior.
+*/}}
+{{- define "openhands.env" }}
+{{- $defaults := include "openhands.env.defaults" . | fromYamlArray }}
+{{- /* Build a lookup dict of override keys for O(1) membership checks */}}
+{{- $overrideKeys := dict }}
+{{- if .Values.env }}
+{{- range $key, $_ := .Values.env }}
+{{- $_ := set $overrideKeys $key true }}
+{{- end }}
+{{- end }}
+{{- /* Keep only default entries that are NOT overridden by .Values.env */}}
+{{- $filtered := list }}
+{{- range $entry := $defaults }}
+{{- if not (hasKey $overrideKeys (get $entry "name")) }}
+{{- $filtered = append $filtered $entry }}
+{{- end }}
+{{- end }}
+{{- /* Append user overrides from .Values.env (these take precedence) */}}
+{{- if .Values.env }}
+{{- range $key, $value := .Values.env }}
+{{- $filtered = append $filtered (dict "name" $key "value" ($value | toString)) }}
+{{- end }}
+{{- end }}
+{{- $filtered | toYaml }}
 {{- end }}

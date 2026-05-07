@@ -3,8 +3,6 @@
 #   tag: 0.47.0
 
 env:
-  # This var will cause the openhands deploy to create the LLM team name if it doesn't exist already
-  LITE_LLM_TEAM_NAME: openhands
   # replace <your-model> with your LLM model and uncomment this variable
   # LITELLM_DEFAULT_MODEL: "litellm_proxy/<your-model>"
 
@@ -50,7 +48,7 @@ litellm:
   # NOTE: We recommend using the provided LiteLLM instance for simplicity and
   # because it is the most extensively tested scenario. Our automation uses an
   # admin key to do user management for the LiteLLM instance.
-  enabled: false
+  enabled: true
   url: "https://llm-proxy.example.com"
 
 litellm-helm:

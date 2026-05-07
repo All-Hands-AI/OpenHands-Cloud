@@ -8,10 +8,11 @@ metadata:
 spec:
   schedule: {{ .Values.dbCleanup.schedule | quote }}
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: {{ .Values.dbCleanup.successfulJobsHistoryLimit }}
-  failedJobsHistoryLimit: {{ .Values.dbCleanup.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.jobSettings.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.jobSettings.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
+      activeDeadlineSeconds: {{ .Values.jobSettings.activeDeadlineSeconds }}
       template:
         spec:
           {{- with .Values.securityContext }}
@@ -47,5 +48,7 @@ spec:
               - name: ingress-base-config
                 mountPath: /ingress-base
             {{- end }}
+            resources:
+              {{- toYaml .Values.jobSettings.resources | nindent 14 }}
           restartPolicy: OnFailure
 {{- end }}

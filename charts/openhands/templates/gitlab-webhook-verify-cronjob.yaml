@@ -28,6 +28,10 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.caBundle.enabled }}
+          volumes:
+            {{- include "openhands.caBundle.volume" . | nindent 12 }}
+          {{- end }}
           containers:
             - name: {{ .Release.Name }}-install-hooks
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -35,6 +39,11 @@ spec:
               command: ["python", "-m", "sync.install_gitlab_webhooks"]
               resources:
                 {{- toYaml .Values.gitlabWebhookInstallation.resources | nindent 16 }}
+              {{- if .Values.caBundle.enabled }}
+              volumeMounts:
+                {{- include "openhands.caBundle.volumeMount" . | nindent 16 }}
+              {{- end }}
               env:
                 {{- include "openhands.env" . | nindent 16 }}
+                {{- include "openhands.caBundle.env" . | nindent 16 }}
 {{- end }}
