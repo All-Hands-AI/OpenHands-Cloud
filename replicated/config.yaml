@@ -352,6 +352,18 @@ spec:
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
+        - name: automation_service_key
+          title: Automation Service Key
+          help_text: Secret key for the automation service
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: automation_webhook_secret
+          title: Automation Webhook Secret
+          help_text: Secret for validating automation webhooks
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
 
     - name: bitbucket_data_center_authentication
       title: Bitbucket Data Center Authentication
@@ -714,6 +726,11 @@ spec:
       title: Advanced Options
       description: Optional components and advanced configuration settings
       items:
+        - name: automations_enabled
+          title: Enable Automations
+          help_text: Deploy the Automations UI and backend. If you use an external PostgreSQL instance, make sure the automations database requirements are satisfied before enabling this option.
+          type: bool
+          default: "0"
         - name: analytics_enabled
           title: Enable Analytics
           help_text: Enable analytics for LLM observability and tracing

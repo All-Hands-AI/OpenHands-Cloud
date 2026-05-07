@@ -425,6 +425,34 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "200m"
+    - when: '{{repl ConfigOptionEquals "automations_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        automationServiceKey:
+          enabled: true
+          existingSecret: automation-service-key
+          secretKey: automation-service-key
+        automationWebhookSecret:
+          enabled: true
+          existingSecret: automation-webhook-secret
+          secretKey: webhook-secret
+        automation:
+          enabled: true
+          image:
+            repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/automation'
+            tag: sha-e52cca3
+          imagePullSecrets:
+            - name: '{{repl ImagePullSecretName }}'
+          openhandsApiUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          automationBaseUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          filestore:
+            type: local
+          env:
+            LOCAL_STORAGE_PATH: /tmp/automation
+          database:
+            createDatabaseUser: true
+            host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}openhands-postgresql{{repl end}}'
+
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
