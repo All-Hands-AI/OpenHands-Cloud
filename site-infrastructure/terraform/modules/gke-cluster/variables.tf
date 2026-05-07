@@ -240,6 +240,12 @@ variable "runtime_node_pool_max_count" {
   default     = 10
 }
 
+variable "runtime_node_image_type" {
+  description = "Image type for runtime nodes. Use 'UBUNTU_CONTAINERD' for sysbox support (sysbox requires Ubuntu, not COS). Only used when enable_gke_sandbox=false."
+  type        = string
+  default     = "UBUNTU_CONTAINERD"
+}
+
 # -----------------------------------------------------------------------------
 # Addons & Features
 # -----------------------------------------------------------------------------

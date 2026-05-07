@@ -204,6 +204,10 @@ resource "google_container_node_pool" "runtime" {
     disk_size_gb = var.runtime_node_disk_size_gb
     disk_type    = var.node_disk_type
 
+    # Image type: Use UBUNTU_CONTAINERD for sysbox support
+    # Sysbox requires Ubuntu (Container-Optimized OS is not supported)
+    image_type = var.enable_gke_sandbox ? "COS_CONTAINERD" : var.runtime_node_image_type
+
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform",
     ]

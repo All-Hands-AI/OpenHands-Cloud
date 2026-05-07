@@ -2,6 +2,17 @@
 
 This directory contains manifests to install [sysbox](https://github.com/nestybox/sysbox) on GKE nodes for OpenHands runtime containers.
 
+## Version Requirements
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| sysbox-deploy-k8s | v0.6.7+ | Required for Ubuntu 24.04 (Noble) support |
+| Kubernetes | 1.29 - 1.32 | K8s v1.32 supported in v0.6.7+ |
+| Ubuntu | 22.04 or 24.04 | Container-Optimized OS not supported |
+| Kernel | 5.15+ (22.04), 6.8+ (24.04) | See [distro-compat.md](https://github.com/nestybox/sysbox/blob/master/docs/distro-compat.md) |
+
+**Important**: Sysbox v0.6.4 does NOT support Ubuntu 24.04. Use v0.6.7+ for Noble Numbat.
+
 ## Why Sysbox?
 
 OpenHands runtime containers need to run Docker-in-Docker for executing user code in isolated environments. Sysbox provides:

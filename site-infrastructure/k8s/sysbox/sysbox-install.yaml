@@ -82,7 +82,8 @@ spec:
           effect: "NoSchedule"
       initContainers:
         - name: sysbox-installer
-          image: ghcr.io/nestybox/sysbox-deploy-k8s:v0.6.4
+          # v0.6.7 adds support for Ubuntu 24.04 (Noble Numbat) and K8s v1.32
+          image: ghcr.io/nestybox/sysbox-deploy-k8s:v0.6.7-0
           imagePullPolicy: Always
           command: ["/opt/sysbox/scripts/sysbox-deploy-k8s.sh", "install"]
           securityContext:
