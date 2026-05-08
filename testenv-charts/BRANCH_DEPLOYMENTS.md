@@ -1,265 +1,109 @@
 # Deploying Your Branch to Staging
 
-This guide explains how to deploy your own branch of OpenHands to the shared staging clusters.
+This guide explains how to deploy your own branch of OpenHands to the shared staging cluster (`ohe-staging.platform-team.all-hands.dev`).
+
+## Quick Start (TL;DR)
+
+```bash
+# 1. Set your branch name (lowercase, alphanumeric, hyphens only)
+export BRANCH_NAME="my-feature"
+export NAMESPACE="openhands-${BRANCH_NAME}"
+export IMAGE_TAG="sha-abc1234"  # Your image tag from CI
+
+# 2. Create namespace and copy secrets
+kubectl create namespace ${NAMESPACE}
+for secret in ghcr-login-secret postgres-password redis keycloak-realm keycloak-admin lite-llm-api-key litellm-env-secrets admin-password; do
+  kubectl get secret $secret -n openhands -o yaml | sed "s/namespace: openhands/namespace: ${NAMESPACE}/" | kubectl apply -n ${NAMESPACE} -f -
+done
+
+# 3. Deploy!
+helm upgrade --install openhands-${BRANCH_NAME} ./charts/openhands \
+  --namespace ${NAMESPACE} \
+  --values testenv-charts/helm/base-values.yaml \
+  --set image.tag="${IMAGE_TAG}" \
+  --set branchSanitized="${BRANCH_NAME}"
+
+# 4. Access at: https://${BRANCH_NAME}.ohe-staging.platform-team.all-hands.dev
+```
 
 ## Overview
 
-The staging infrastructure supports multiple simultaneous deployments using **Helm release isolation**. Each developer can deploy their own branch with a unique release name, and the ingress controller routes traffic based on subdomain or path prefixes.
+Branch deployments use **shared infrastructure** (PostgreSQL, Redis, Keycloak, LiteLLM) from the main `openhands` namespace, so you only deploy the OpenHands application itself. This makes deployments fast and resource-efficient.
 
-### Two-Level Routing Architecture
+| Component | Source |
+|-----------|--------|
+| PostgreSQL | Shared from `openhands` namespace |
+| Redis | Shared from `openhands` namespace |
+| Keycloak | Shared (`auth.ohe-staging.platform-team.all-hands.dev`) |
+| LiteLLM | Shared from `openhands` namespace |
+| Minio | Per-branch (ephemeral) |
 
-The Helm chart supports a **two-level routing architecture**:
-
-| Level | Option | Description |
-|-------|--------|-------------|
-| **Level 1: Branch Routing** | `routingMode` | How branches are differentiated (`subdomain` or `path`) |
-| **Level 2: Service Routing** | `serviceRoutingMode` | How services within a branch are routed (`path` or `subdomain`) |
-
-#### Common Configurations
-
-**Config A: Branch subdomain + Service paths** (most common)
-```
-my-feature.staging.example.com/                     # Main UI
-my-feature.staging.example.com/api/automation       # Automation API
-my-feature.staging.example.com/integration/github   # Integrations
-```
-
-**Config B: Branch subdomain + Service subdomains** (isolated services)
-```
-my-feature.staging.example.com                      # Main UI
-automation.my-feature.staging.example.com           # Automation API
-integrations.my-feature.staging.example.com         # Integrations
-```
-
-### How It Works
-
-1. **Helm Release Isolation**: Each deployment uses a unique Helm release name (e.g., `openhands-yourname`)
-2. **Namespace Isolation**: Each deployment gets its own Kubernetes namespace
-3. **Branch Routing**: Your deployment is accessible via subdomain or path prefix
-4. **Service Routing**: Services within your branch use paths or subdomains
+Your deployment URL: `https://<branch-name>.ohe-staging.platform-team.all-hands.dev`
 
 ## Prerequisites
 
-1. **Cluster Access**: Get kubectl credentials for the staging cluster:
+1. **Cluster Access**:
    ```bash
-   gcloud container clusters get-credentials ohe-staging-path \
+   gcloud container clusters get-credentials ohe-staging-cluster \
      --region us-central1 \
      --project staging-092324
    ```
 
-2. **Helm**: Install Helm 3.x: https://helm.sh/docs/intro/install/
+2. **Helm 3.x**: https://helm.sh/docs/intro/install/
 
-3. **Docker Image**: Your branch must have a published Docker image. The CI/CD pipeline publishes images to:
-   ```
-   ghcr.io/all-hands-ai/openhands:your-branch-name
-   ```
+3. **Docker Image**: Your branch needs a published image. CI builds images as:
+   - `ghcr.io/openhands/openhands:sha-<commit>`
+   - `ghcr.io/openhands/enterprise-server:sha-<commit>`
 
-## Quick Start
+## Step-by-Step Deployment
 
 ### 1. Create Your Namespace
 
 ```bash
-# Use your name or branch name as identifier
-export BRANCH_NAME="your-branch-name"
+export BRANCH_NAME="your-feature"  # lowercase, alphanumeric, hyphens only
 export NAMESPACE="openhands-${BRANCH_NAME}"
 
 kubectl create namespace ${NAMESPACE}
 ```
 
-### 2. Create a Values Override File
+### 2. Copy Required Secrets
 
-Create a file `my-branch-values.yaml`:
+Branch deployments need secrets from the main namespace:
 
-```yaml
-# Image configuration - point to your branch's image
-image:
-  repository: ghcr.io/all-hands-ai/openhands
-  tag: "your-branch-name"  # Your branch's image tag
+```bash
+SECRETS="ghcr-login-secret postgres-password redis keycloak-realm keycloak-admin lite-llm-api-key litellm-env-secrets admin-password"
 
-# Ingress configuration
-ingress:
-  enabled: true
-  host: staging.example.com
-  
-  # Level 1: Branch routing
-  routingMode: subdomain      # Options: "subdomain" | "path"
-  prefixWithBranch: true      # Prepend branchSanitized to host
-  
-  # Level 2: Service routing (only used when routingMode=subdomain)
-  serviceRoutingMode: path    # Options: "path" | "subdomain"
-
-# REQUIRED: Sanitized branch name (lowercase, alphanumeric, hyphens only)
-# This becomes your subdomain: your-branch.staging.example.com
-branchSanitized: "your-branch"
-
-# Use shared databases (or create your own)
-postgresql:
-  host: "shared-postgres.default.svc.cluster.local"
-  auth:
-    existingSecret: "openhands-shared-db-credentials"
-    secretKeys:
-      userPasswordKey: "password"
-  database: "openhands_yourbranch"  # Use unique DB name
-
-redis:
-  host: "shared-redis.default.svc.cluster.local"
-
-# Disable components you don't need for testing
-automation:
-  enabled: false
-
-# Scale down for development
-deployment:
-  replicas: 1
-  resources:
-    requests:
-      memory: 512Mi
-      cpu: 100m
-    limits:
-      memory: 1Gi
+for secret in $SECRETS; do
+  kubectl get secret $secret -n openhands -o yaml | \
+    sed "s/namespace: openhands/namespace: ${NAMESPACE}/" | \
+    kubectl apply -n ${NAMESPACE} -f -
+done
 ```
 
 ### 3. Deploy with Helm
 
+The `base-values.yaml` configures all shared infrastructure. You only need to set your image tag and branch name:
+
 ```bash
-# From the repository root
-helm install openhands-${BRANCH_NAME} ./charts/openhands \
+helm upgrade --install openhands-${BRANCH_NAME} ./charts/openhands \
   --namespace ${NAMESPACE} \
   --values testenv-charts/helm/base-values.yaml \
-  --values my-branch-values.yaml
+  --set image.tag="sha-abc1234" \
+  --set branchSanitized="${BRANCH_NAME}"
+```
+
+**Optional overrides:**
+```bash
+  --set image.repository="ghcr.io/openhands/enterprise-server" \  # Different image
+  --set deployment.replicas=2 \                                    # More replicas
+  --set automation.enabled=false                                   # Disable automation
 ```
 
 ### 4. Access Your Deployment
 
-For **subdomain-based** routing (`routingMode: subdomain`):
+Your app is available at:
 ```
-https://your-branch.staging.example.com           # Main app
-https://your-branch.staging.example.com/api/automation  # Automation API (if serviceRoutingMode=path)
-```
-
-For **subdomain-based** routing with **service subdomains** (`serviceRoutingMode: subdomain`):
-```
-https://your-branch.staging.example.com           # Main app
-https://automation.your-branch.staging.example.com  # Automation API
-https://integrations.your-branch.staging.example.com  # Integrations
-https://mcp.your-branch.staging.example.com       # MCP
-```
-
-For **path-based** routing (`routingMode: path`):
-```
-https://staging.example.com/your-branch/          # Main app
-https://staging.example.com/your-branch/api/automation  # Automation API
-```
-
-## Deployment Patterns
-
-### Minimal Development Deployment
-
-For quick iteration with minimal resources:
-
-```yaml
-# dev-values.yaml
-image:
-  tag: "your-branch"
-
-branchSanitized: "yourname"
-
-ingress:
-  enabled: true
-  host: staging.example.com
-  routingMode: subdomain
-  prefixWithBranch: true
-  serviceRoutingMode: path  # Services at /api/*, /integration/*, etc.
-
-deployment:
-  replicas: 1
-  resources:
-    requests:
-      memory: 512Mi
-      cpu: 50m
-
-# Disable non-essential services
-automation:
-  enabled: false
-integrationEvents:
-  deployment:
-    replicas: 0
-mcpEvents:
-  deployment:
-    replicas: 0
-```
-
-### Full Stack Deployment
-
-For testing the complete system:
-
-```yaml
-# full-stack-values.yaml
-image:
-  tag: "your-branch"
-
-branchSanitized: "yourname-full"
-
-ingress:
-  enabled: true
-  host: staging.example.com
-  routingMode: subdomain
-  prefixWithBranch: true
-  serviceRoutingMode: path
-
-deployment:
-  replicas: 2
-
-automation:
-  enabled: true
-
-integrationEvents:
-  deployment:
-    replicas: 1
-
-# Point to your own databases if needed
-postgresql:
-  host: "your-postgres-instance"
-  database: "openhands_yourname"
-```
-
-### Service Subdomain Deployment
-
-For isolated service testing (requires wildcard TLS cert for `*.branch.host`):
-
-```yaml
-# service-subdomain-values.yaml
-image:
-  tag: "your-branch"
-
-branchSanitized: "yourname"
-
-ingress:
-  enabled: true
-  host: staging.example.com
-  routingMode: subdomain
-  prefixWithBranch: true
-  serviceRoutingMode: subdomain  # Each service gets its own subdomain
-
-# Results in:
-#   yourname.staging.example.com (main app)
-#   automation.yourname.staging.example.com
-#   integrations.yourname.staging.example.com
-#   mcp.yourname.staging.example.com
-```
-
-## Runtime API Deployment
-
-If you're also testing changes to the Runtime API:
-
-```bash
-helm install runtime-api-${BRANCH_NAME} ./charts/runtime-api \
-  --namespace ${NAMESPACE} \
-  --set image.tag="${BRANCH_NAME}" \
-  --set ingress.enabled=true \
-  --set ingress.host=staging.example.com \
-  --set ingress.prefixWithBranch=true \
-  --set branchSanitized="${BRANCH_NAME}"
+https://<branch-name>.ohe-staging.platform-team.all-hands.dev
 ```
 
 ## Managing Your Deployment
@@ -267,105 +111,106 @@ helm install runtime-api-${BRANCH_NAME} ./charts/runtime-api \
 ### View Status
 
 ```bash
-# Check pods
 kubectl get pods -n ${NAMESPACE}
-
-# Check ingress
 kubectl get ingress -n ${NAMESPACE}
-
-# View logs
 kubectl logs -n ${NAMESPACE} -l app=openhands -f
 ```
 
 ### Update Deployment
 
+After pushing new changes and CI builds a new image:
+
 ```bash
-# After pushing new changes and image is built
 helm upgrade openhands-${BRANCH_NAME} ./charts/openhands \
   --namespace ${NAMESPACE} \
-  --values my-branch-values.yaml \
-  --set image.tag="${NEW_TAG}"
+  --values testenv-charts/helm/base-values.yaml \
+  --set image.tag="${NEW_IMAGE_TAG}" \
+  --set branchSanitized="${BRANCH_NAME}"
 ```
 
 ### Delete Deployment
 
 ```bash
-# Remove Helm release
-helm uninstall openhands-${BRANCH_NAME} --namespace ${NAMESPACE}
-
-# Optionally delete namespace (removes all resources)
+helm uninstall openhands-${BRANCH_NAME} -n ${NAMESPACE}
 kubectl delete namespace ${NAMESPACE}
 ```
 
-## Shared Resources
-
-The staging clusters provide shared resources that branch deployments can use:
-
-| Resource | Service Address | Notes |
-|----------|-----------------|-------|
-| PostgreSQL | `shared-postgres.default.svc.cluster.local` | Request DB credentials from team |
-| Redis | `shared-redis.default.svc.cluster.local` | Shared cache |
-| LiteLLM Proxy | `litellm.default.svc.cluster.local` | Shared LLM gateway |
-
 ## Troubleshooting
 
-### Ingress Not Working
+### Pods Stuck in Init State
 
-1. Check ingress resource:
-   ```bash
-   kubectl describe ingress -n ${NAMESPACE}
-   ```
+Check init container logs:
+```bash
+kubectl logs -n ${NAMESPACE} <pod-name> -c wait-for-db
+kubectl logs -n ${NAMESPACE} <pod-name> -c wait-for-redis
+```
 
-2. Verify TLS certificate:
-   ```bash
-   kubectl get certificate -n ${NAMESPACE}
-   ```
+**Common causes:**
+- Missing secrets → Re-run the secret copy step
+- Database unreachable → Check PostgreSQL in `openhands` namespace
 
-3. Check Traefik logs:
-   ```bash
-   kubectl logs -n traefik -l app.kubernetes.io/name=traefik
-   ```
+### Missing Secrets
 
-### Pod Crashes
+```bash
+# Compare secrets
+kubectl get secrets -n ${NAMESPACE}
+kubectl get secrets -n openhands
+```
 
-1. Check pod events:
-   ```bash
-   kubectl describe pod -n ${NAMESPACE} -l app=openhands
-   ```
+### Image Pull Errors
 
-2. Check for missing secrets:
-   ```bash
-   kubectl get secrets -n ${NAMESPACE}
-   ```
+```bash
+kubectl get secret ghcr-login-secret -n ${NAMESPACE}
+kubectl describe pod -n ${NAMESPACE} <pod-name>
+```
 
 ### Database Connection Issues
 
-1. Verify database secret exists:
-   ```bash
-   kubectl get secret -n ${NAMESPACE} | grep postgres
-   ```
+```bash
+kubectl run pg-test -n ${NAMESPACE} --rm -it --image=postgres:15 -- \
+  psql -h openhands-postgresql.openhands.svc.cluster.local -U postgres
+```
 
-2. Test connectivity:
-   ```bash
-   kubectl run -n ${NAMESPACE} pg-test --rm -it --image=postgres:15 -- \
-     psql -h shared-postgres.default.svc.cluster.local -U openhands -d openhands_yourdb
-   ```
+## Advanced: Custom Values File
+
+For complex deployments, create a values override file:
+
+```yaml
+# my-branch-values.yaml
+image:
+  tag: "sha-abc1234"
+
+branchSanitized: "my-feature"
+
+# Disable services you don't need
+automation:
+  enabled: false
+integrationEvents:
+  deployment:
+    replicas: 0
+```
+
+Deploy with:
+```bash
+helm upgrade --install openhands-${BRANCH_NAME} ./charts/openhands \
+  --namespace ${NAMESPACE} \
+  --values testenv-charts/helm/base-values.yaml \
+  --values my-branch-values.yaml
+```
 
 ## Best Practices
 
-1. **Use descriptive branch names**: Your `branchSanitized` value becomes your subdomain
-2. **Clean up after yourself**: Delete deployments when done to free cluster resources
-3. **Don't modify shared resources**: Use your own databases for destructive testing
-4. **Coordinate with team**: Communicate on Slack when deploying large changes
-5. **Resource limits**: Keep resource requests minimal for dev deployments
+1. **Clean up when done**: Delete your namespace to free cluster resources
+2. **Use descriptive branch names**: They become your URL subdomain
+3. **Keep deployments minimal**: Disable services you don't need
 
-## CI/CD Integration
+## Quick Reference
 
-For automated deployments from CI, see the GitHub Actions workflow examples in `.github/workflows/`. Key environment variables:
-
-```yaml
-env:
-  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  BRANCH_SANITIZED: ${{ steps.sanitize.outputs.branch }}
-  NAMESPACE: openhands-${{ steps.sanitize.outputs.branch }}
-```
+| Item | Value |
+|------|-------|
+| Cluster | `ohe-staging-cluster` |
+| Region | `us-central1` |
+| Project | `staging-092324` |
+| Base domain | `ohe-staging.platform-team.all-hands.dev` |
+| Keycloak | `auth.ohe-staging.platform-team.all-hands.dev` |
+| Base values | `testenv-charts/helm/base-values.yaml` |
