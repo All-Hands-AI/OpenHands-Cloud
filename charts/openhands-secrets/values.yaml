@@ -2,6 +2,9 @@
 # This chart creates all the required secrets for OpenHands
 
 # Configuration values will be passed from the parent chart
+automation:
+  enabled: false
+
 config:
   # Security secrets
   admin_password: ""
@@ -29,7 +32,11 @@ config:
   google_vertex_credentials: ""
   deepseek_api_key: ""
   mistral_api_key: ""
+  azure_auth_method: "api_key"
   azure_api_key: ""
+  azure_tenant_id: ""
+  azure_client_id: ""
+  azure_client_secret: ""
   azure_endpoint: ""
   azure_api_version: ""
   azure_deployment_name: ""
@@ -62,6 +69,10 @@ config:
   # Plugin Directory secrets
   plugin_directory_identity_shared_secret: ""
   plugin_directory_session_secret: ""
+
+  # Automation secrets
+  automation_service_key: ""
+  automation_webhook_secret: ""
 
   # TLS certificates
   tls_certificate: ""
