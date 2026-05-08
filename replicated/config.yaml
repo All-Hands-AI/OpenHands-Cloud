@@ -728,7 +728,7 @@ spec:
       items:
         - name: analytics_enabled
           title: Enable Analytics
-          help_text: Deploy a Laminar analytics instance for LLM observability and tracing. Once enabled, Laminar will be accessible at analytics.app.BASE_DOMAIN (or your configured analytics hostname). Log in using your Keycloak credentials, then create a Laminar project API key to connect OpenHands to your analytics instance.
+          help_text: Enable analytics for LLM observability and tracing
           type: bool
           default: "0"
         - name: laminar_project_api_key
