@@ -685,9 +685,9 @@ spec:
             tlsSecretName: openhands-tls
     - when: '{{repl ConfigOptionEquals "analytics_enabled" "1" }}'
       recursiveMerge: true
-      env:
-        LMNR_BASE_URL: "http://laminar-app-server-service"
       values:
+        env:
+          LMNR_BASE_URL: "http://laminar-app-server-service"
         laminar:
           enabled: true
           httpPort: 8000
