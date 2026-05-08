@@ -267,10 +267,10 @@ spec:
               NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
               REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
               SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
-              LMNR_BASE_URL: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}http://laminar-app-server-service{{repl end }}'
-              LMNR_FORCE_HTTP: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}true{{repl end }}'
-              LMNR_HTTP_PORT: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}8000{{repl end }}'
-              LMNR_PROJECT_API_KEY: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}{{repl ConfigOption "laminar_project_api_key"}}{{repl end }}'
+              LMNR_BASE_URL: &lmnr_base_url '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}http://laminar-app-server-service{{repl end }}'
+              LMNR_FORCE_HTTP: &lmnr_force_http '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}true{{repl end }}'
+              LMNR_HTTP_PORT: &lmnr_http_port '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}8000{{repl end }}'
+              LMNR_PROJECT_API_KEY: &lmnr_project_api_key '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}{{repl ConfigOption "laminar_project_api_key"}}{{repl end }}'
             command:
               - /usr/local/bin/openhands-agent-server
               - "--port"
@@ -501,10 +501,10 @@ spec:
                   NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
                   REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
                   SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
-                  LMNR_BASE_URL: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}http://laminar-app-server-service{{repl end }}'
-                  LMNR_FORCE_HTTP: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}true{{repl end }}'
-                  LMNR_HTTP_PORT: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}8000{{repl end }}'
-                  LMNR_PROJECT_API_KEY: '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}{{repl ConfigOption "laminar_project_api_key"}}{{repl end }}'
+                  LMNR_BASE_URL: *lmnr_base_url
+                  LMNR_FORCE_HTTP: *lmnr_force_http
+                  LMNR_HTTP_PORT: *lmnr_http_port
+                  LMNR_PROJECT_API_KEY: *lmnr_project_api_key
                 command:
                   - /usr/local/bin/openhands-agent-server
                   - "--port"
@@ -729,8 +729,10 @@ spec:
       recursiveMerge: true
       values:
         env:
-          LMNR_BASE_URL: "http://laminar-app-server-service"
-          LMNR_PROJECT_API_KEY: '{{repl ConfigOption "laminar_project_api_key"}}'
+          LMNR_BASE_URL: *lmnr_base_url
+          LMNR_FORCE_HTTP: *lmnr_force_http
+          LMNR_HTTP_PORT: *lmnr_http_port
+          LMNR_PROJECT_API_KEY: *lmnr_project_api_key
         laminar:
           enabled: true
           httpPort: 8000
