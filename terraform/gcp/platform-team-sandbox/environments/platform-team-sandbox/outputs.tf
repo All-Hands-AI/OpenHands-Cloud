@@ -57,7 +57,7 @@ output "environment_info" {
 
 output "sysbox_install_command" {
   description = "Command to install sysbox DaemonSet after cluster creation"
-  value       = "kubectl apply -f ../../../k8s/sysbox/sysbox-install.yaml"
+  value       = "kubectl apply -f ../../../../testenv-charts/k8s/sysbox/sysbox-install.yaml"
 }
 
 output "sysbox_verify_command" {
@@ -75,7 +75,7 @@ output "post_terraform_steps" {
        ${module.gke_cluster.get_credentials_command}
     
     2. Install sysbox:
-       kubectl apply -f ../../../k8s/sysbox/sysbox-install.yaml
+       kubectl apply -f ../../../../testenv-charts/k8s/sysbox/sysbox-install.yaml
     
     3. Wait for sysbox pods to be ready:
        kubectl wait --for=condition=Ready pods -n sysbox --all --timeout=300s

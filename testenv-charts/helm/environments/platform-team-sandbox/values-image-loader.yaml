@@ -11,7 +11,7 @@
 # Usage:
 #   helm install image-loader ./charts/image-loader \
 #     -n openhands --create-namespace \
-#     -f site-infrastructure/helm/environments/platform-team-sandbox/values-image-loader.yaml
+#     -f testenv-charts/helm/environments/platform-team-sandbox/values-image-loader.yaml
 # =============================================================================
 
 # Runtime image to pre-cache on nodes

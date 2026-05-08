@@ -16,19 +16,25 @@ Two independent deployment environments are supported:
 ## Directory Structure
 
 ```
-site-infrastructure/
-├── terraform/
-│   ├── modules/
-│   │   ├── gke-cluster/      # GKE cluster module
-│   │   └── vpc-network/      # VPC network module
-│   └── environments/
-│       ├── single-cluster-path/
-│       └── single-cluster-subdomain/
+testenv-charts/
 ├── helm/
 │   ├── cert-manager/         # TLS certificate management
 │   ├── external-dns/         # DNS record automation
 │   └── traefik/              # Ingress controller
+├── k8s/                      # Kubernetes manifests
+│   └── sysbox/               # Sysbox runtime installation
 └── scripts/                  # Deployment scripts
+
+terraform/gcp/platform-team-sandbox/
+├── modules/
+│   ├── gke-cluster/          # GKE cluster module
+│   └── vpc-network/          # VPC network module
+├── environments/
+│   ├── platform-team-sandbox/
+│   ├── single-cluster-path/
+│   └── single-cluster-subdomain/
+├── shared-auth/              # Shared Keycloak authentication
+└── staging-dns/              # DNS zone configuration
 ```
 
 ## Prerequisites
@@ -66,7 +72,7 @@ Or manually edit the files before applying.
 ### 1. Terraform Infrastructure
 
 ```bash
-cd terraform/environments/<environment-name>
+cd terraform/gcp/platform-team-sandbox/environments/<environment-name>
 
 # Initialize
 terraform init

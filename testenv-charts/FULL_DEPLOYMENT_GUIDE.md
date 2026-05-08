@@ -83,11 +83,11 @@ export ACME_EMAIL="platform-team@all-hands.dev"  # For Let's Encrypt notificatio
 
 | Component | Purpose | Location |
 |-----------|---------|----------|
-| GKE Cluster | Kubernetes cluster for all workloads | `site-infrastructure/terraform/` |
+| GKE Cluster | Kubernetes cluster for all workloads | `terraform/gcp/platform-team-sandbox/` |
 | Cloud DNS | DNS zone for staging domain | `terraform/gcp/staging-dns/` |
-| Traefik | Ingress controller with TLS termination | `site-infrastructure/helm/traefik/` |
-| cert-manager | Automatic TLS certificate management | `site-infrastructure/helm/cert-manager/` |
-| external-dns | Automatic DNS record management | `site-infrastructure/helm/external-dns/` |
+| Traefik | Ingress controller with TLS termination | `testenv-charts/helm/traefik/` |
+| cert-manager | Automatic TLS certificate management | `testenv-charts/helm/cert-manager/` |
+| external-dns | Automatic DNS record management | `testenv-charts/helm/external-dns/` |
 | Keycloak | Shared authentication (optional) | `terraform/gcp/shared-auth/` |
 | OpenHands | Main application | `charts/openhands/` |
 | Runtime API | Runtime management service | `charts/runtime-api/` |
@@ -164,7 +164,7 @@ terraform output nameservers
 ### 2.2 Deploy GKE Cluster
 
 ```bash
-cd site-infrastructure/terraform/environments/single-cluster-subdomain
+cd terraform/gcp/platform-team-sandbox/environments/single-cluster-subdomain
 
 # Create terraform.tfvars
 cat > terraform.tfvars << EOF
@@ -252,7 +252,7 @@ helm install cert-manager jetstack/cert-manager \
   --create-namespace \
   --version v1.14.4 \
   --set installCRDs=true \
-  -f site-infrastructure/helm/cert-manager/values.yaml
+  -f testenv-charts/helm/cert-manager/values.yaml
 
 # Wait for cert-manager to be ready
 kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=300s
@@ -292,7 +292,7 @@ rm /tmp/dns-solver-key.json
 export ACME_EMAIL="${ACME_EMAIL}"
 export GCP_PROJECT_ID="${GCP_PROJECT_ID}"
 
-envsubst < site-infrastructure/helm/cert-manager/cluster-issuer.yaml | kubectl apply -f -
+envsubst < testenv-charts/helm/cert-manager/cluster-issuer.yaml | kubectl apply -f -
 
 # Verify ClusterIssuers
 kubectl get clusterissuers
@@ -312,8 +312,8 @@ helm install traefik traefik/traefik \
   --namespace traefik \
   --create-namespace \
   --version 26.1.0 \
-  -f site-infrastructure/helm/traefik/values.yaml \
-  -f site-infrastructure/helm/traefik/values-subdomain-routing.yaml \
+  -f testenv-charts/helm/traefik/values.yaml \
+  -f testenv-charts/helm/traefik/values-subdomain-routing.yaml \
   --set service.spec.loadBalancerIP=${INGRESS_IP}
 
 # Wait for Traefik to be ready
@@ -376,8 +376,8 @@ If you want automatic DNS record management:
 helm install external-dns bitnami/external-dns \
   --namespace external-dns \
   --create-namespace \
-  -f site-infrastructure/helm/external-dns/values.yaml \
-  -f site-infrastructure/helm/external-dns/values-subdomain-routing.yaml \
+  -f testenv-charts/helm/external-dns/values.yaml \
+  -f testenv-charts/helm/external-dns/values-subdomain-routing.yaml \
   --set provider=google \
   --set google.project=${GCP_PROJECT_ID} \
   --set domainFilters[0]=${DOMAIN}
@@ -434,7 +434,7 @@ cd /path/to/OpenHands-Cloud
 # Deploy main OpenHands instance
 helm install openhands ./charts/openhands \
   --namespace openhands \
-  -f site-infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
+  -f testenv-charts/helm/environments/single-cluster-subdomain/values-openhands.yaml \
   --set branchSanitized=main \
   --set image.tag=main \
   --timeout 10m
@@ -536,7 +536,7 @@ EOF
 # Deploy
 helm install openhands-${BRANCH_NAME} ./charts/openhands \
   --namespace ${NAMESPACE} \
-  -f site-infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml \
+  -f testenv-charts/helm/environments/single-cluster-subdomain/values-openhands.yaml \
   -f my-branch-values.yaml
 
 # Access at: https://${BRANCH_NAME}.ohe-staging.platform-team.all-hands.dev
@@ -584,7 +584,7 @@ kubectl delete namespace external-dns traefik cert-manager
 
 ```bash
 # Remove GKE cluster
-cd site-infrastructure/terraform/environments/single-cluster-subdomain
+cd terraform/gcp/platform-team-sandbox/environments/single-cluster-subdomain
 terraform destroy
 
 # Remove DNS infrastructure
@@ -728,9 +728,9 @@ curl -sk https://${DOMAIN}/health | jq .
 
 | Purpose | Path |
 |---------|------|
-| GKE Terraform | `site-infrastructure/terraform/environments/single-cluster-subdomain/` |
+| GKE Terraform | `terraform/gcp/platform-team-sandbox/environments/single-cluster-subdomain/` |
 | DNS Terraform | `terraform/gcp/staging-dns/` |
-| Helm values (subdomain) | `site-infrastructure/helm/environments/single-cluster-subdomain/values-openhands.yaml` |
-| Branch deployment guide | `site-infrastructure/BRANCH_DEPLOYMENTS.md` |
-| cert-manager values | `site-infrastructure/helm/cert-manager/` |
-| Traefik values | `site-infrastructure/helm/traefik/` |
+| Helm values (subdomain) | `testenv-charts/helm/environments/single-cluster-subdomain/values-openhands.yaml` |
+| Branch deployment guide | `testenv-charts/BRANCH_DEPLOYMENTS.md` |
+| cert-manager values | `testenv-charts/helm/cert-manager/` |
+| Traefik values | `testenv-charts/helm/traefik/` |

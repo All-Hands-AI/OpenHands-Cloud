@@ -5,7 +5,7 @@
 #
 # This environment uses sysbox for runtime isolation (same as production).
 # After terraform apply, you must also install sysbox:
-#   kubectl apply -f ../../../k8s/sysbox/sysbox-install.yaml
+#   kubectl apply -f ../../../../testenv-charts/k8s/sysbox/sysbox-install.yaml
 #
 # Domain routing: ohe-staging.platform-team.all-hands.dev
 #   - Main app: ohe-staging.platform-team.all-hands.dev

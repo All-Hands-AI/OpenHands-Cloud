@@ -162,7 +162,9 @@
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
         "https://ohe-staging.platform-team.all-hands.dev/*",
-        "https://*.ohe-staging.platform-team.all-hands.dev/*"
+        "https://ohe-staging.platform-team.all-hands.dev/oauth/keycloak/callback",
+        "https://*.ohe-staging.platform-team.all-hands.dev/*",
+        "https://*.ohe-staging.platform-team.all-hands.dev/oauth/keycloak/callback"
       ],
       "webOrigins": [
         "https://ohe-staging.platform-team.all-hands.dev",
@@ -180,7 +182,7 @@
       "attributes": {
         "oidc.ciba.grant.enabled": "false",
         "backchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "https://ohe-staging.platform-team.all-hands.dev/*##https://*.ohe-staging.platform-team.all-hands.dev/*",
+        "post.logout.redirect.uris": "https://ohe-staging.platform-team.all-hands.dev/*##https://ohe-staging.platform-team.all-hands.dev/oauth/keycloak/callback##https://*.ohe-staging.platform-team.all-hands.dev/*##https://*.ohe-staging.platform-team.all-hands.dev/oauth/keycloak/callback",
         "oauth2.device.authorization.grant.enabled": "true",
         "display.on.consent.screen": "false",
         "backchannel.logout.revoke.offline.tokens": "false"

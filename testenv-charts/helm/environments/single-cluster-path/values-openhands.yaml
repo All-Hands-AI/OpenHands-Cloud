@@ -5,7 +5,7 @@
 # 
 # Usage:
 #   helm install openhands ./charts/openhands \
-#     -f site-infrastructure/helm/environments/single-cluster-path/values-openhands.yaml
+#     -f testenv-charts/helm/environments/single-cluster-path/values-openhands.yaml
 # =============================================================================
 
 # TODO: Remove this tag override once PR in ~/Code/OpenHands is merged

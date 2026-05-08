@@ -124,7 +124,7 @@ variable "node_pool_initial_count" {
 # This matches the production configuration.
 #
 # After terraform apply, you must also:
-# 1. Install sysbox DaemonSet: kubectl apply -f ../../k8s/sysbox/sysbox-install.yaml
+# 1. Install sysbox DaemonSet: kubectl apply -f ../../../testenv-charts/k8s/sysbox/sysbox-install.yaml
 # 2. Set RUNTIME_CLASS="sysbox-runc" in openhands helm values
 # -----------------------------------------------------------------------------
 

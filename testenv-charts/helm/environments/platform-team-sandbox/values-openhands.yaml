@@ -9,7 +9,7 @@
 #
 # PREREQUISITES (before deploying):
 # 1. Terraform creates runtime node pool with Ubuntu nodes (runtime_node_image_type = UBUNTU_CONTAINERD)
-# 2. Apply sysbox-install.yaml: kubectl apply -f site-infrastructure/k8s/sysbox/sysbox-install.yaml
+# 2. Apply sysbox-install.yaml: kubectl apply -f testenv-charts/k8s/sysbox/sysbox-install.yaml
 # 3. Deploy image-loader for pre-caching runtime images
 #
 # VERIFICATION:
@@ -19,7 +19,7 @@
 #
 # Usage:
 #   helm install openhands ./charts/openhands \
-#     -f site-infrastructure/helm/environments/platform-team-sandbox/values-openhands.yaml \
+#     -f testenv-charts/helm/environments/platform-team-sandbox/values-openhands.yaml \
 #     --set branchSanitized=my-branch
 # =============================================================================
 
