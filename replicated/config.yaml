@@ -762,6 +762,23 @@ spec:
           when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
           required: true
 
+    - name: analytics_configuration
+      title: Analytics Configuration
+      description: Configure LLM observability and tracing with Laminar
+      items:
+        - name: analytics_enabled
+          title: Enable Analytics
+          help_text: Enable analytics for LLM observability and tracing
+          type: bool
+          default: "0"
+        - name: laminar_project_api_key
+          title: Laminar Project API Key
+          help_text: |
+            Your Laminar project API key. After enabling analytics and logging in to your Laminar instance via Keycloak, create a project API key in the Laminar UI. Ingest-only keys are strongly recommended — they are write-only and have no read access, which is more secure than default project API keys.
+          type: password
+          when: 'repl{{ ConfigOptionEquals "analytics_enabled" "1" }}'
+          required: false
+
     - name: advanced_options
       title: Advanced Options
       description: Optional components and advanced configuration settings
@@ -769,10 +786,5 @@ spec:
         - name: automations_enabled
           title: Enable Automations
           help_text: Deploy the Automations UI and backend. If you use an external PostgreSQL instance, make sure the automations database requirements are satisfied before enabling this option.
-          type: bool
-          default: "0"
-        - name: analytics_enabled
-          title: Enable Analytics
-          help_text: Enable analytics for LLM observability and tracing
           type: bool
           default: "0"
