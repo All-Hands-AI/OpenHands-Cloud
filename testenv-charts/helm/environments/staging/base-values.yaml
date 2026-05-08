@@ -1,7 +1,7 @@
 # =============================================================================
-# OpenHands Staging Base Values
+# OpenHands Platform Team Sandbox Base Values
 # =============================================================================
-# Shared configuration for all branch deployments on staging.all-hands.dev
+# Shared configuration for all branch deployments on ohe-staging.platform-team.all-hands.dev
 #
 # Usage:
 #   helm install openhands-{branch} ./charts/openhands \
@@ -57,10 +57,10 @@ env:
   OPENHANDS_SUPPRESS_BANNER: "1"
   
   # Runtime Configuration
-  RUNTIME_URL_PATTERN: https://{runtime_id}.staging-runtime.all-hands.dev
+  RUNTIME_URL_PATTERN: https://{runtime_id}.runtime.ohe-staging.platform-team.all-hands.dev
   
   # LLM Proxy
-  OPENHANDS_PROVIDER_BASE_URL: https://llm-proxy.staging.all-hands.dev/
+  OPENHANDS_PROVIDER_BASE_URL: https://llm-proxy.ohe-staging.platform-team.all-hands.dev/
   
   # Features
   ENABLE_BILLING: "true"
@@ -119,7 +119,7 @@ debuggingRoutes:
 ingress:
   class: traefik
   enabled: true
-  host: staging.all-hands.dev
+  host: ohe-staging.platform-team.all-hands.dev
   prefixWithBranch: true
   root:
     annotations:
@@ -214,7 +214,7 @@ keycloak:
   fullnameOverride: keycloak
   ingress:
     enabled: true
-    hostname: ""  # Will be set dynamically: {branch}.auth.staging.all-hands.dev
+    hostname: ""  # Will be set dynamically: {branch}.auth.ohe-staging.platform-team.all-hands.dev
     hostnameStrict: true
     ingressClassName: traefik
     servicePort: 80
@@ -236,7 +236,7 @@ litellm:
     existingSecret: lite-llm-api-key
   enabled: true
   teamId: 62ea39c4-8886-44f3-b7ce-07ed4fe42d2c
-  url: https://llm-proxy.staging.all-hands.dev
+  url: https://llm-proxy.ohe-staging.platform-team.all-hands.dev
 
 litellm-helm:
   enabled: false
@@ -258,7 +258,7 @@ runtime-api:
     enabled: false
 
 sandbox:
-  apiHostname: https://runtime.staging.all-hands.dev
+  apiHostname: https://runtime.ohe-staging.platform-team.all-hands.dev
 
 # -----------------------------------------------------------------------------
 # Integration: GitHub
@@ -371,8 +371,8 @@ tavily:
 # -----------------------------------------------------------------------------
 automation:
   enabled: true
-  # automationBaseUrl: will be set dynamically: https://{branch}.staging.all-hands.dev
-  # openhandsApiUrl: will be set dynamically: https://{branch}.staging.all-hands.dev
+  # automationBaseUrl: will be set dynamically: https://{branch}.ohe-staging.platform-team.all-hands.dev
+  # openhandsApiUrl: will be set dynamically: https://{branch}.ohe-staging.platform-team.all-hands.dev
   automationWebhookSecretFromSecret:
     key: webhook-secret
     name: automation-webhook-secret
@@ -440,7 +440,7 @@ automation:
 
 automationService:
   eventForwardingEnabled: true
-  url: ""  # Will be set dynamically: https://{branch}.staging.all-hands.dev/api/automation
+  url: ""  # Will be set dynamically: https://{branch}.ohe-staging.platform-team.all-hands.dev/api/automation
 
 automationServiceKey:
   enabled: true

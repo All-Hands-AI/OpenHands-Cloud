@@ -1,7 +1,7 @@
-# Deploy OpenHands Branch to Staging
+# Deploy OpenHands Branch to Platform Team Sandbox
 
 ## Description
-Deploy an OpenHands branch or PR to the staging environment (`staging.all-hands.dev`). This skill helps developers quickly test their changes on a real Kubernetes cluster with a dedicated URL.
+Deploy an OpenHands branch or PR to the Platform Team Sandbox environment (`ohe-staging.platform-team.all-hands.dev`). This skill helps developers quickly test their changes on a real Kubernetes cluster with a dedicated URL.
 
 ## Triggers
 - "deploy my branch"
@@ -18,9 +18,9 @@ Before deploying, verify the user has:
 1. **GCloud Authentication**: Run `gcloud auth login` if kubectl commands fail
 2. **Cluster Access**: 
    ```bash
-   gcloud container clusters get-credentials staging-main \
+   gcloud container clusters get-credentials ohe-staging-cluster \
      --region us-central1 \
-     --project staging-092324
+     --project platform-team-sandbox
    ```
 3. **GitHub CLI**: Required to look up PR details
    ```bash
@@ -40,7 +40,7 @@ Ask: "What would you like to deploy? Please provide one of:"
 ### 2. Branch Name for URL
 Ask: "What should the branch deployment be called? This becomes your URL subdomain."
 - Must be lowercase, alphanumeric, and hyphens only
-- Example: `pr-14343` → `pr-14343.staging.all-hands.dev`
+- Example: `pr-14343` → `pr-14343.ohe-staging.platform-team.all-hands.dev`
 - Default: `pr-<number>` format for PR deployments
 
 ## Image Tag Lookup from OpenHands PR
@@ -134,12 +134,12 @@ helm upgrade --install openhands-${BRANCH_NAME} ./charts/openhands \
   --values testenv-charts/helm/environments/staging/base-values.yaml \
   --set image.tag="${IMAGE_TAG}" \
   --set branchSanitized="${BRANCH_NAME}" \
-  --set ingress.host="staging.all-hands.dev" \
-  --set keycloak.ingress.hostname="${BRANCH_NAME}.auth.staging.all-hands.dev" \
+  --set ingress.host="ohe-staging.platform-team.all-hands.dev" \
+  --set keycloak.ingress.hostname="${BRANCH_NAME}.auth.ohe-staging.platform-team.all-hands.dev" \
   --set keycloak.externalDatabase.host="openhands-${BRANCH_NAME}-postgresql" \
   --set automation.database.host="openhands-${BRANCH_NAME}-postgresql" \
   --set automation.minio.external.endpoint="openhands-${BRANCH_NAME}-minio:9000" \
-  --set automationService.url="https://${BRANCH_NAME}.staging.all-hands.dev/api/automation" \
+  --set automationService.url="https://${BRANCH_NAME}.ohe-staging.platform-team.all-hands.dev/api/automation" \
   --wait --timeout 15m
 ```
 
@@ -160,12 +160,12 @@ kubectl wait --for=condition=Ready pods -l app.kubernetes.io/name=openhands -n $
 
 Once deployed, the application is available at:
 ```
-https://<branch-name>.staging.all-hands.dev
+https://<branch-name>.ohe-staging.platform-team.all-hands.dev
 ```
 
 Auth (Keycloak) is at:
 ```
-https://<branch-name>.auth.staging.all-hands.dev
+https://<branch-name>.auth.ohe-staging.platform-team.all-hands.dev
 ```
 
 ## Troubleshooting
@@ -248,8 +248,8 @@ Found:
 - **Image tag**: `abc1234` (first 7 chars)
 
 I'll create a deployment called `pr-14343`:
-- **URL**: `https://pr-14343.staging.all-hands.dev`
-- **Auth URL**: `https://pr-14343.auth.staging.all-hands.dev`
+- **URL**: `https://pr-14343.ohe-staging.platform-team.all-hands.dev`
+- **Auth URL**: `https://pr-14343.auth.ohe-staging.platform-team.all-hands.dev`
 
 Should I proceed with the deployment?
 
@@ -266,8 +266,8 @@ Should I proceed with the deployment?
 ✅ **Deployment complete!**
 
 Your branch is now available at:
-- **App**: https://pr-14343.staging.all-hands.dev
-- **Auth**: https://pr-14343.auth.staging.all-hands.dev
+- **App**: https://pr-14343.ohe-staging.platform-team.all-hands.dev
+- **Auth**: https://pr-14343.auth.ohe-staging.platform-team.all-hands.dev
 
 Pod status:
 ```
@@ -284,12 +284,12 @@ To clean up when done: `kubectl delete namespace openhands-pr-14343`
 
 | Item | Value |
 |------|-------|
-| Cluster | `staging-main` (us-central1) |
-| Project | `staging-092324` |
-| Base domain | `staging.all-hands.dev` |
-| Auth domain | `auth.staging.all-hands.dev` |
-| Runtime domain | `staging-runtime.all-hands.dev` |
-| LLM Proxy | `llm-proxy.staging.all-hands.dev` |
+| Cluster | `ohe-staging-cluster` (us-central1) |
+| Project | `platform-team-sandbox` |
+| Base domain | `ohe-staging.platform-team.all-hands.dev` |
+| Auth domain | `auth.ohe-staging.platform-team.all-hands.dev` |
+| Runtime domain | `runtime.ohe-staging.platform-team.all-hands.dev` |
+| LLM Proxy | `llm-proxy.ohe-staging.platform-team.all-hands.dev` |
 | Base values file | `testenv-charts/helm/environments/staging/base-values.yaml` |
 | Secrets source namespace | `all-hands-system` |
 | OpenHands Repo | `All-Hands-AI/OpenHands` |
