@@ -688,6 +688,7 @@ spec:
       values:
         env:
           LMNR_BASE_URL: "http://laminar-app-server-service"
+          LMNR_PROJECT_API_KEY: '{{repl ConfigOption "laminar_project_api_key"}}'
         laminar:
           enabled: true
           httpPort: 8000
