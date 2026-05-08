@@ -62,7 +62,7 @@ credentialEncryption:
 # Admin configuration
 admin:
   # Comma-separated list of admin email addresses
-  emails: ""
+  emails: "chuck@openhands.dev,chuck@all-hands.dev,graham@openhands.dev,graham@all-hands.dev"
 
 # PostgreSQL database configuration
 database:
