@@ -65,9 +65,6 @@ config:
   github_app_slug: ""
   github_app_webhook_secret: ""
   github_app_private_key: ""
-  
-  # Analytics (Laminar) credentials
-  laminar_project_api_key: ""
 
   # Slack credentials
   slack_client_id: ""
