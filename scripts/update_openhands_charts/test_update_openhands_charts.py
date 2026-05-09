@@ -1073,6 +1073,58 @@ serviceAccount:
         assert result.has_error_containing("warmRuntimes")
 
 
+
+class TestUpdateReplicatedOpenhandsWrapperValues:
+    """Tests for replicated OpenHands wrapper agent-server image updates."""
+
+    @pytest.fixture
+    def temp_replicated_wrapper_file(self, make_temp_yaml_file, sample_replicated_openhands_wrapper_values):
+        """Create a temporary replicated wrapper YAML file."""
+        return make_temp_yaml_file(sample_replicated_openhands_wrapper_values)
+
+    def test_updates_all_three_agent_server_tag_references(self, temp_replicated_wrapper_file):
+        """Test that all replicated wrapper agent-server references use the new runtime image tag."""
+        result = update_openhands_values(
+            temp_replicated_wrapper_file,
+            openhands_version="cloud-1.19.1",
+            runtime_image_tag="1.19.1-python",
+        )
+
+        assert_file_contains(temp_replicated_wrapper_file, "tag: '1.19.1-python'")
+        assert_file_contains(
+            temp_replicated_wrapper_file,
+            "image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue \"appSlug\"}}/ghcr.io/openhands/agent-server:1.19.1-python'",
+        )
+        assert_file_contains(
+            temp_replicated_wrapper_file,
+            "image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.1-python'",
+        )
+        assert result.has_change_for("replicated runtime image tag")
+        assert result.has_change_for("replicated warmRuntimes image tag")
+        assert result.has_change_for("replicated local registry runtime image tag")
+        assert result.has_change_for("replicated local registry warmRuntimes image tag")
+
+    def test_is_idempotent_for_replicated_wrapper_references(self, temp_replicated_wrapper_file):
+        """Test that reapplying identical replicated wrapper values records unchanged entries."""
+        update_openhands_values(
+            temp_replicated_wrapper_file,
+            openhands_version="cloud-1.19.1",
+            runtime_image_tag="1.19.1-python",
+        )
+
+        result = update_openhands_values(
+            temp_replicated_wrapper_file,
+            openhands_version="cloud-1.19.1",
+            runtime_image_tag="1.19.1-python",
+        )
+
+        assert result.has_changes is False
+        assert result.is_unchanged("replicated runtime image tag")
+        assert result.is_unchanged("replicated warmRuntimes image tag")
+        assert result.is_unchanged("replicated local registry runtime image tag")
+        assert result.is_unchanged("replicated local registry warmRuntimes image tag")
+
+
 class TestConditionalChartVersionBump:
     """Tests for conditional chart version bumping across both chart types.
 

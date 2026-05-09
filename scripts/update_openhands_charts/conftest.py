@@ -404,6 +404,34 @@ warmRuntimes:
 """
 
 
+@pytest.fixture
+def sample_replicated_openhands_wrapper_values():
+    """Sample replicated openhands wrapper YAML with agent-server image references."""
+    return """\
+spec:
+  values:
+    runtime:
+      image:
+        repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
+        tag: '1.19.0-python'
+      warmRuntimes:
+        configs:
+          - name: default
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.19.0-python'
+    helmChart:
+      values:
+        runtime:
+          image:
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
+            tag: '1.19.0-python'
+          warmRuntimes:
+            configs:
+              - name: default
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.0-python'
+"""
+
+
+
 # =============================================================================
 # GitHub API mock fixtures
 # =============================================================================

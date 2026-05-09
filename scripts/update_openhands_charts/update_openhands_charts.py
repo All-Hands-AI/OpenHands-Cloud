@@ -44,6 +44,18 @@ WARM_RUNTIMES_TAG_PATTERN = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
 RUNTIME_API_TAG_PATTERN = (
     r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
 )
+REPLICATED_PROXY_AGENT_SERVER_TAG_PATTERN = (
+    r"(repository:\s*'images\.r9\.all-hands\.dev/proxy/\{\{repl LicenseFieldValue \"appSlug\"\}\}/ghcr\.io/openhands/agent-server'\s*\n\s*tag:\s*')([^']+)'"
+)
+REPLICATED_PROXY_WARM_RUNTIME_IMAGE_PATTERN = (
+    r"(image:\s*'images\.r9\.all-hands\.dev/proxy/\{\{repl LicenseFieldValue \"appSlug\"\}\}/ghcr\.io/openhands/agent-server:)([^']+)'"
+)
+REPLICATED_LOCAL_AGENT_SERVER_TAG_PATTERN = (
+    r"(repository:\s*'\{\{repl LocalRegistryHost \}\}/\{\{repl LocalRegistryNamespace \}\}/agent-server'\s*\n\s*tag:\s*')([^']+)'"
+)
+REPLICATED_LOCAL_WARM_RUNTIME_IMAGE_PATTERN = (
+    r"(image:\s*'\{\{repl LocalRegistryHost \}\}/\{\{repl LocalRegistryNamespace \}\}/agent-server:)([^']+)'"
+)
 
 
 @dataclass
@@ -251,6 +263,36 @@ def update_runtime_api_dependency(
             break
 
 
+def update_all_tags_in_content(
+    content: str,
+    pattern: str,
+    new_tag: str,
+    tag_name: str,
+    result: UpdateResult,
+    replacement_suffix: str = "",
+    error_if_missing: bool = True,
+) -> str:
+    """Update all regex-matched tags in content and track grouped results."""
+    matches = list(re.finditer(pattern, content))
+    if not matches:
+        if error_if_missing:
+            result.errors.append(f"Could not find {tag_name} in values.yaml")
+        return content
+
+    old_tags = [match.group(2) for match in matches]
+    if all(old_tag == new_tag for old_tag in old_tags):
+        result.unchanged.append((tag_name, new_tag))
+        return content
+
+    replacement = rf"\g<1>{new_tag}{replacement_suffix}"
+    content = re.sub(pattern, replacement, content)
+    changed_old_tags = sorted({old_tag for old_tag in old_tags if old_tag != new_tag})
+    old_value_summary = ", ".join(changed_old_tags)
+    result.changes.append((tag_name, old_value_summary, new_tag))
+    result.has_changes = True
+    return content
+
+
 def bump_patch_version(version: str) -> str:
     """Bump the patch version of a semantic version string.
 
@@ -368,6 +410,40 @@ def update_openhands_values(
         result,
         replacement_suffix='"',
     )
+    content = update_all_tags_in_content(
+        content,
+        REPLICATED_PROXY_AGENT_SERVER_TAG_PATTERN,
+        runtime_image_tag,
+        "replicated runtime image tag",
+        result,
+        replacement_suffix="'",
+        error_if_missing=False,
+    )
+    content = update_tag_in_content(
+        content,
+        REPLICATED_PROXY_WARM_RUNTIME_IMAGE_PATTERN,
+        runtime_image_tag,
+        "replicated warmRuntimes image tag",
+        result,
+        replacement_suffix="'",
+    ) if re.search(REPLICATED_PROXY_WARM_RUNTIME_IMAGE_PATTERN, content) else content
+    content = update_all_tags_in_content(
+        content,
+        REPLICATED_LOCAL_AGENT_SERVER_TAG_PATTERN,
+        runtime_image_tag,
+        "replicated local registry runtime image tag",
+        result,
+        replacement_suffix="'",
+        error_if_missing=False,
+    )
+    content = update_tag_in_content(
+        content,
+        REPLICATED_LOCAL_WARM_RUNTIME_IMAGE_PATTERN,
+        runtime_image_tag,
+        "replicated local registry warmRuntimes image tag",
+        result,
+        replacement_suffix="'",
+    ) if re.search(REPLICATED_LOCAL_WARM_RUNTIME_IMAGE_PATTERN, content) else content
 
     if not dry_run and result.has_changes:
         values_path.write_text(content)
