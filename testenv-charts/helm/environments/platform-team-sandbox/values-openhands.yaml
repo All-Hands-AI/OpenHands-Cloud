@@ -46,6 +46,19 @@ sandbox:
 keycloak:
   url: "https://auth.ohe-staging.platform-team.all-hands.dev"
   authHost: "auth.ohe-staging.platform-team.all-hands.dev"
+  # Redirect URI registration for branch deployments
+  # When enabled, a post-install/upgrade hook registers the branch's redirect URI
+  # with the shared Keycloak instance. Required because Keycloak doesn't support
+  # wildcard subdomains (e.g., https://*.example.com/*).
+  redirectUriRegistration:
+    enabled: true
+    keycloakUrl: "https://auth.ohe-staging.platform-team.all-hands.dev"
+    realmName: "allhands"
+    clientId: "allhands"
+    adminUser: "tmpadmin"
+    adminPasswordSecret:
+      name: "keycloak-admin"
+      key: "admin-password"
 
 enterpriseSSO:
   enabled: true
