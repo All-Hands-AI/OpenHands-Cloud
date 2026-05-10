@@ -1,99 +1,105 @@
 # Staging Subdomain Environment Configuration
 
-This directory contains the configuration for deploying OpenHands to the **staging-subdomain** environment.
+This directory contains the configuration for deploying OpenHands to the **staging-subdomain** environment on the Platform Team Sandbox infrastructure.
 
 ## Environment Overview
 
-This environment uses **subdomain-based routing** (same as production pattern):
-- Main app: `https://staging-subdomain.all-hands.dev/`
-- Integrations still use path-based routes on the main domain (GitHub/GitLab webhooks, Stripe, etc.)
-- MCP: `https://staging-subdomain.all-hands.dev/mcp/mcp`
+This environment uses **subdomain-based routing** (production-like pattern) and deploys to the Platform Team Sandbox cluster:
 
-The key difference from staging-pathroute is that this environment tests the production-like subdomain pattern for services that will eventually move to subdomains.
+- **URL:** `https://subdomain.ohe-staging.platform-team.all-hands.dev/`
+- **Auth:** `https://auth.ohe-staging.platform-team.all-hands.dev` (shared Keycloak)
+- **Automation API:** `https://subdomain.ohe-staging.platform-team.all-hands.dev/api/automation`
+- **Integrations:** `https://subdomain.ohe-staging.platform-team.all-hands.dev/integration/*`
+- **MCP:** `https://subdomain.ohe-staging.platform-team.all-hands.dev/mcp/mcp`
+
+The key difference from staging-pathroute is that this environment tests the production-like subdomain routing pattern.
+
+## Infrastructure
+
+This environment shares infrastructure with PR #580 (`SV-OHE-staging-Deploy-Infra`):
+
+| Component | Details |
+|-----------|---------|
+| **GCP Project** | `platform-team-sandbox` |
+| **GKE Cluster** | `ohe-staging-cluster` |
+| **Region** | `us-central1` |
+| **Base Domain** | `ohe-staging.platform-team.all-hands.dev` |
+| **Namespace** | `openhands-subdomain` |
+| **Helm Release** | `openhands-subdomain` |
 
 ## Directory Structure
 
 ```
-envs/
-├── common/
-│   └── values.yaml         # Shared staging config (base)
-└── staging-subdomain/
-    ├── README.md           # This file
-    ├── values.yaml         # Environment-specific overrides (host, URLs)
-    └── secrets/            # SOPS-encrypted Kubernetes secrets
+envs/staging-subdomain/
+├── README.md           # This file
+├── values.yaml         # Environment-specific overrides (routing, URLs)
+└── secrets/            # (unused - secrets are managed in all-hands-system namespace)
+
+testenv-charts/helm/environments/staging/
+└── base-values.yaml    # Base configuration for all staging deployments
 ```
 
-Helm is invoked with both values files:
+Helm is invoked with:
 ```bash
-helm upgrade ... -f envs/common/values.yaml -f envs/staging-subdomain/values.yaml
+helm upgrade ... \
+  -f testenv-charts/helm/environments/staging/base-values.yaml \
+  -f envs/staging-subdomain/values.yaml \
+  --set branchSanitized=subdomain
 ```
-
-## Kubernetes Details
-
-- **Namespace:** `openhands-subdomain`
-- **Helm Release:** `openhands-subdomain`
-- **GCP Project:** `staging-092324`
-- **GKE Cluster:** `staging-core-application`
-- **Zone:** `us-central1`
 
 ## Secrets Management
 
-Secrets are encrypted using [SOPS](https://github.com/getsops/sops) with GCP KMS encryption.
+Secrets are **managed in the `all-hands-system` namespace** on the cluster and copied to the deployment namespace at deploy time. This follows the same pattern as branch deployments described in `testenv-charts/BRANCH_DEPLOYMENTS.md`.
 
-### Required Secrets
-
-The following secrets must be created in `secrets/` before deployment:
-
-| Secret Name | Description | Required Keys |
-|-------------|-------------|---------------|
-| `ghcr-login-secret` | GitHub Container Registry pull credentials | `.dockerconfigjson` |
-| `lite-llm-api-key` | LiteLLM API key | `api-key` |
-| `stripe-api-key` | Stripe API key | `api-key` |
-| `resend-api-key` | Resend email API key | `api-key` |
-| `bitbucket-app` | Bitbucket OAuth app credentials | `client-id`, `client-secret` |
-| `automation-service-key` | Automation service authentication key | `automation-service-key` |
-| `automation-db-secret` | Automation database password | `db-password` |
-| `keycloak-realm` | Keycloak realm credentials | `client-id`, `client-secret` |
-
-### Creating/Editing Secrets
-
-```bash
-# Create a new SOPS-encrypted secret
-cat <<EOF > /tmp/my-secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: my-secret
-type: Opaque
-stringData:
-  key: "value"
-EOF
-sops --encrypt /tmp/my-secret.yaml > envs/staging-subdomain/secrets/my-secret.yaml
-
-# Edit (decrypts, opens editor, re-encrypts on save)
-sops envs/staging-subdomain/secrets/my-secret.yaml
-
-# View decrypted content
-sops --decrypt envs/staging-subdomain/secrets/my-secret.yaml
-```
+Required secrets in `all-hands-system`:
+- `ghcr-login-secret`
+- `postgres-password`
+- `redis`
+- `keycloak-admin`
+- `keycloak-db-secret`
+- `lite-llm-api-key`
+- `stripe-api-key`
+- `resend-api-key`
+- `github-app`
+- `bitbucket-app`
+- `gitlab-auth`
+- `automation-webhook-secret`
+- `automation-service-key`
+- `automation-db-secret`
 
 ## Deployment
 
-Use the GitHub Actions workflow:
+### Via GitHub Actions (Recommended)
 
 1. Go to **Actions** → **Deploy to Staging**
 2. Click **Run workflow**
 3. Select environment: `subdomain` or `both`
 4. Enter the image tag to deploy
 
-### Workflow Parameters
+### Manual Deployment
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `image_tag` | OpenHands image tag to deploy | `main` |
-| `environment` | Which environment(s) to deploy | `both` |
-| `skip_secrets` | Skip applying secrets | `false` |
-| `dry_run` | Template only, don't deploy | `false` |
+```bash
+# Get cluster credentials
+gcloud container clusters get-credentials ohe-staging-cluster \
+  --region us-central1 \
+  --project platform-team-sandbox
+
+# Create namespace and copy secrets
+kubectl create namespace openhands-subdomain
+for secret in ghcr-login-secret postgres-password redis keycloak-admin keycloak-db-secret lite-llm-api-key; do
+  kubectl get secret $secret -n all-hands-system -o yaml | \
+    sed 's/namespace: all-hands-system/namespace: openhands-subdomain/' | \
+    kubectl apply -n openhands-subdomain -f -
+done
+
+# Deploy
+helm upgrade --install openhands-subdomain ./charts/openhands \
+  --namespace openhands-subdomain \
+  --values testenv-charts/helm/environments/staging/base-values.yaml \
+  --values envs/staging-subdomain/values.yaml \
+  --set branchSanitized=subdomain \
+  --set image.tag=main
+```
 
 ## Troubleshooting
 
@@ -107,15 +113,25 @@ helm history openhands-subdomain -n openhands-subdomain
 # Check ingress
 kubectl get ingress -n openhands-subdomain
 
-# GCP auth for SOPS
-gcloud auth application-default login
+# View logs
+kubectl logs -n openhands-subdomain -l app=openhands -f
+
+# Get cluster credentials
+gcloud container clusters get-credentials ohe-staging-cluster \
+  --region us-central1 --project platform-team-sandbox
 ```
+
+## Related Documentation
+
+- [Branch Deployments Guide](../../testenv-charts/BRANCH_DEPLOYMENTS.md)
+- [Full Deployment Guide](../../testenv-charts/FULL_DEPLOYMENT_GUIDE.md)
+- [Staging Base Values](../../testenv-charts/helm/environments/staging/base-values.yaml)
 
 ## Comparison with staging-pathroute
 
 | Aspect | staging-pathroute | staging-subdomain |
 |--------|-------------------|-------------------|
-| Main URL | `staging-pathroute.all-hands.dev` | `staging-subdomain.all-hands.dev` |
-| Routing | Path-based | Subdomain-based (future) |
-| Purpose | Test path routing | Test production-like subdomain pattern |
+| Main URL | `pathroute.ohe-staging.platform-team.all-hands.dev` | `subdomain.ohe-staging.platform-team.all-hands.dev` |
+| Routing Mode | Path-based (`routingMode: path`) | Subdomain-based (`routingMode: subdomain`) |
+| Purpose | Test path routing pattern | Test production-like subdomain pattern |
 | Namespace | `openhands-pathroute` | `openhands-subdomain` |

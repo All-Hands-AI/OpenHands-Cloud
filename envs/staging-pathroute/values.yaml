@@ -1,11 +1,27 @@
-# Staging (Path-Based Routing) environment values
-# Uses path-based routing: /api/automation, /integration/*, etc.
-# Base config: envs/common/values.yaml
-# Secrets: envs/staging-pathroute/secrets/
+# =============================================================================
+# Staging Path-Route Environment (CI continuous deployment)
+# =============================================================================
+# Deployed to: pathroute.ohe-staging.platform-team.all-hands.dev
+# Infrastructure: Platform Team Sandbox GCP project (shared with #580)
+# Base config: testenv-charts/helm/environments/staging/base-values.yaml
+#
+# This environment tests path-based routing where services are accessed via
+# URL paths: /api/automation, /integration/*, etc.
+# =============================================================================
 
+# Path-based routing configuration
 ingress:
-  host: staging-pathroute.all-hands.dev
-
+  routingMode: path
+  pathPrefix: ""
+  
+# Environment-specific URLs (branchSanitized=pathroute set via --set)
 automation:
-  openhandsApiUrl: "https://staging-pathroute.all-hands.dev"
-  automationBaseUrl: "https://staging-pathroute.all-hands.dev"
+  openhandsApiUrl: "https://pathroute.ohe-staging.platform-team.all-hands.dev"
+  automationBaseUrl: "https://pathroute.ohe-staging.platform-team.all-hands.dev"
+
+automationService:
+  url: "https://pathroute.ohe-staging.platform-team.all-hands.dev/api/automation"
+
+# Override runtime URL pattern for this environment
+env:
+  RUNTIME_URL_PATTERN: "https://pathroute.ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"

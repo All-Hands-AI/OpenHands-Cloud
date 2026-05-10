@@ -1,11 +1,27 @@
-# Staging (Subdomain-Based Routing) environment values
-# Uses subdomain-based routing: automation.staging-subdomain.all-hands.dev
-# Base config: envs/common/values.yaml
-# Secrets: envs/staging-subdomain/secrets/
+# =============================================================================
+# Staging Subdomain Environment (CI continuous deployment)
+# =============================================================================
+# Deployed to: subdomain.ohe-staging.platform-team.all-hands.dev
+# Infrastructure: Platform Team Sandbox GCP project (shared with #580)
+# Base config: testenv-charts/helm/environments/staging/base-values.yaml
+#
+# This environment tests subdomain-based routing where services have their
+# own subdomains (production-like pattern).
+# =============================================================================
 
+# Subdomain-based routing configuration (default)
 ingress:
-  host: staging-subdomain.all-hands.dev
+  routingMode: subdomain
+  serviceRoutingMode: path
 
+# Environment-specific URLs (branchSanitized=subdomain set via --set)
 automation:
-  openhandsApiUrl: "https://staging-subdomain.all-hands.dev"
-  automationBaseUrl: "https://staging-subdomain.all-hands.dev"
+  openhandsApiUrl: "https://subdomain.ohe-staging.platform-team.all-hands.dev"
+  automationBaseUrl: "https://subdomain.ohe-staging.platform-team.all-hands.dev"
+
+automationService:
+  url: "https://subdomain.ohe-staging.platform-team.all-hands.dev/api/automation"
+
+# Override runtime URL pattern for this environment
+env:
+  RUNTIME_URL_PATTERN: "https://subdomain.ohe-staging.platform-team.all-hands.dev/runtime/{runtime_id}"

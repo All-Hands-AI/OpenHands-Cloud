@@ -2,96 +2,95 @@
 
 **Author:** Saurya Velagapudi  
 **Date:** 2026-04-14  
-**Updated:** 2026-04-16  
-**Status:** In Progress  
+**Updated:** 2026-05-10  
+**Status:** Implemented  
 **Stakeholders:** Engineering, DevOps, QA
 
 ---
 
 ## Executive Summary
 
-We need staging environments that accurately replicate what enterprise customers experience when running OpenHands in production. This PRD defines a four-environment staging infrastructure that enables both automated CI testing and individual developer validation of customer-facing features.
+We need staging environments that accurately replicate what enterprise customers experience when running OpenHands in production. This PRD defines the staging infrastructure that enables both automated CI testing and individual developer validation of customer-facing features.
 
 ---
 
-## Current Progress (as of 2026-04-16)
+## Current Progress (as of 2026-05-10)
 
-### ✅ Completed: Developer Testbed Infrastructure
+### ✅ Completed: Full Staging Infrastructure
 
-We have implemented a **developer testbed** in the Platform Team Sandbox GCP project that addresses Goal #3 (customer issue debugging) and provides a foundation for the full staging environment.
+We have implemented a complete staging environment on the **Platform Team Sandbox** infrastructure (PR #580), with two continuously-deployed routing environments.
 
-**What's Deployed:**
+**Infrastructure (from PR #580 - `SV-OHE-staging-Deploy-Infra`):**
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| GKE Cluster | ✅ Running | `openhands-testbed` in `platform-team-sandbox-62793` |
-| Traefik Ingress | ✅ Running | LoadBalancer IP: `34.28.75.102` |
-| cert-manager | ✅ Running | ClusterIssuer configured for Let's Encrypt |
-| DNS Zone | ✅ Created | `sandbox.all-hands.dev` (private, no NS delegation) |
-| Deployment Scripts | ✅ Committed | `scripts/testbed/deploy.sh` |
-| Documentation | ✅ Written | `scripts/testbed/README.md` |
+| GKE Cluster | ✅ Running | `ohe-staging-cluster` in `platform-team-sandbox` |
+| Traefik Ingress | ✅ Running | LoadBalancer with wildcard TLS |
+| cert-manager | ✅ Running | ClusterIssuer with Let's Encrypt DNS-01 |
+| external-dns | ✅ Running | Automatic DNS record management |
+| Cloud DNS | ✅ Configured | `ohe-staging.platform-team.all-hands.dev` |
+| Shared Keycloak | ✅ Running | `auth.ohe-staging.platform-team.all-hands.dev` |
+
+**Continuous Deployment Environments:**
+
+| Environment | URL | Routing | Namespace |
+|-------------|-----|---------|-----------|
+| **pathroute** | `pathroute.ohe-staging.platform-team.all-hands.dev` | Path-based | `openhands-pathroute` |
+| **subdomain** | `subdomain.ohe-staging.platform-team.all-hands.dev` | Subdomain-based | `openhands-subdomain` |
 
 **Architecture:**
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                Platform Team Sandbox GCP Project                 │
-│                (platform-team-sandbox-62793)                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │                 GKE: openhands-testbed                      │ │
-│  │                                                              │ │
-│  │  ┌─────────────┐  ┌─────────────┐                          │ │
-│  │  │ traefik     │  │ cert-manager│     Shared Services      │ │
-│  │  │ (ingress)   │  │ (TLS certs) │                          │ │
-│  │  └─────────────┘  └─────────────┘                          │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │       Namespace: testbed-<developer-name>            │  │ │
-│  │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐    │  │ │
-│  │  │  │openhands│ │keycloak │ │litellm  │ │postgres │    │  │ │
-│  │  │  │         │ │ (auth)  │ │ (llm)   │ │ (db)    │    │  │ │
-│  │  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘    │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  └────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      Platform Team Sandbox GCP Project                       │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    GKE: ohe-staging-cluster                             │ │
+│  │                                                                          │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                  │ │
+│  │  │   traefik    │  │ cert-manager │  │ external-dns │                  │ │
+│  │  │  namespace   │  │  namespace   │  │  namespace   │                  │ │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘                  │ │
+│  │                                                                          │ │
+│  │  ┌──────────────┐  ┌─────────────────────────────────────────────────┐ │ │
+│  │  │ shared-auth  │  │        openhands-pathroute namespace            │ │ │
+│  │  │  (Keycloak)  │  │  pathroute.ohe-staging.platform-team.all-hands.dev│ │ │
+│  │  │              │  └─────────────────────────────────────────────────┘ │ │
+│  │  │   auth.ohe-  │                                                       │ │
+│  │  │   staging... │  ┌─────────────────────────────────────────────────┐ │ │
+│  │  │              │  │        openhands-subdomain namespace            │ │ │
+│  │  └──────────────┘  │ subdomain.ohe-staging.platform-team.all-hands.dev │ │ │
+│  │                     └─────────────────────────────────────────────────┘ │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Cloud DNS Zone: ohe-staging.platform-team.all-hands.dev               │ │
+│  │  └── *.ohe-staging.platform-team.all-hands.dev → Traefik LB IP         │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Design Decisions:**
 
-1. **Private by design** - No public DNS; access via `/etc/hosts` only
-2. **Namespace isolation** - Each developer gets their own namespace
-3. **In-cluster databases** - PostgreSQL and Redis per namespace (simpler, disposable)
-4. **Keycloak auth** - No GitHub App required for testbed
-5. **Self-signed TLS** - Traefik default cert (no Let's Encrypt for private env)
+1. **Shared infrastructure** - Both environments run on the same cluster as developer branch deployments
+2. **Namespace isolation** - Each environment in its own namespace
+3. **Shared Keycloak** - Single authentication provider for all deployments
+4. **Branch-like deployment** - Uses the same `branchSanitized` mechanism as developer deployments
+5. **Secrets from all-hands-system** - Centralized secret management, copied to namespaces at deploy time
 
-**Usage:**
+**Deployment:**
 
-```bash
-# Deploy your instance
-export ANTHROPIC_API_KEY="sk-ant-..."
-./scripts/testbed/deploy.sh --name <yourname>
+Via GitHub Actions workflow:
+1. Go to **Actions** → **Deploy to Staging**
+2. Click **Run workflow**
+3. Select environment: `both`, `pathroute`, or `subdomain`
+4. Enter the image tag to deploy
 
-# Add to /etc/hosts
-echo "34.28.75.102 testbed-<yourname>.sandbox.all-hands.dev auth-testbed-<yourname>.sandbox.all-hands.dev" | sudo tee -a /etc/hosts
+**Related Documentation:**
 
-# Access
-https://testbed-<yourname>.sandbox.all-hands.dev
-```
-
-See [`scripts/testbed/README.md`](../scripts/testbed/README.md) for full documentation.
-
-### 🔄 Next Steps
-
-The testbed provides a foundation. To complete the full staging environment vision:
-
-1. **Add CI environments** - `staging-ci-pathroute` and `staging-ci-subdomain`
-2. **Enable public DNS** - For CI environments that need webhook testing
-3. **Add SAML/SSO** - Shared Keycloak with SAML realm
-4. **Add routing variations** - Path-based vs subdomain-based routing
-5. **CI integration** - GitHub Actions workflow for automated testing
+- [Branch Deployments Guide](../testenv-charts/BRANCH_DEPLOYMENTS.md)
+- [Full Deployment Guide](../testenv-charts/FULL_DEPLOYMENT_GUIDE.md)
+- [Staging Base Values](../testenv-charts/helm/environments/staging/base-values.yaml)
 
 ---
 

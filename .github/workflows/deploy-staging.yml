@@ -26,9 +26,11 @@ on:
         default: false
 
 env:
-  GCP_PROJECT: staging-092324
-  GCP_ZONE: us-central1
-  GCP_CLUSTER: staging-core-application
+  # Platform Team Sandbox infrastructure (shared with PR #580)
+  GCP_PROJECT: platform-team-sandbox
+  GCP_REGION: us-central1
+  GCP_CLUSTER: ohe-staging-cluster
+  BASE_DOMAIN: ohe-staging.platform-team.all-hands.dev
 
 jobs:
   deploy:
@@ -44,11 +46,13 @@ jobs:
           - name: pathroute
             namespace: openhands-pathroute
             helm_release: openhands-pathroute
-            env_dir: envs/staging-pathroute
+            branch_name: pathroute
+            values_dir: envs/staging-pathroute
           - name: subdomain
             namespace: openhands-subdomain
             helm_release: openhands-subdomain
-            env_dir: envs/staging-subdomain
+            branch_name: subdomain
+            values_dir: envs/staging-subdomain
     # Only run for selected environment(s)
     if: ${{ inputs.environment == 'both' || inputs.environment == matrix.env.name }}
 
@@ -82,7 +86,7 @@ jobs:
       - name: Configure kubectl
         run: |
           gcloud container clusters get-credentials ${{ env.GCP_CLUSTER }} \
-            --zone ${{ env.GCP_ZONE }} \
+            --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT }}
 
       - name: Create namespace if not exists
@@ -90,21 +94,39 @@ jobs:
         run: |
           kubectl create namespace ${{ matrix.env.namespace }} --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Decrypt and apply secrets
+      - name: Copy secrets from all-hands-system namespace
         if: ${{ !inputs.skip_secrets && !inputs.dry_run }}
         run: |
-          SECRETS_DIR="${{ matrix.env.env_dir }}/secrets"
-          if [[ -d "$SECRETS_DIR" ]]; then
-            echo "Applying secrets from $SECRETS_DIR"
-            for file in "$SECRETS_DIR"/*.yaml; do
-              [[ -e "$file" ]] || continue
-              [[ "$(basename "$file")" == ".gitkeep" ]] && continue
-              echo "Decrypting and applying: $file"
-              sops --decrypt "$file" | kubectl apply -n ${{ matrix.env.namespace }} -f -
-            done
-          else
-            echo "No secrets directory found at $SECRETS_DIR"
-          fi
+          # Secrets are managed in the all-hands-system namespace (from PR #580 infrastructure)
+          # Copy required secrets to the deployment namespace
+          echo "Copying secrets from all-hands-system namespace..."
+          SECRETS=(
+            "ghcr-login-secret"
+            "postgres-password"
+            "redis"
+            "keycloak-admin"
+            "keycloak-db-secret"
+            "lite-llm-api-key"
+            "stripe-api-key"
+            "resend-api-key"
+            "github-app"
+            "bitbucket-app"
+            "gitlab-auth"
+            "automation-webhook-secret"
+            "automation-service-key"
+            "automation-db-secret"
+          )
+          
+          for secret in "${SECRETS[@]}"; do
+            if kubectl get secret "$secret" -n all-hands-system &>/dev/null; then
+              kubectl get secret "$secret" -n all-hands-system -o yaml | \
+                sed "s/namespace: all-hands-system/namespace: ${{ matrix.env.namespace }}/" | \
+                kubectl apply -n ${{ matrix.env.namespace }} -f -
+              echo "✓ Copied secret: $secret"
+            else
+              echo "⚠ Secret not found: $secret (may be optional)"
+            fi
+          done
 
       - name: Update Helm dependencies
         run: helm dependency update charts/openhands
@@ -114,9 +136,10 @@ jobs:
         run: |
           helm template ${{ matrix.env.helm_release }} charts/openhands \
             --namespace ${{ matrix.env.namespace }} \
-            --values envs/common/values.yaml \
-            --values ${{ matrix.env.env_dir }}/values.yaml \
+            --values testenv-charts/helm/environments/staging/base-values.yaml \
+            --values ${{ matrix.env.values_dir }}/values.yaml \
             --set image.tag=${{ inputs.image_tag }} \
+            --set branchSanitized=${{ matrix.env.branch_name }} \
             --debug
 
       - name: Deploy with Helm
@@ -137,9 +160,10 @@ jobs:
             ${{ matrix.env.helm_release }} \
             charts/openhands \
             --namespace ${{ matrix.env.namespace }} \
-            --values envs/common/values.yaml \
-            --values ${{ matrix.env.env_dir }}/values.yaml \
+            --values testenv-charts/helm/environments/staging/base-values.yaml \
+            --values ${{ matrix.env.values_dir }}/values.yaml \
             --set image.tag=${{ inputs.image_tag }} \
+            --set branchSanitized=${{ matrix.env.branch_name }} \
             --debug
 
       - name: Get deployment info
