@@ -642,7 +642,9 @@ def get_agent_server_image():
         result = get_runtime_image_tag_from_sandbox_spec("token", "owner/repo", ref="cloud-1.26.1")
 
         assert result is None
-        assert "Error fetching sandbox spec" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "Error fetching sandbox spec" in out
+        assert "AGENT_SERVER_IMAGE" in out
 
 
 class TestGetDeployConfig:
