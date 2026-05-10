@@ -17,7 +17,8 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-keycloak-redirect-uri-script
   labels:
-    {{- include "openhands.labels" . | nindent 4 }}
+    app: openhands
+    release: {{ .Release.Name }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "-5"
@@ -193,7 +194,8 @@ kind: Job
 metadata:
   name: {{ .Release.Name }}-keycloak-redirect-uri
   labels:
-    {{- include "openhands.labels" . | nindent 4 }}
+    app: openhands
+    release: {{ .Release.Name }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "0"
