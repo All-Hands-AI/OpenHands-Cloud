@@ -27,6 +27,12 @@ serviceAccount:
   name: runtime-api-sa
   annotations: {}
   createRBAC: true
+  # Skip creating cluster-scoped RBAC (ClusterRole). Set to true for branch
+  # deployments that share a ClusterRole with the main deployment.
+  skipClusterRBAC: false
+  # Name of existing ClusterRole to bind when skipClusterRBAC is true.
+  # Defaults to "openhands-runtime-api-clusterrole" if not specified.
+  existingClusterRole: ""
 
 runtimeInSameCluster: false
 defaultAPIKeySecretName: default-api-key

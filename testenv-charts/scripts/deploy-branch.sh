@@ -329,8 +329,11 @@ if [[ "$SKIP_HOOKS" == "true" ]]; then
     HELM_CMD="$HELM_CMD --set keycloak.redirectUriRegistration.enabled=false"
 fi
 
-# Runtime API namespace override
+# Runtime API overrides for branch deployment
 HELM_CMD="$HELM_CMD --set runtime-api.env.K8S_NAMESPACE=$NAMESPACE"
+# Skip ClusterRole creation - branch deployments share the ClusterRole from main deployment
+HELM_CMD="$HELM_CMD --set runtime-api.serviceAccount.skipClusterRBAC=true"
+HELM_CMD="$HELM_CMD --set runtime-api.serviceAccount.existingClusterRole=openhands-runtime-api-clusterrole"
 
 # Dry run flag
 if [[ "$DRY_RUN" == "true" ]]; then
