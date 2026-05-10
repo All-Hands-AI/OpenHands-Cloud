@@ -116,7 +116,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.25.1
+  tag: cloud-1.26.1
 
 ingress:
   enabled: false
@@ -213,7 +213,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: 1.19.0-python
+    tag: 1.19.1-python
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -378,6 +378,10 @@ laminar:
   # Force HTTP instead of HTTPS for Laminar connections
   # Useful for development/test environments without TLS
   forceHttp: true
+
+  # HTTP port for Laminar app server (default: 443)
+  # Set to 8000 for self-hosted environments where laminar exposes HTTP on port 8000
+  httpPort: null
 
   frontend:
     ingress:
@@ -575,7 +579,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:1.19.0-python"
+        image: "ghcr.io/openhands/agent-server:1.19.1-python"
         working_dir: "/workspace"
         environment:
           LOG_JSON: "1"

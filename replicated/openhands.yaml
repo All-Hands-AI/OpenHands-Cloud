@@ -17,6 +17,7 @@ spec:
 
     image:
       repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/enterprise-server'
+      tag: 'sha-60f5c1c'
     imagePullSecrets:
       - name: '{{repl ImagePullSecretName }}'
 
@@ -54,7 +55,7 @@ spec:
         # this is what we need to use for real deployments
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
         # repository: 'ghcr.io/openhands/agent-server'
-        tag: '1.19.0-python'
+        tag: '1.19.1-python'
 
     keycloak:
       enabled: true
@@ -134,9 +135,13 @@ spec:
       # Migrations run automatically when litellm starts. This disables running them separately as a job.
       migrationJob:
         enabled: false
+      args:
+        - --config
+        - /etc/litellm/config.yaml
+        - --use_v2_migration_resolver
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
-        tag: "v1.82.3-stable.patch.3"
+        tag: "v1.83.14-stable"
       imagePullSecrets:
         - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
@@ -175,6 +180,14 @@ spec:
           OR_APP_NAME: "OpenHands"
           OR_SITE_URL: "https://docs.all-hands.dev"
         model_list:
+          # LiteLLM 1.83.14 workaround: expose this model through the
+          # proxy for openhands/claude-opus-4-7 because direct Anthropic calls
+          # break thinking translation in this release. Can consider removing after LiteLLM
+          # ships https://github.com/BerriAI/litellm/pull/27074.
+          - model_name: "claude-opus-4-7"
+            litellm_params:
+              model: "anthropic/claude-opus-4-7"
+              api_key: os.environ/ANTHROPIC_API_KEY
           - model_name: "claude-sonnet-4-5-20250929"
             litellm_params:
               model: "anthropic/claude-sonnet-4-5-20250929"
@@ -234,7 +247,7 @@ spec:
         count: repl{{ ConfigOption "sandbox_warm_runtime_count" }}
         configs:
           - name: default
-            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.19.0-python'
+            image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server:1.19.1-python'
             working_dir: "/workspace"
             environment:
               LOG_JSON: "1"
@@ -254,6 +267,10 @@ spec:
               NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
               REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
               SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+              LMNR_BASE_URL: &lmnr_base_url '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}http://laminar-app-server-service{{repl end }}'
+              LMNR_FORCE_HTTP: &lmnr_force_http '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}true{{repl end }}'
+              LMNR_HTTP_PORT: &lmnr_http_port '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}8000{{repl end }}'
+              LMNR_PROJECT_API_KEY: &lmnr_project_api_key '{{repl if ConfigOptionEquals "analytics_enabled" "1" }}{{repl ConfigOption "laminar_project_api_key"}}{{repl end }}'
             command:
               - /usr/local/bin/openhands-agent-server
               - "--port"
@@ -300,10 +317,6 @@ spec:
       host: 'repl{{ ConfigOption "gitlab_host" }}'
     slack:
       enabled: repl{{ ConfigOptionEquals "slack_enabled" "1" }}
-
-    automation:
-      image:
-        tag: "sha-36b5df4"
 
     replicated:
       enabled: true
@@ -416,6 +429,34 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "200m"
+    - when: '{{repl ConfigOptionEquals "automations_enabled" "1" }}'
+      recursiveMerge: true
+      values:
+        automationServiceKey:
+          enabled: true
+          existingSecret: automation-service-key
+          secretKey: automation-service-key
+        automationWebhookSecret:
+          enabled: true
+          existingSecret: automation-webhook-secret
+          secretKey: webhook-secret
+        automation:
+          enabled: true
+          image:
+            repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/automation'
+            tag: sha-e52cca3
+          imagePullSecrets:
+            - name: '{{repl ImagePullSecretName }}'
+          openhandsApiUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          automationBaseUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
+          filestore:
+            type: local
+          env:
+            LOCAL_STORAGE_PATH: /tmp/automation
+          database:
+            createDatabaseUser: true
+            host: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_host"}}{{repl else}}openhands-postgresql{{repl end}}'
+
     - when: '{{repl ConfigOptionEquals "postgres_type" "embedded_postgres" }}'
       recursiveMerge: true
       values:
@@ -436,11 +477,11 @@ spec:
         runtime:
           image:
             repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
-            tag: '1.19.0-python'
+            tag: '1.19.1-python'
           warmRuntimes:
             configs:
               - name: default
-                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.0-python'
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.1-python'
                 working_dir: "/workspace"
                 environment:
                   LOG_JSON: "1"
@@ -460,6 +501,10 @@ spec:
                   NODE_EXTRA_CA_CERTS: "/etc/openhands/ca-bundle/ca-bundle.crt"
                   REQUESTS_CA_BUNDLE: "/etc/openhands/ca-bundle/ca-bundle.crt"
                   SSL_CERT_FILE: "/etc/openhands/ca-bundle/ca-bundle.crt"
+                  LMNR_BASE_URL: *lmnr_base_url
+                  LMNR_FORCE_HTTP: *lmnr_force_http
+                  LMNR_HTTP_PORT: *lmnr_http_port
+                  LMNR_PROJECT_API_KEY: *lmnr_project_api_key
                 command:
                   - /usr/local/bin/openhands-agent-server
                   - "--port"
@@ -623,6 +668,40 @@ spec:
             enabled: true
             project: '{{repl ConfigOption "google_vertex_project_id"}}'
             location: '{{repl ConfigOption "google_vertex_location"}}'
+    # AWS Bedrock — static access keys. LiteLLM speaks Bedrock natively via the
+    # AWS SDK; the AWS_* env vars are sourced from litellm-env-secrets and
+    # referenced in model_list via os.environ/* so the keys never appear in
+    # rendered ConfigMaps.
+    - when: '{{repl and (ConfigOptionEquals "llm_provider" "bedrock") (ConfigOptionEquals "aws_auth_method" "static_keys") }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/bedrock'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"AWS_ACCESS_KEY_ID\": \"%s\", \"AWS_SECRET_ACCESS_KEY\": \"%s\", \"AWS_REGION_NAME\": \"%s\"}" (ConfigOption "aws_access_key_id") (ConfigOption "aws_secret_access_key") (ConfigOption "aws_region_name") }}'
+        litellm-helm:
+          proxy_config:
+            model_list:
+              - model_name: 'bedrock'
+                litellm_params:
+                  model: 'bedrock/{{repl ConfigOption "bedrock_model_id"}}'
+                  aws_access_key_id: os.environ/AWS_ACCESS_KEY_ID
+                  aws_secret_access_key: os.environ/AWS_SECRET_ACCESS_KEY
+                  aws_region_name: os.environ/AWS_REGION_NAME
+    # AWS Bedrock — instance profile / IRSA. Omit AWS_ACCESS_KEY_ID/SECRET so
+    # boto3 falls back to its default credential chain (IMDS on EC2, web
+    # identity token on EKS). Region still injected explicitly.
+    - when: '{{repl and (ConfigOptionEquals "llm_provider" "bedrock") (ConfigOptionEquals "aws_auth_method" "instance_profile") }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/bedrock'
+        litellm-helm:
+          proxy_config:
+            model_list:
+              - model_name: 'bedrock'
+                litellm_params:
+                  model: 'bedrock/{{repl ConfigOption "bedrock_model_id"}}'
+                  aws_region_name: os.environ/AWS_REGION_NAME
     # Path-based sandbox routing: route every runtime at <base>/{id} through a
     # shared Gateway instead of per-sandbox Ingresses at {id}.<base>. Traefik's
     # kubernetesGateway provider (enabled in embedded-cluster.yaml) installs
@@ -649,8 +728,14 @@ spec:
     - when: '{{repl ConfigOptionEquals "analytics_enabled" "1" }}'
       recursiveMerge: true
       values:
+        env:
+          LMNR_BASE_URL: *lmnr_base_url
+          LMNR_FORCE_HTTP: *lmnr_force_http
+          LMNR_HTTP_PORT: *lmnr_http_port
+          LMNR_PROJECT_API_KEY: *lmnr_project_api_key
         laminar:
           enabled: true
+          httpPort: 8000
           appServer:
             loadBalancer:
               enabled: false
