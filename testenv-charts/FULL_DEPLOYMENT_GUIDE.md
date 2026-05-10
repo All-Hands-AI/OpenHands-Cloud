@@ -406,7 +406,29 @@ kubectl get secret ohe-staging-wildcard-tls -n traefik -o yaml | \
   kubectl apply -f -
 ```
 
-### 4.2 Deploy Shared Keycloak (Optional)
+### 4.2 Create LiteLLM API Keys Secret (Shared Infrastructure)
+
+LiteLLM proxies all LLM API calls and requires API keys for the configured providers.
+This secret is **shared infrastructure** - all branch deployments in the cluster use this
+single secret to access LLM services. You only need to create it once per cluster.
+
+```bash
+# Create the litellm-env-secrets with your LLM provider API keys
+kubectl create secret generic litellm-env-secrets \
+  --namespace openhands \
+  --from-literal=ANTHROPIC_API_KEY="your-anthropic-api-key" \
+  --from-literal=OPENAI_API_KEY="your-openai-api-key"  # Optional
+
+# Verify the secret was created
+kubectl get secret litellm-env-secrets -n openhands
+```
+
+> **Note**: Branch deployments automatically inherit access to LiteLLM through the shared
+> `litellm-helm` service in the `openhands` namespace. Individual branches do NOT need
+> their own API keys - the keys in `litellm-env-secrets` are used by the shared LiteLLM
+> instance which all deployments connect to.
+
+### 4.3 Deploy Shared Keycloak (Optional)
 
 If you want shared authentication across branch deployments:
 
