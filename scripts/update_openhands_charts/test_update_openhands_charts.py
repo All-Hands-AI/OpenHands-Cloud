@@ -43,6 +43,7 @@ from update_openhands_charts import (
     get_current_app_version,
     get_deploy_config,
     get_latest_cloud_tag,
+    get_runtime_image_tag_from_sandbox_spec,
     get_short_sha,
     main,
     parse_args,
@@ -567,6 +568,83 @@ description: A test chart
 # =============================================================================
 
 
+class TestGetRuntimeImageTagFromSandboxSpec:
+    """Tests for get_runtime_image_tag_from_sandbox_spec function.
+
+    Fetches sandbox_spec_service.py from the OpenHands repo at a specific cloud
+    tag and extracts the AGENT_SERVER_IMAGE tag.
+    """
+
+    VALID_SANDBOX_SPEC_CONTENT = """\
+AGENT_SERVER_IMAGE = 'ghcr.io/openhands/agent-server:1.19.1-python'
+
+def get_agent_server_image():
+    return AGENT_SERVER_IMAGE
+"""
+
+    def test_returns_image_tag_from_sandbox_spec(self, monkeypatch, make_workflow_response):
+        """Test that a valid sandbox spec returns the agent-server image tag."""
+        response = make_workflow_response(self.VALID_SANDBOX_SPEC_CONTENT)
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=response)
+        )
+
+        result = get_runtime_image_tag_from_sandbox_spec("token", "owner/repo", ref="cloud-1.26.1")
+
+        assert result == "1.19.1-python"
+
+    def test_constructs_correct_url_with_ref(self, monkeypatch, make_workflow_response):
+        """Test URL includes sandbox_spec_service.py path and ref parameter."""
+        mock_get = Mock(return_value=make_workflow_response(self.VALID_SANDBOX_SPEC_CONTENT))
+        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
+
+        get_runtime_image_tag_from_sandbox_spec("token", "owner/repo", ref="cloud-1.26.1")
+
+        called_url = mock_get.call_args[0][0]
+        assert "openhands/app_server/sandbox/sandbox_spec_service.py" in called_url
+        assert "?ref=cloud-1.26.1" in called_url
+
+    def test_includes_authorization_header(self, monkeypatch, make_workflow_response):
+        """Test that the Authorization header carries the bearer token."""
+        mock_get = Mock(return_value=make_workflow_response(self.VALID_SANDBOX_SPEC_CONTENT))
+        monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
+
+        get_runtime_image_tag_from_sandbox_spec("my-secret-token", "owner/repo", ref="cloud-1.26.1")
+
+        called_headers = mock_get.call_args[1]["headers"]
+        assert called_headers["Authorization"] == "Bearer my-secret-token"
+
+    def test_returns_none_and_prints_error_on_http_failure(self, monkeypatch, capsys):
+        """Test graceful handling when the GitHub API request fails."""
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = Exception("HTTP 404: Not Found")
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=mock_response)
+        )
+
+        result = get_runtime_image_tag_from_sandbox_spec("token", "owner/repo", ref="cloud-1.26.1")
+
+        assert result is None
+        assert "Error fetching sandbox spec" in capsys.readouterr().out
+
+    def test_returns_none_and_prints_error_when_image_constant_missing(
+        self, monkeypatch, make_workflow_response, capsys
+    ):
+        """Test graceful handling when AGENT_SERVER_IMAGE constant is absent."""
+        response = make_workflow_response("# No image constant here\n")
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=response)
+        )
+
+        result = get_runtime_image_tag_from_sandbox_spec("token", "owner/repo", ref="cloud-1.26.1")
+
+        assert result is None
+        assert "Error fetching sandbox spec" in capsys.readouterr().out
+
+
 class TestGetDeployConfig:
     """Tests for get_deploy_config function.
 
@@ -578,7 +656,6 @@ class TestGetDeployConfig:
     VALID_WORKFLOW_YAML = """\
 env:
   RUNTIME_API_SHA: abc123def456
-  OPENHANDS_RUNTIME_IMAGE_TAG: "cloud-1.21.0-nikolaik"
   OTHER_VAR: value
 """
 
@@ -603,7 +680,6 @@ env:
         assert result is not None
         assert isinstance(result, DeployConfig)
         assert result.runtime_api_sha == "abc123def456"
-        assert result.openhands_runtime_image_tag == "cloud-1.21.0-nikolaik"
 
     def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
         """Test that URL is constructed correctly without ref parameter."""
@@ -653,7 +729,6 @@ env:
 
         assert result is not None
         assert result.runtime_api_sha == ""
-        assert result.openhands_runtime_image_tag == ""
 
     def test_returns_empty_string_when_env_section_missing(self, monkeypatch, make_workflow_response):
         """Test that missing env section returns empty string.
@@ -672,7 +747,6 @@ env:
 
         assert result is not None
         assert result.runtime_api_sha == ""
-        assert result.openhands_runtime_image_tag == ""
 
     # =========================================================================
     # Parameterized error path tests

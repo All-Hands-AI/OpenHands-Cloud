@@ -24,7 +24,10 @@ logging.getLogger("github").setLevel(logging.WARNING)
 CLOUD_SEMVER_PATTERN = re.compile(r"^cloud-(\d+\.\d+\.\d+)$")
 SHORT_SHA_LENGTH = 7
 OPENHANDS_REPO = "All-Hands-AI/OpenHands"
+OPENHANDS_ENTERPRISE_REPO = "OpenHands/OpenHands"
 DEPLOY_REPO = "OpenHands/deploy"
+SANDBOX_SPEC_PATH = "openhands/app_server/sandbox/sandbox_spec_service.py"
+AGENT_SERVER_IMAGE_PATTERN = re.compile(r"AGENT_SERVER_IMAGE\s*=\s*'[^:]+:([^']+)'")
 SEPARATOR = "=" * 60
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -146,7 +149,6 @@ class DeployConfig:
     """Configuration values from the deploy workflow."""
 
     runtime_api_sha: str
-    openhands_runtime_image_tag: str
 
 
 def get_latest_cloud_tag(token: str, repo_name: str) -> str | None:
@@ -192,10 +194,28 @@ def get_deploy_config(token: str, repo_name: str, ref: str | None = None) -> Dep
         env = workflow.get("env", {})
         return DeployConfig(
             runtime_api_sha=env.get("RUNTIME_API_SHA", ""),
-            openhands_runtime_image_tag=env.get("OPENHANDS_RUNTIME_IMAGE_TAG", ""),
         )
     except Exception as e:
         print(f"Error fetching deploy config: {e}")
+        return None
+
+
+def get_runtime_image_tag_from_sandbox_spec(token: str, repo_name: str, ref: str) -> str | None:
+    """Fetch the agent-server image tag from sandbox_spec_service.py at the given cloud tag."""
+    headers = {"Authorization": f"Bearer {token}"}
+    url = f"https://api.github.com/repos/{repo_name}/contents/{SANDBOX_SPEC_PATH}?ref={ref}"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        content = base64.b64decode(response.json()["content"]).decode("utf-8")
+        match = AGENT_SERVER_IMAGE_PATTERN.search(content)
+        if not match:
+            raise ValueError(f"AGENT_SERVER_IMAGE constant not found in {SANDBOX_SPEC_PATH}")
+        return match.group(1)
+    except Exception as e:
+        print(f"Error fetching sandbox spec: {e}")
         return None
 
 
@@ -569,6 +589,7 @@ def resolve_openhands_version(token: str, cloud_tag: str | None) -> str | None:
 
 def update_runtime_api_workflow(
     deploy_config: DeployConfig,
+    runtime_image_tag: str,
     dry_run: bool,
 ) -> str:
     """Update runtime-api chart and values. Returns the new chart version."""
@@ -578,7 +599,7 @@ def update_runtime_api_workflow(
     values_result = update_runtime_api_values(
         RUNTIME_API_VALUES_PATH,
         deploy_config.runtime_api_sha,
-        deploy_config.openhands_runtime_image_tag,
+        runtime_image_tag,
         dry_run=dry_run,
     )
     values_result.print_summary()
@@ -599,6 +620,7 @@ def update_openhands_workflow(
     deploy_config: DeployConfig,
     openhands_version: str,
     runtime_api_version: str,
+    runtime_image_tag: str,
     dry_run: bool,
 ) -> None:
     """Update openhands chart and values."""
@@ -608,7 +630,7 @@ def update_openhands_workflow(
     values_result = update_openhands_values(
         VALUES_PATH,
         openhands_version,
-        deploy_config.openhands_runtime_image_tag,
+        runtime_image_tag,
         dry_run=dry_run,
     )
     values_result.print_summary()
@@ -647,6 +669,13 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     print(f"Using deploy tag: {version_number}")
 
+    runtime_image_tag = get_runtime_image_tag_from_sandbox_spec(
+        token, OPENHANDS_ENTERPRISE_REPO, ref=openhands_version
+    )
+    if not runtime_image_tag:
+        print(f"Could not fetch runtime image tag from sandbox spec at {openhands_version}")
+        return
+
     deploy_config = get_deploy_config(token, DEPLOY_REPO, ref=version_number)
     if not deploy_config:
         print(f"Could not fetch deploy config from tag {version_number}")
@@ -654,13 +683,13 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
 
     print(f"Deploy config (from {version_number}):")
     print(f"  RUNTIME_API_SHA: {deploy_config.runtime_api_sha}")
-    print(f"  OPENHANDS_RUNTIME_IMAGE_TAG: {deploy_config.openhands_runtime_image_tag}")
+    print(f"  AGENT_SERVER_IMAGE tag (from sandbox spec): {runtime_image_tag}")
 
     print()
-    runtime_api_version = update_runtime_api_workflow(deploy_config, dry_run)
+    runtime_api_version = update_runtime_api_workflow(deploy_config, runtime_image_tag, dry_run)
 
     print()
-    update_openhands_workflow(deploy_config, openhands_version, runtime_api_version, dry_run)
+    update_openhands_workflow(deploy_config, openhands_version, runtime_api_version, runtime_image_tag, dry_run)
 
 
 def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
