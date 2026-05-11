@@ -44,6 +44,9 @@ enterpriseSSO:
 # NOTE: Don't override OH_APP_MODE, CONVERSATION_MANAGER_CLASS, etc. - chart sets them correctly
 # NOTE: Don't override OH_WEB_CLIENT_PROVIDERS_CONFIGURED - let chart compute from enterpriseSSO.enabled
 env:
+  # Enterprise SSO backend flag (required alongside enterpriseSSO.enabled for full SSO support)
+  ENABLE_ENTERPRISE_SSO: "true"
+  
   # Runtime Configuration (use shared runtime)
   RUNTIME_URL_PATTERN: https://{runtime_id}.runtime.ohe-staging.platform-team.all-hands.dev
   
