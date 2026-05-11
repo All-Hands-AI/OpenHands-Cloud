@@ -2,7 +2,7 @@ sequenceDiagram
     autonumber
     participant Browser
     participant OpenHands as OpenHands<br/>(Enterprise Server)
-    participant DB as AuthTokenStore<br/>(Local DB)
+    participant DB as SecretsStore<br/>(secrets.json)
     participant Keycloak as Keycloak<br/>(Identity Provider)
     participant GitHub as GitHub<br/>(OAuth Provider)
 
@@ -68,7 +68,7 @@ sequenceDiagram
 
     OpenHands->>Browser: Set session cookies<br/>Redirect to app
 
-    Note over Browser,GitHub: Subsequent API Calls (GitHub Token from Local DB)
+    Note over Browser,GitHub: Subsequent API Calls (GitHub Token from SecretsStore)
 
     Browser->>OpenHands: API request (e.g., list repos)
 
