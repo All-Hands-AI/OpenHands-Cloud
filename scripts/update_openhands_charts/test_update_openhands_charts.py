@@ -46,7 +46,6 @@ from update_openhands_charts import (
     get_runtime_image_tag_from_sandbox_spec,
     get_short_sha,
     main,
-    parse_args,
     update_openhands_chart,
     update_openhands_values,
     update_runtime_api_chart,
@@ -1516,6 +1515,45 @@ class TestUpdateRuntimeApiValues:
         )
 
         assert result.has_changes is True
+
+
+class TestSkipVersionCheck:
+    """Tests for --skip-version-check flag behavior.
+
+    Without the flag, the script exits early when the chart version already
+    matches the latest cloud tag. With the flag, it continues past that check.
+    """
+
+    MOCK_CLOUD_TAG = "cloud-1.20.0"
+
+    @pytest.fixture
+    def mock_versions_match(self, monkeypatch):
+        """Mock environment where chart version already matches latest cloud tag."""
+        monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
+        monkeypatch.setattr(
+            "update_openhands_charts.get_latest_cloud_tag",
+            lambda token, repo: self.MOCK_CLOUD_TAG,
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_current_app_version",
+            lambda path: self.MOCK_CLOUD_TAG,
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
+            lambda token, repo, ref: None,
+        )
+
+    def test_exits_early_when_versions_match_without_flag(self, mock_versions_match, capsys):
+        """Without --skip-version-check, exits with 'already up to date' message."""
+        main(dry_run=True)
+
+        assert "Charts are already up to date" in capsys.readouterr().out
+
+    def test_skips_up_to_date_check_when_flag_set(self, mock_versions_match, capsys):
+        """With --skip-version-check, continues past version check even when versions match."""
+        main(dry_run=True, skip_version_check=True)
+
+        assert "Charts are already up to date" not in capsys.readouterr().out
 
 
 class TestMainOutputMessages:

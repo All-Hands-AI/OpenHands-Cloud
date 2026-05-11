@@ -548,7 +548,7 @@ def print_section_header(title: str) -> None:
     print(SEPARATOR)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(args=None) -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Update OpenHands and runtime-api charts based on a SaaS deploy."
@@ -564,7 +564,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="A cloud tag from OpenHands (e.g., cloud-1.19.0) to use instead of fetching the latest.",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--skip-version-check",
+        action="store_true",
+        help="Continue even if charts are already up to date, re-fetching and applying image tags.",
+    )
+    return parser.parse_args(args)
 
 
 def resolve_openhands_version(token: str, cloud_tag: str | None) -> str | None:
@@ -647,7 +652,12 @@ def update_openhands_workflow(
     chart_result.print_summary()
 
 
-def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = None) -> None:
+def process_updates(
+    token: str,
+    dry_run: bool = False,
+    cloud_tag: str | None = None,
+    skip_version_check: bool = False,
+) -> None:
     print_section_header("Fetching latest versions...")
 
     openhands_version = resolve_openhands_version(token, cloud_tag)
@@ -657,7 +667,7 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
     current_app_version = get_current_app_version(CHART_PATH)
     if current_app_version:
         print(f"OpenHands-Cloud openhands chart appVersion: {current_app_version}")
-        if current_app_version == openhands_version:
+        if current_app_version == openhands_version and not skip_version_check:
             print()
             print_section_header("Charts are already up to date - no changes needed")
             return
@@ -692,7 +702,7 @@ def process_updates(token: str, dry_run: bool = False, cloud_tag: str | None = N
     update_openhands_workflow(deploy_config, openhands_version, runtime_api_version, runtime_image_tag, dry_run)
 
 
-def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
+def main(dry_run: bool = False, cloud_tag: str | None = None, skip_version_check: bool = False) -> None:
     if dry_run:
         print_section_header("DRY RUN MODE - No changes will be made")
         print()
@@ -702,9 +712,9 @@ def main(dry_run: bool = False, cloud_tag: str | None = None) -> None:
         print("Environment variable GITHUB_TOKEN is required. Try getting with: gh auth status --show-token")
         return
 
-    process_updates(token, dry_run=dry_run, cloud_tag=cloud_tag)
+    process_updates(token, dry_run=dry_run, cloud_tag=cloud_tag, skip_version_check=skip_version_check)
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(dry_run=args.dry_run, cloud_tag=args.cloud_tag)
+    main(dry_run=args.dry_run, cloud_tag=args.cloud_tag, skip_version_check=args.skip_version_check)
