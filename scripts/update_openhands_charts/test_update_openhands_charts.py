@@ -865,38 +865,38 @@ class TestUpdateValues:
 
         assert_file_contains(temp_values_file, expected_content)
 
-    def test_idempotent_when_reapplying_same_values(self, temp_values_file):
-        """Test that reapplying identical values is idempotent.
+    @pytest.fixture
+    def reapplied_values_result(self, temp_values_file):
+        """Apply identical values twice and return the second-call UpdateResult.
 
         Idempotency pattern: The two-step (apply → reapply) structure verifies
-        that calling the function with identical values:
-        1. Does not mark the result as having changes (has_changes=False)
-        2. Reports specific keys as unchanged via is_unchanged()
-
-        This ensures update functions are deterministic and don't cause spurious
-        version bumps when no actual changes occur.
+        that calling the function with identical values produces an UpdateResult
+        with no changes. This ensures update functions are deterministic and
+        don't cause spurious version bumps when no actual changes occur.
         """
-        # Step 1: Apply initial values (establishes baseline state)
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
             runtime_image_tag=RUNTIME_IMAGE_TAG,
         )
-
-        # Step 2: Reapply same values (tests idempotency)
-        result = update_openhands_values(
+        return update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
             runtime_image_tag=RUNTIME_IMAGE_TAG,
         )
 
-        # Verify: Boolean flag correctly indicates no changes
-        assert result.has_changes is False
+    def test_reapplying_same_values_reports_no_changes(self, reapplied_values_result):
+        """Reapplying identical values sets has_changes=False on the result."""
+        assert reapplied_values_result.has_changes is False
 
-        # Verify: Specific keys reported as unchanged
-        assert result.is_unchanged("enterprise-server image tag")
-        assert result.is_unchanged("runtime image tag")
-        assert result.is_unchanged("warmRuntimes image tag")
+    @pytest.mark.parametrize("unchanged_key", [
+        "enterprise-server image tag",
+        "runtime image tag",
+        "warmRuntimes image tag",
+    ])
+    def test_reapplying_same_values_marks_key_unchanged(self, reapplied_values_result, unchanged_key):
+        """Each image-tag key is reported as unchanged when reapplied with the same value."""
+        assert reapplied_values_result.is_unchanged(unchanged_key)
 
     def test_preserves_other_content(self, temp_values_file):
         """Test that other content in values.yaml is preserved."""
@@ -1095,25 +1095,33 @@ class TestUpdateReplicatedOpenhandsWrapperValues:
 
         assert result.has_change_for(change_key)
 
-    def test_is_idempotent_for_replicated_wrapper_references(self, temp_replicated_wrapper_file):
-        """Test that reapplying identical replicated wrapper values records unchanged entries."""
+    @pytest.fixture
+    def reapplied_replicated_wrapper_result(self, temp_replicated_wrapper_file):
+        """Apply identical replicated wrapper values twice and return the second-call UpdateResult."""
         update_openhands_values(
             temp_replicated_wrapper_file,
             openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
-
-        result = update_openhands_values(
+        return update_openhands_values(
             temp_replicated_wrapper_file,
             openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
 
-        assert result.has_changes is False
-        assert result.is_unchanged("replicated runtime image tag")
-        assert result.is_unchanged("replicated warmRuntimes image tag")
-        assert result.is_unchanged("replicated local registry runtime image tag")
-        assert result.is_unchanged("replicated local registry warmRuntimes image tag")
+    def test_reapplying_same_replicated_wrapper_values_reports_no_changes(self, reapplied_replicated_wrapper_result):
+        """Reapplying identical replicated wrapper values sets has_changes=False."""
+        assert reapplied_replicated_wrapper_result.has_changes is False
+
+    @pytest.mark.parametrize("unchanged_key", [
+        "replicated runtime image tag",
+        "replicated warmRuntimes image tag",
+        "replicated local registry runtime image tag",
+        "replicated local registry warmRuntimes image tag",
+    ])
+    def test_reapplying_same_replicated_wrapper_values_marks_key_unchanged(self, reapplied_replicated_wrapper_result, unchanged_key):
+        """Each replicated wrapper tag key is reported as unchanged when reapplied."""
+        assert reapplied_replicated_wrapper_result.is_unchanged(unchanged_key)
 
 
 class TestConditionalChartVersionBump:
@@ -1371,32 +1379,35 @@ class TestUpdateRuntimeApiValues:
         # Should use runtime_image_tag from deploy config
         assert_file_contains(temp_runtime_api_values_file, f'image: "ghcr.io/openhands/agent-server:{NEW_RUNTIME_IMAGE_TAG}"')
 
-    def test_idempotent_when_reapplying_same_values(self, temp_runtime_api_values_file):
-        """Test that reapplying identical values is idempotent.
+    @pytest.fixture
+    def reapplied_runtime_api_values_result(self, temp_runtime_api_values_file):
+        """Apply identical runtime-api values twice and return the second-call UpdateResult.
 
         Idempotency pattern: Verifies runtime-api update function is deterministic.
-        See TestUpdateValues.test_idempotent_when_reapplying_same_values for pattern rationale.
+        See TestUpdateValues.reapplied_values_result for pattern rationale.
         """
-        # Step 1: Apply initial values
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
-
-        # Step 2: Reapply same values
-        result = update_runtime_api_values(
+        return update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
             runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
-        # Verify: Boolean flag correctly indicates no changes
-        assert result.has_changes is False
+    def test_reapplying_same_runtime_api_values_reports_no_changes(self, reapplied_runtime_api_values_result):
+        """Reapplying identical runtime-api values sets has_changes=False."""
+        assert reapplied_runtime_api_values_result.has_changes is False
 
-        # Verify: Specific keys reported as unchanged
-        assert result.is_unchanged("runtime-api image tag")
-        assert result.is_unchanged("runtime-api warmRuntimes image tag")
+    @pytest.mark.parametrize("unchanged_key", [
+        "runtime-api image tag",
+        "runtime-api warmRuntimes image tag",
+    ])
+    def test_reapplying_same_runtime_api_values_marks_key_unchanged(self, reapplied_runtime_api_values_result, unchanged_key):
+        """Each runtime-api image-tag key is reported as unchanged when reapplied."""
+        assert reapplied_runtime_api_values_result.is_unchanged(unchanged_key)
 
     def test_preserves_other_content(self, temp_runtime_api_values_file):
         """Test that other content is preserved."""
