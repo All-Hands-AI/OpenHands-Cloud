@@ -672,8 +672,15 @@ env:
         mock_response.json.return_value = {"content": encoded_content}
         return mock_response
 
-    def test_returns_deploy_config_on_success(self, monkeypatch, mock_successful_response):
-        """Test that valid response returns DeployConfig with correct values."""
+    def test_returns_deploy_config_instance_on_success(self, monkeypatch, mock_successful_response):
+        """Test that a valid response yields a non-None DeployConfig instance.
+
+        Type-level contract: callers rely on the returned object being a
+        DeployConfig (so they can access typed fields like runtime_api_sha).
+        Kept separate from the value-extraction test below so a failure here
+        unambiguously signals "wrong return type or None" rather than a parsing
+        regression.
+        """
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
             Mock(return_value=mock_successful_response)
@@ -681,8 +688,22 @@ env:
 
         result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
 
-        assert result is not None
         assert isinstance(result, DeployConfig)
+
+    def test_runtime_api_sha_parsed_from_workflow_env(self, monkeypatch, mock_successful_response):
+        """Test that runtime_api_sha is correctly extracted from the workflow env section.
+
+        Value-extraction contract: the RUNTIME_API_SHA key in the workflow's
+        env section must surface as DeployConfig.runtime_api_sha. A failure
+        here unambiguously signals a regression in the env-parsing logic.
+        """
+        monkeypatch.setattr(
+            "update_openhands_charts.requests.get",
+            Mock(return_value=mock_successful_response)
+        )
+
+        result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
+
         assert result.runtime_api_sha == "abc123def456"
 
     def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
