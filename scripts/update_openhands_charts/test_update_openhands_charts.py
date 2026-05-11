@@ -46,6 +46,8 @@ from update_openhands_charts import (
     get_runtime_image_tag_from_sandbox_spec,
     get_short_sha,
     main,
+    process_updates,
+    resolve_openhands_version,
     update_openhands_chart,
     update_openhands_values,
     update_runtime_api_chart,
@@ -323,16 +325,11 @@ class TestUpdateChart:
 
         assert get_dependency_version(temp_chart_file, "other-dep") == OPENHANDS_CHART_WITH_DEPS_OTHER_DEP_VERSION
 
-    @pytest.mark.parametrize("key,expected", [
-        ("apiVersion", "v2"),
-        ("description", "Test chart"),
-        ("name", "test-chart"),
-    ])
-    def test_scalar_metadata_preserved_after_update(self, temp_chart_file, key, expected):
+    def test_scalar_metadata_preserved_after_update(self, temp_chart_file):
         """Verify scalar metadata fields are not modified by chart update."""
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
-        assert get_chart_value(temp_chart_file, key) == expected
+        assert_file_contains_all(temp_chart_file, ["apiVersion: v2", "description: Test chart", "name: test-chart"])
 
     def test_maintainers_count_preserved_after_update(self, temp_chart_file):
         """Verify maintainers list length is not modified by chart update."""
@@ -913,6 +910,60 @@ def _make_invalid_yaml_response(Mock, base64_module, invalid_yaml):
     return Mock(return_value=mock_response)
 
 
+class TestResolveOpenhandsVersion:
+    """Tests for resolve_openhands_version function.
+
+    Determines which cloud tag to use for updates — either a caller-specified
+    tag or the latest tag fetched from GitHub.
+    """
+
+    def test_returns_specified_tag_when_it_exists(self, monkeypatch):
+        """When cloud_tag is provided and exists in the repo, return it."""
+        monkeypatch.setattr(
+            "update_openhands_charts.cloud_tag_exists",
+            lambda token, repo, tag: True,
+        )
+
+        result = resolve_openhands_version("token", "cloud-1.20.0")
+
+        assert result == "cloud-1.20.0"
+
+    def test_returns_none_when_specified_tag_does_not_exist(self, monkeypatch, capsys):
+        """When cloud_tag is provided but not found in the repo, return None and print error."""
+        monkeypatch.setattr(
+            "update_openhands_charts.cloud_tag_exists",
+            lambda token, repo, tag: False,
+        )
+
+        result = resolve_openhands_version("token", "cloud-99.0.0")
+
+        assert result is None
+        assert "does not exist" in capsys.readouterr().out
+
+    def test_fetches_latest_tag_when_no_tag_specified(self, monkeypatch):
+        """When no cloud_tag is given, returns the latest cloud tag from GitHub."""
+        monkeypatch.setattr(
+            "update_openhands_charts.get_latest_cloud_tag",
+            lambda token, repo: "cloud-1.20.0",
+        )
+
+        result = resolve_openhands_version("token", None)
+
+        assert result == "cloud-1.20.0"
+
+    def test_returns_none_and_prints_when_no_tags_found(self, monkeypatch, capsys):
+        """When no cloud_tag is given and none found in repo, return None and print message."""
+        monkeypatch.setattr(
+            "update_openhands_charts.get_latest_cloud_tag",
+            lambda token, repo: None,
+        )
+
+        result = resolve_openhands_version("token", None)
+
+        assert result is None
+        assert "No cloud tag found" in capsys.readouterr().out
+
+
 class TestUpdateValues:
     """Tests for update_openhands_values function.
 
@@ -934,35 +985,24 @@ class TestUpdateValues:
         """Create a temporary values.yaml file using shared fixtures."""
         return make_temp_yaml_file(sample_openhands_values_full)
 
-    def test_update_enterprise_server_tag_uses_cloud_version(self, temp_values_file):
-        """Test that enterprise-server image tag uses cloud version format."""
+    @pytest.mark.parametrize("expected_content", [
+        pytest.param("tag: cloud-1.1.0", id="enterprise-server tag"),
+        pytest.param("tag: cloud-1.1.0-nikolaik", id="runtime tag"),
+        pytest.param('image: "ghcr.io/openhands/agent-server:cloud-1.1.0-nikolaik"', id="warmRuntimes tag"),
+    ])
+    def test_each_image_tag_is_updated(self, temp_values_file, expected_content):
+        """Test that enterprise-server, runtime, and warmRuntimes image tags are each updated.
+
+        All three tags are written by one call; each parametrize case verifies
+        one tag location in the output file.
+        """
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
             runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
-        assert_file_contains(temp_values_file, "tag: cloud-1.1.0")
-
-    def test_update_runtime_tag_uses_runtime_image_tag(self, temp_values_file):
-        """Test that runtime image tag uses value from deploy config."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert_file_contains(temp_values_file, "tag: cloud-1.1.0-nikolaik")
-
-    def test_update_warm_runtimes_tag_uses_runtime_image_tag(self, temp_values_file):
-        """Test that warmRuntimes image tag uses value from deploy config."""
-        update_openhands_values(
-            temp_values_file,
-            openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
-        )
-
-        assert_file_contains(temp_values_file, 'image: "ghcr.io/openhands/agent-server:cloud-1.1.0-nikolaik"')
+        assert_file_contains(temp_values_file, expected_content)
 
     def test_idempotent_when_reapplying_same_values(self, temp_values_file):
         """Test that reapplying identical values is idempotent.
@@ -1157,27 +1197,42 @@ class TestUpdateReplicatedOpenhandsWrapperValues:
         """Create a temporary replicated wrapper YAML file."""
         return make_temp_yaml_file(sample_replicated_openhands_wrapper_values)
 
-    def test_updates_all_three_agent_server_tag_references(self, temp_replicated_wrapper_file):
-        """Test that all replicated wrapper agent-server references use the new runtime image tag."""
+    @pytest.mark.parametrize("expected_content", [
+        pytest.param("tag: '1.19.1-python'", id="proxy runtime tag"),
+        pytest.param(
+            "image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue \"appSlug\"}}/ghcr.io/openhands/agent-server:1.19.1-python'",
+            id="proxy warmRuntimes image",
+        ),
+        pytest.param(
+            "image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.1-python'",
+            id="local registry image",
+        ),
+    ])
+    def test_replicated_wrapper_file_content_updated(self, temp_replicated_wrapper_file, expected_content):
+        """Test that each agent-server tag location in the replicated wrapper file is updated."""
+        update_openhands_values(
+            temp_replicated_wrapper_file,
+            openhands_version="cloud-1.19.1",
+            runtime_image_tag="1.19.1-python",
+        )
+
+        assert_file_contains(temp_replicated_wrapper_file, expected_content)
+
+    @pytest.mark.parametrize("change_key", [
+        "replicated runtime image tag",
+        "replicated warmRuntimes image tag",
+        "replicated local registry runtime image tag",
+        "replicated local registry warmRuntimes image tag",
+    ])
+    def test_result_records_replicated_wrapper_change(self, temp_replicated_wrapper_file, change_key):
+        """Test that each replicated wrapper tag key is recorded as changed in the result."""
         result = update_openhands_values(
             temp_replicated_wrapper_file,
             openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
 
-        assert_file_contains(temp_replicated_wrapper_file, "tag: '1.19.1-python'")
-        assert_file_contains(
-            temp_replicated_wrapper_file,
-            "image: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue \"appSlug\"}}/ghcr.io/openhands/agent-server:1.19.1-python'",
-        )
-        assert_file_contains(
-            temp_replicated_wrapper_file,
-            "image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.19.1-python'",
-        )
-        assert result.has_change_for("replicated runtime image tag")
-        assert result.has_change_for("replicated warmRuntimes image tag")
-        assert result.has_change_for("replicated local registry runtime image tag")
-        assert result.has_change_for("replicated local registry warmRuntimes image tag")
+        assert result.has_change_for(change_key)
 
     def test_is_idempotent_for_replicated_wrapper_references(self, temp_replicated_wrapper_file):
         """Test that reapplying identical replicated wrapper values records unchanged entries."""
@@ -1554,6 +1609,79 @@ class TestSkipVersionCheck:
         main(dry_run=True, skip_version_check=True)
 
         assert "Charts are already up to date" not in capsys.readouterr().out
+
+
+class TestProcessUpdates:
+    """Tests for process_updates function.
+
+    Orchestrates version fetching, config retrieval, and file updates.
+    These tests cover the guard clauses that prevent partial updates when
+    upstream data is unavailable.
+    """
+
+    def test_returns_early_when_version_resolution_fails(self, monkeypatch):
+        """When resolve_openhands_version returns None, no deploy config fetch is attempted."""
+        monkeypatch.setattr(
+            "update_openhands_charts.resolve_openhands_version",
+            lambda token, cloud_tag: None,
+        )
+        mock_get_deploy_config = MagicMock()
+        monkeypatch.setattr("update_openhands_charts.get_deploy_config", mock_get_deploy_config)
+
+        process_updates("token")
+
+        mock_get_deploy_config.assert_not_called()
+
+    def test_returns_early_when_runtime_image_tag_unavailable(self, monkeypatch, capsys):
+        """When runtime image tag fetch fails, no deploy config fetch is attempted."""
+        monkeypatch.setattr(
+            "update_openhands_charts.resolve_openhands_version",
+            lambda token, cloud_tag: "cloud-1.20.0",
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_current_app_version",
+            lambda path: "cloud-1.19.0",
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
+            lambda token, repo, ref: None,
+        )
+        mock_get_deploy_config = MagicMock()
+        monkeypatch.setattr("update_openhands_charts.get_deploy_config", mock_get_deploy_config)
+
+        process_updates("token")
+
+        mock_get_deploy_config.assert_not_called()
+        assert "Could not fetch runtime image tag" in capsys.readouterr().out
+
+    def test_returns_early_when_deploy_config_unavailable(self, monkeypatch, capsys):
+        """When deploy config fetch fails, no file updates are attempted."""
+        monkeypatch.setattr(
+            "update_openhands_charts.resolve_openhands_version",
+            lambda token, cloud_tag: "cloud-1.20.0",
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_current_app_version",
+            lambda path: "cloud-1.19.0",
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
+            lambda token, repo, ref: "1.20.0-python",
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_deploy_config",
+            lambda token, repo, ref: None,
+        )
+        mock_update_runtime_api = MagicMock()
+        monkeypatch.setattr(
+            "update_openhands_charts.update_runtime_api_workflow",
+            mock_update_runtime_api,
+        )
+
+        process_updates("token")
+
+        mock_update_runtime_api.assert_not_called()
+        assert "Could not fetch deploy config" in capsys.readouterr().out
 
 
 class TestMainOutputMessages:
