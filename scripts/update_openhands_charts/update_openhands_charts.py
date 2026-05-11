@@ -234,9 +234,10 @@ def update_tag_in_content(
     tag_name: str,
     result: UpdateResult,
     replacement_suffix: str = "",
+    error_if_missing: bool = True,
 ) -> str:
     """Update a regex-matched tag in content and track the result.
-    
+
     Args:
         content: The file content to update
         pattern: Regex pattern with group(2) capturing the old tag
@@ -244,7 +245,10 @@ def update_tag_in_content(
         tag_name: Human-readable name for reporting (e.g., "enterprise-server image tag")
         result: UpdateResult to record changes/unchanged/errors
         replacement_suffix: Optional suffix to append after new_tag in replacement
-        
+        error_if_missing: If True (default), append an error when pattern not found.
+            Pass False for optional patterns whose absence is expected (e.g., replicated
+            wrapper-only tags that aren't present in upstream values.yaml).
+
     Returns:
         Updated content string
     """
@@ -258,7 +262,7 @@ def update_tag_in_content(
             content = re.sub(pattern, replacement, content)
             result.changes.append((tag_name, old_tag, new_tag))
             result.has_changes = True
-    else:
+    elif error_if_missing:
         result.errors.append(f"Could not find {tag_name} in values.yaml")
     return content
 
@@ -446,7 +450,8 @@ def update_openhands_values(
         "replicated warmRuntimes image tag",
         result,
         replacement_suffix="'",
-    ) if re.search(REPLICATED_PROXY_WARM_RUNTIME_IMAGE_PATTERN, content) else content
+        error_if_missing=False,
+    )
     content = update_all_tags_in_content(
         content,
         REPLICATED_LOCAL_AGENT_SERVER_TAG_PATTERN,
@@ -463,7 +468,8 @@ def update_openhands_values(
         "replicated local registry warmRuntimes image tag",
         result,
         replacement_suffix="'",
-    ) if re.search(REPLICATED_LOCAL_WARM_RUNTIME_IMAGE_PATTERN, content) else content
+        error_if_missing=False,
+    )
 
     if not dry_run and result.has_changes:
         values_path.write_text(content)
