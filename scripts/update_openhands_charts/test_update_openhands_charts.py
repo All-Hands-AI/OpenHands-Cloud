@@ -1611,18 +1611,17 @@ class TestCloudTagExists:
 
         assert result is False
 
-    def test_handles_various_tag_formats(self, mock_github_ref):
-        """Test that function correctly queries different tag formats."""
+    @pytest.mark.parametrize("tag,expected_ref", [
+        pytest.param("cloud-1.0.0", "tags/cloud-1.0.0", id="single-digit version"),
+        pytest.param("cloud-10.20.30", "tags/cloud-10.20.30", id="multi-digit version"),
+    ])
+    def test_constructs_correct_ref_format(self, mock_github_ref, tag, expected_ref):
+        """Verify ref format is 'tags/<tag>' for various cloud tag versions."""
         _, mock_repo = mock_github_ref(tag_exists=True)
 
-        # Test various tag formats
-        cloud_tag_exists("fake-token", "owner/repo", "cloud-1.0.0")
-        cloud_tag_exists("fake-token", "owner/repo", "cloud-10.20.30")
+        cloud_tag_exists("fake-token", "owner/repo", tag)
 
-        # Verify correct ref format is used
-        calls = mock_repo.get_git_ref.call_args_list
-        assert calls[0][0][0] == "tags/cloud-1.0.0"
-        assert calls[1][0][0] == "tags/cloud-10.20.30"
+        mock_repo.get_git_ref.assert_called_once_with(expected_ref)
 
 
 if __name__ == "__main__":
