@@ -1,13 +1,13 @@
-name: Test update_openhands_charts
+name: Test scripts
 
 on:
   pull_request:
     paths:
-      - 'scripts/update_openhands_charts/**'
+      - 'scripts/**'
       - '.github/workflows/test-update-openhands-charts.yml'
 
 jobs:
-  test-update-openhands-charts:
+  test-scripts:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,5 +22,14 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Run update_openhands_charts tests
-        run: uv run scripts/update_openhands_charts/test_update_openhands_charts.py
+      - name: Run scripts tests
+        run: >-
+          uv run
+          --with pytest
+          --with requests
+          --with PyGithub
+          --with fastapi
+          --with uvicorn
+          --with httpx
+          --with ruamel.yaml
+          python -m pytest scripts -q
