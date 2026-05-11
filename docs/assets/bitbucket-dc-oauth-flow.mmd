@@ -2,7 +2,7 @@ sequenceDiagram
     autonumber
     participant Browser
     participant OpenHands as OpenHands (Enterprise Server)<br/>also hosts /bitbucket-dc-proxy/oauth2/userinfo<br/>(OIDC userinfo shim for BBDC)
-    participant DB as SecretsStore<br/>(AuthTokenStore)
+    participant DB as SecretsStore<br/>(secrets.json)
     participant Keycloak as Keycloak<br/>(Identity Provider)
     participant BBDC as Bitbucket Data Center<br/>(OAuth2 Provider)
 
@@ -55,7 +55,7 @@ sequenceDiagram
     OpenHands->>Keycloak: GET /realms/allhands/broker/bitbucket_data_center/token<br/>Authorization: Bearer <keycloak_access_token>
     Keycloak-->>OpenHands: BBDC access_token (JWT: eyJhb...)
 
-    OpenHands->>DB: Store BBDC token in AuthTokenStore
+    OpenHands->>DB: Store BBDC token in SecretsStore
 
     Note over OpenHands: User logged in<br/>Session created
 
@@ -79,13 +79,13 @@ sequenceDiagram
 
     Browser->>OpenHands: API request<br/>(e.g., GET /api/v1/git/installations/search?provider=bitbucket_data_center)
 
-    OpenHands->>DB: Load BBDC token from AuthTokenStore
+    OpenHands->>DB: Load BBDC token from SecretsStore
     Note over OpenHands: Log: "Getting token for user <email><br/>and IDP ProviderType.BITBUCKET_DATA_CENTER"<br/>"Got ProviderType.BITBUCKET_DATA_CENTER token: eyJhb..."
 
     alt Token Expired
         OpenHands->>BBDC: POST /rest/oauth2/latest/token<br/>grant_type=refresh_token<br/>(direct refresh with BBDC)
         BBDC-->>OpenHands: New access_token
-        OpenHands->>DB: Update token in AuthTokenStore
+        OpenHands->>DB: Update token in SecretsStore
     end
 
     OpenHands->>BBDC: REST API call with BBDC token<br/>Authorization: Bearer eyJhb...<br/>(e.g., GET /rest/api/latest/projects/.../repos)
