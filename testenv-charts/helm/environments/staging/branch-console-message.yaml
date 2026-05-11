@@ -18,28 +18,32 @@ image:
 # Use shared Keycloak from openhands namespace
 keycloak:
   enabled: false
+  # CRITICAL: Set authHost to point to shared Keycloak (not derived from ingress.host)
+  # Without this, the chart computes AUTH_URL as auth.console-message.ohe-staging... which doesn't exist
+  authHost: auth.ohe-staging.platform-team.all-hands.dev
+  # Register this branch's redirect URI with the shared Keycloak
+  # This is required because Keycloak doesn't support wildcard subdomains
+  redirectUriRegistration:
+    enabled: true
+    keycloakUrl: "https://auth.ohe-staging.platform-team.all-hands.dev"
+    realmName: "allhands"
+    clientId: "allhands"
+    adminUser: "admin"
+    adminPasswordSecret:
+      name: "keycloak-admin"
+      key: "admin-password"
 keycloakConfig:
   enabled: false
-keycloakRedirectUriHook:
-  enabled: false
 
-# Auth config pointing to shared Keycloak
-# IMPORTANT: env block replaces base-values.yaml entirely, so we must include all needed vars
+# Enable Enterprise SSO button on frontend
+# This adds "enterprise_sso" to OH_WEB_CLIENT_PROVIDERS_CONFIGURED via the chart template
+enterpriseSSO:
+  enabled: true
+
+# Branch-specific env overrides
+# NOTE: Don't override OH_APP_MODE, CONVERSATION_MANAGER_CLASS, etc. - chart sets them correctly
+# NOTE: Don't override OH_WEB_CLIENT_PROVIDERS_CONFIGURED - let chart compute from enterpriseSSO.enabled
 env:
-  # Auth
-  AUTH_TYPE: "oidc"
-  OIDC_PROVIDER_URL: "https://auth.ohe-staging.platform-team.all-hands.dev/realms/allhands"
-  OIDC_CLIENT_ID: "openhands"
-  FRONTEND_URL: "https://console-message.ohe-staging.platform-team.all-hands.dev"
-  
-  # Conversation & App Mode (from base-values.yaml - required for SaaS behavior)
-  CONVERSATION_MANAGER_CLASS: server.saas_nested_conversation_manager.SaasNestedConversationManager
-  OH_APP_CONVERSATION_INFO_KIND: server.utils.saas_app_conversation_info_injector.SaasAppConversationInfoServiceInjector
-  OH_APP_MODE: saas
-  V1_ENABLED: "true"
-  INIT_GIT_IN_EMPTY_WORKSPACE: "1"
-  OPENHANDS_SUPPRESS_BANNER: "1"
-  
   # Runtime Configuration (use shared runtime)
   RUNTIME_URL_PATTERN: https://{runtime_id}.runtime.ohe-staging.platform-team.all-hands.dev
   
@@ -61,17 +65,12 @@ env:
   OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: "true"
   OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_INTEGRATIONS_PAGE: "false"
   OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_USERS_PAGE: "false"
-  OH_WEB_CLIENT_PROVIDERS_CONFIGURED: '[]'
   
   # Access Control (open for testing)
   DUPLICATE_EMAIL_CHECK: "false"
   OH_USER_AUTHORIZER_PREVENT_DUPLICATES: "false"
   EMAIL_PATTERN_BLACKLIST: '%'
   EMAIL_PATTERN_WHITELIST: '%@openhands.dev,%@all-hands.dev,saurya@gmail.com'
-
-# Enable Enterprise SSO button on frontend
-enterpriseSSO:
-  enabled: true
 
 # Disable all integrations requiring secrets we don't have
 github:

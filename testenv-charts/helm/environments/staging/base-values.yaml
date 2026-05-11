@@ -77,7 +77,8 @@ env:
   OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: "false"
   OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_INTEGRATIONS_PAGE: "false"
   OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_USERS_PAGE: "false"
-  OH_WEB_CLIENT_PROVIDERS_CONFIGURED: '["github","gitlab","bitbucket"]'
+  # NOTE: Don't set OH_WEB_CLIENT_PROVIDERS_CONFIGURED here - let the chart compute 
+  # it from github.enabled, gitlab.enabled, bitbucket.enabled, enterpriseSSO.enabled flags
   
   # Integrations
   COLLECT_GITHUB_INTERACTIONS: "true"
