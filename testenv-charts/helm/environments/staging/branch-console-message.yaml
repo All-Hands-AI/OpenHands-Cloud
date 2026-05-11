@@ -24,11 +24,50 @@ keycloakRedirectUriHook:
   enabled: false
 
 # Auth config pointing to shared Keycloak
+# IMPORTANT: env block replaces base-values.yaml entirely, so we must include all needed vars
 env:
+  # Auth
   AUTH_TYPE: "oidc"
   OIDC_PROVIDER_URL: "https://auth.ohe-staging.platform-team.all-hands.dev/realms/allhands"
   OIDC_CLIENT_ID: "openhands"
   FRONTEND_URL: "https://console-message.ohe-staging.platform-team.all-hands.dev"
+  
+  # Conversation & App Mode (from base-values.yaml - required for SaaS behavior)
+  CONVERSATION_MANAGER_CLASS: server.saas_nested_conversation_manager.SaasNestedConversationManager
+  OH_APP_CONVERSATION_INFO_KIND: server.utils.saas_app_conversation_info_injector.SaasAppConversationInfoServiceInjector
+  OH_APP_MODE: saas
+  V1_ENABLED: "true"
+  INIT_GIT_IN_EMPTY_WORKSPACE: "1"
+  OPENHANDS_SUPPRESS_BANNER: "1"
+  
+  # Runtime Configuration (use shared runtime)
+  RUNTIME_URL_PATTERN: https://{runtime_id}.runtime.ohe-staging.platform-team.all-hands.dev
+  
+  # LLM Proxy (shared)
+  OPENHANDS_PROVIDER_BASE_URL: https://llm-proxy.ohe-staging.platform-team.all-hands.dev/
+  
+  # Features (minimal for branch testing)
+  ENABLE_BILLING: "false"
+  ENABLE_EXPERIMENT_MANAGER: "false"
+  ENABLE_MCP_SEARCH_ENGINE: "false"
+  ENABLE_PROACTIVE_CONVERSATION_STARTERS: "false"
+  ENABLE_SOLVABILITY_ANALYSIS: "false"
+  ENABLE_V1_GITHUB_RESOLVER: "false"
+  ENABLE_V1_SLACK_RESOLVER: "false"
+  
+  # UI Flags (show enterprise features)
+  OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: "false"
+  OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_JIRA: "false"
+  OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_BILLING_PAGE: "true"
+  OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_INTEGRATIONS_PAGE: "false"
+  OH_WEB_CLIENT_FEATURE_FLAGS_HIDE_USERS_PAGE: "false"
+  OH_WEB_CLIENT_PROVIDERS_CONFIGURED: '[]'
+  
+  # Access Control (open for testing)
+  DUPLICATE_EMAIL_CHECK: "false"
+  OH_USER_AUTHORIZER_PREVENT_DUPLICATES: "false"
+  EMAIL_PATTERN_BLACKLIST: '%'
+  EMAIL_PATTERN_WHITELIST: '%@openhands.dev,%@all-hands.dev,saurya@gmail.com'
 
 # Enable Enterprise SSO button on frontend
 enterpriseSSO:
