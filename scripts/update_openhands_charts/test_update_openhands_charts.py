@@ -432,21 +432,21 @@ class TestUpdateResultHelpers:
         method = getattr(result, method_name)
         assert method(query) is False
 
-    @pytest.mark.parametrize("field,data,expected_count", [
+    @pytest.mark.parametrize("field,count_property,data,expected_count", [
         # error_count: multiple, single, empty
-        pytest.param("errors", ["error1", "error2", "error3"], 3, id="error_count: multiple"),
-        pytest.param("errors", ["only one error"], 1, id="error_count: single"),
-        pytest.param("errors", [], 0, id="error_count: empty"),
+        pytest.param("errors", "error_count", ["error1", "error2", "error3"], 3, id="error_count: multiple"),
+        pytest.param("errors", "error_count", ["only one error"], 1, id="error_count: single"),
+        pytest.param("errors", "error_count", [], 0, id="error_count: empty"),
         # change_count: multiple, single, empty
-        pytest.param("changes", [("k1", "old1", "new1"), ("k2", "old2", "new2")], 2, id="change_count: multiple"),
-        pytest.param("changes", [("key", "old", "new")], 1, id="change_count: single"),
-        pytest.param("changes", [], 0, id="change_count: empty"),
+        pytest.param("changes", "change_count", [("k1", "old1", "new1"), ("k2", "old2", "new2")], 2, id="change_count: multiple"),
+        pytest.param("changes", "change_count", [("key", "old", "new")], 1, id="change_count: single"),
+        pytest.param("changes", "change_count", [], 0, id="change_count: empty"),
         # unchanged_count: multiple, single, empty
-        pytest.param("unchanged", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")], 3, id="unchanged_count: multiple"),
-        pytest.param("unchanged", [("key", "value")], 1, id="unchanged_count: single"),
-        pytest.param("unchanged", [], 0, id="unchanged_count: empty"),
+        pytest.param("unchanged", "unchanged_count", [("k1", "v1"), ("k2", "v2"), ("k3", "v3")], 3, id="unchanged_count: multiple"),
+        pytest.param("unchanged", "unchanged_count", [("key", "value")], 1, id="unchanged_count: single"),
+        pytest.param("unchanged", "unchanged_count", [], 0, id="unchanged_count: empty"),
     ])
-    def test_count_properties_return_correct_counts(self, field, data, expected_count):
+    def test_count_properties_return_correct_counts(self, field, count_property, data, expected_count):
         """Verify count properties (error_count, change_count, unchanged_count) return correct values.
 
         Consolidates count property tests into a single parameterized test that
@@ -454,8 +454,6 @@ class TestUpdateResultHelpers:
         single, empty).
         """
         result = update_openhands_charts.UpdateResult(**{field: data})
-        # Property name follows pattern: field_name -> field_count (errors -> error_count)
-        count_property = field.rstrip("s") + "_count"  # errors->error_count, changes->change_count
         assert getattr(result, count_property) == expected_count
 
 
