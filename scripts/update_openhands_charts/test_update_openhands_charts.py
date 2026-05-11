@@ -5,7 +5,6 @@
 # ///
 """Unit tests for update_openhands_charts.py."""
 
-import base64
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
@@ -667,16 +666,7 @@ env:
   OTHER_VAR: value
 """
 
-    @pytest.fixture
-    def mock_successful_response(self):
-        """Create a mock response with valid workflow content."""
-        encoded_content = base64.b64encode(self.VALID_WORKFLOW_YAML.encode()).decode()
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.json.return_value = {"content": encoded_content}
-        return mock_response
-
-    def test_returns_deploy_config_instance_on_success(self, monkeypatch, mock_successful_response):
+    def test_returns_deploy_config_instance_on_success(self, monkeypatch, make_workflow_response):
         """Test that a valid response yields a non-None DeployConfig instance.
 
         Type-level contract: callers rely on the returned object being a
@@ -687,14 +677,14 @@ env:
         """
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
-            Mock(return_value=mock_successful_response)
+            Mock(return_value=make_workflow_response(self.VALID_WORKFLOW_YAML))
         )
 
         result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
 
         assert isinstance(result, DeployConfig)
 
-    def test_runtime_api_sha_parsed_from_workflow_env(self, monkeypatch, mock_successful_response):
+    def test_runtime_api_sha_parsed_from_workflow_env(self, monkeypatch, make_workflow_response):
         """Test that runtime_api_sha is correctly extracted from the workflow env section.
 
         Value-extraction contract: the RUNTIME_API_SHA key in the workflow's
@@ -703,16 +693,16 @@ env:
         """
         monkeypatch.setattr(
             "update_openhands_charts.requests.get",
-            Mock(return_value=mock_successful_response)
+            Mock(return_value=make_workflow_response(self.VALID_WORKFLOW_YAML))
         )
 
         result = get_deploy_config("fake-token", "owner/repo", ref="1.0.0")
 
         assert result.runtime_api_sha == "abc123def456"
 
-    def test_constructs_correct_url_without_ref(self, monkeypatch, mock_successful_response):
+    def test_constructs_correct_url_without_ref(self, monkeypatch, make_workflow_response):
         """Test that URL is constructed correctly without ref parameter."""
-        mock_get = Mock(return_value=mock_successful_response)
+        mock_get = Mock(return_value=make_workflow_response(self.VALID_WORKFLOW_YAML))
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
         get_deploy_config("fake-token", "owner/repo")
@@ -721,9 +711,9 @@ env:
         assert called_url == "https://api.github.com/repos/owner/repo/contents/.github/workflows/deploy.yaml"
         assert "?ref=" not in called_url
 
-    def test_constructs_correct_url_with_ref(self, monkeypatch, mock_successful_response):
+    def test_constructs_correct_url_with_ref(self, monkeypatch, make_workflow_response):
         """Test that URL includes ref parameter when provided."""
-        mock_get = Mock(return_value=mock_successful_response)
+        mock_get = Mock(return_value=make_workflow_response(self.VALID_WORKFLOW_YAML))
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
         get_deploy_config("fake-token", "owner/repo", ref="v1.2.3")
@@ -731,9 +721,9 @@ env:
         called_url = mock_get.call_args[0][0]
         assert "?ref=v1.2.3" in called_url
 
-    def test_includes_authorization_header(self, monkeypatch, mock_successful_response):
+    def test_includes_authorization_header(self, monkeypatch, make_workflow_response):
         """Test that Authorization header is included with token."""
-        mock_get = Mock(return_value=mock_successful_response)
+        mock_get = Mock(return_value=make_workflow_response(self.VALID_WORKFLOW_YAML))
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
         get_deploy_config("my-secret-token", "owner/repo")
