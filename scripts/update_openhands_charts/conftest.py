@@ -532,6 +532,63 @@ def mock_main_early_exit(monkeypatch):
 
 
 @pytest.fixture
+def stub_cloud_tag_exists(monkeypatch):
+    """Factory fixture that stubs `update_openhands_charts.cloud_tag_exists` to return a fixed bool."""
+    def _stub(exists: bool):
+        monkeypatch.setattr(
+            "update_openhands_charts.cloud_tag_exists",
+            lambda token, repo, tag: exists,
+        )
+    return _stub
+
+
+@pytest.fixture
+def stub_latest_cloud_tag(monkeypatch):
+    """Factory fixture that stubs `update_openhands_charts.get_latest_cloud_tag` to return a fixed value."""
+    def _stub(tag: str | None):
+        monkeypatch.setattr(
+            "update_openhands_charts.get_latest_cloud_tag",
+            lambda token, repo: tag,
+        )
+    return _stub
+
+
+@pytest.fixture
+def stub_process_updates_chain(monkeypatch):
+    """Factory fixture for stubbing the call chain inside process_updates().
+
+    Defaults give a fully-successful chain up to the deploy-config fetch.
+    Pass None to any kwarg to simulate that step failing — this triggers the
+    corresponding early-return guard so tests can verify downstream calls
+    are skipped.
+
+    Usage:
+        def test_runtime_tag_guard(stub_process_updates_chain):
+            stub_process_updates_chain(runtime_image_tag=None)
+            process_updates("token")
+            # ... assert downstream call was NOT made
+    """
+    def _stub(
+        openhands_version: str | None = "cloud-1.20.0",
+        current_app_version: str | None = "cloud-1.19.0",
+        runtime_image_tag: str | None = "1.20.0-python",
+    ):
+        monkeypatch.setattr(
+            "update_openhands_charts.resolve_openhands_version",
+            lambda token, cloud_tag: openhands_version,
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_current_app_version",
+            lambda path: current_app_version,
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
+            lambda token, repo, ref: runtime_image_tag,
+        )
+    return _stub
+
+
+@pytest.fixture
 def make_workflow_response():
     """Factory fixture for creating mock GitHub API responses with workflow content.
 

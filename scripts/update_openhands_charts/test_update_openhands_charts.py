@@ -906,46 +906,34 @@ class TestResolveOpenhandsVersion:
     tag or the latest tag fetched from GitHub.
     """
 
-    def test_returns_specified_tag_when_it_exists(self, monkeypatch):
+    def test_returns_specified_tag_when_it_exists(self, stub_cloud_tag_exists):
         """When cloud_tag is provided and exists in the repo, return it."""
-        monkeypatch.setattr(
-            "update_openhands_charts.cloud_tag_exists",
-            lambda token, repo, tag: True,
-        )
+        stub_cloud_tag_exists(True)
 
         result = resolve_openhands_version("token", "cloud-1.20.0")
 
         assert result == "cloud-1.20.0"
 
-    def test_returns_none_when_specified_tag_does_not_exist(self, monkeypatch, capsys):
+    def test_returns_none_when_specified_tag_does_not_exist(self, stub_cloud_tag_exists, capsys):
         """When cloud_tag is provided but not found in the repo, return None and print error."""
-        monkeypatch.setattr(
-            "update_openhands_charts.cloud_tag_exists",
-            lambda token, repo, tag: False,
-        )
+        stub_cloud_tag_exists(False)
 
         result = resolve_openhands_version("token", "cloud-99.0.0")
 
         assert result is None
         assert "does not exist" in capsys.readouterr().out
 
-    def test_fetches_latest_tag_when_no_tag_specified(self, monkeypatch):
+    def test_fetches_latest_tag_when_no_tag_specified(self, stub_latest_cloud_tag):
         """When no cloud_tag is given, returns the latest cloud tag from GitHub."""
-        monkeypatch.setattr(
-            "update_openhands_charts.get_latest_cloud_tag",
-            lambda token, repo: "cloud-1.20.0",
-        )
+        stub_latest_cloud_tag("cloud-1.20.0")
 
         result = resolve_openhands_version("token", None)
 
         assert result == "cloud-1.20.0"
 
-    def test_returns_none_and_prints_when_no_tags_found(self, monkeypatch, capsys):
+    def test_returns_none_and_prints_when_no_tags_found(self, stub_latest_cloud_tag, capsys):
         """When no cloud_tag is given and none found in repo, return None and print message."""
-        monkeypatch.setattr(
-            "update_openhands_charts.get_latest_cloud_tag",
-            lambda token, repo: None,
-        )
+        stub_latest_cloud_tag(None)
 
         result = resolve_openhands_version("token", None)
 
@@ -1597,12 +1585,9 @@ class TestProcessUpdates:
     upstream data is unavailable.
     """
 
-    def test_returns_early_when_version_resolution_fails(self, monkeypatch):
+    def test_returns_early_when_version_resolution_fails(self, monkeypatch, stub_process_updates_chain):
         """When resolve_openhands_version returns None, no deploy config fetch is attempted."""
-        monkeypatch.setattr(
-            "update_openhands_charts.resolve_openhands_version",
-            lambda token, cloud_tag: None,
-        )
+        stub_process_updates_chain(openhands_version=None)
         mock_get_deploy_config = MagicMock()
         monkeypatch.setattr("update_openhands_charts.get_deploy_config", mock_get_deploy_config)
 
@@ -1610,20 +1595,9 @@ class TestProcessUpdates:
 
         mock_get_deploy_config.assert_not_called()
 
-    def test_returns_early_when_runtime_image_tag_unavailable(self, monkeypatch, capsys):
+    def test_returns_early_when_runtime_image_tag_unavailable(self, monkeypatch, stub_process_updates_chain, capsys):
         """When runtime image tag fetch fails, no deploy config fetch is attempted."""
-        monkeypatch.setattr(
-            "update_openhands_charts.resolve_openhands_version",
-            lambda token, cloud_tag: "cloud-1.20.0",
-        )
-        monkeypatch.setattr(
-            "update_openhands_charts.get_current_app_version",
-            lambda path: "cloud-1.19.0",
-        )
-        monkeypatch.setattr(
-            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
-            lambda token, repo, ref: None,
-        )
+        stub_process_updates_chain(runtime_image_tag=None)
         mock_get_deploy_config = MagicMock()
         monkeypatch.setattr("update_openhands_charts.get_deploy_config", mock_get_deploy_config)
 
@@ -1632,20 +1606,9 @@ class TestProcessUpdates:
         mock_get_deploy_config.assert_not_called()
         assert "Could not fetch runtime image tag" in capsys.readouterr().out
 
-    def test_returns_early_when_deploy_config_unavailable(self, monkeypatch, capsys):
+    def test_returns_early_when_deploy_config_unavailable(self, monkeypatch, stub_process_updates_chain, capsys):
         """When deploy config fetch fails, no file updates are attempted."""
-        monkeypatch.setattr(
-            "update_openhands_charts.resolve_openhands_version",
-            lambda token, cloud_tag: "cloud-1.20.0",
-        )
-        monkeypatch.setattr(
-            "update_openhands_charts.get_current_app_version",
-            lambda path: "cloud-1.19.0",
-        )
-        monkeypatch.setattr(
-            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
-            lambda token, repo, ref: "1.20.0-python",
-        )
+        stub_process_updates_chain()
         monkeypatch.setattr(
             "update_openhands_charts.get_deploy_config",
             lambda token, repo, ref: None,
