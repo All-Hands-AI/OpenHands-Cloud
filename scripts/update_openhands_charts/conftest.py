@@ -339,7 +339,7 @@ image:
 
 runtime:
   image:
-    repository: ghcr.io/openhands/runtime
+    repository: ghcr.io/openhands/agent-server
     tag: cloud-1.0.0-nikolaik
   runAsRoot: true
 
@@ -351,7 +351,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
         working_dir: "/openhands/code/"
 """
 
@@ -366,7 +366,7 @@ image:
 
 runtime:
   image:
-    repository: ghcr.io/openhands/runtime
+    repository: ghcr.io/openhands/agent-server
     tag: cloud-1.0.0-nikolaik
 
 runtime-api:
@@ -374,7 +374,7 @@ runtime-api:
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
 """
 
 
@@ -398,7 +398,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+      image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
       working_dir: "/openhands/code/"
       environment: {}
 """

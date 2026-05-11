@@ -962,7 +962,7 @@ class TestUpdateValues:
             runtime_image_tag="cloud-1.1.0-nikolaik",
         )
 
-        assert_file_contains(temp_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
+        assert_file_contains(temp_values_file, 'image: "ghcr.io/openhands/agent-server:cloud-1.1.0-nikolaik"')
 
     def test_idempotent_when_reapplying_same_values(self, temp_values_file):
         """Test that reapplying identical values is idempotent.
@@ -1038,14 +1038,14 @@ image:
 
 runtime:
   image:
-    repository: ghcr.io/openhands/runtime
+    repository: ghcr.io/openhands/agent-server
     tag: cloud-1.0.0-nikolaik
 
 runtime-api:
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
 """
         temp_file = make_temp_yaml_file(values_content)
 
@@ -1075,7 +1075,7 @@ runtime-api:
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/runtime:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
 """
         temp_file = make_temp_yaml_file(values_content)
 
@@ -1103,7 +1103,7 @@ image:
 
 runtime:
   image:
-    repository: ghcr.io/openhands/runtime
+    repository: ghcr.io/openhands/agent-server
     tag: cloud-1.0.0-nikolaik
 
 runtime-api:
@@ -1451,7 +1451,7 @@ class TestUpdateRuntimeApiValues:
         )
 
         # Should use runtime_image_tag from deploy config
-        assert_file_contains(temp_runtime_api_values_file, 'image: "ghcr.io/openhands/runtime:cloud-1.1.0-nikolaik"')
+        assert_file_contains(temp_runtime_api_values_file, 'image: "ghcr.io/openhands/agent-server:cloud-1.1.0-nikolaik"')
 
     def test_idempotent_when_reapplying_same_values(self, temp_runtime_api_values_file):
         """Test that reapplying identical values is idempotent.

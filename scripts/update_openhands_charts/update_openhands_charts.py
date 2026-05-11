@@ -41,9 +41,9 @@ ENTERPRISE_SERVER_TAG_PATTERN = (
     r"(image:\s*\n\s*repository:\s*ghcr\.io/openhands/enterprise-server\s*\n\s*tag:\s*)(\S+)"
 )
 RUNTIME_TAG_PATTERN = (
-    r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/runtime\s*\n\s*tag:\s*)(\S+)"
+    r"(runtime:\s*\n\s*image:\s*\n\s*repository:\s*ghcr\.io/openhands/agent-server\s*\n\s*tag:\s*)(\S+)"
 )
-WARM_RUNTIMES_TAG_PATTERN = r'(image:\s*"ghcr\.io/openhands/runtime:)([^"]+)"'
+WARM_RUNTIMES_TAG_PATTERN = r'(image:\s*"ghcr\.io/openhands/agent-server:)([^"]+)"'
 RUNTIME_API_TAG_PATTERN = (
     r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
 )
