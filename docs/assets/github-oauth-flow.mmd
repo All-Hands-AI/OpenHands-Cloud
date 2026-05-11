@@ -49,7 +49,7 @@ sequenceDiagram
     OpenHands->>Keycloak: GET /realms/allhands/broker/github/token<br/>Authorization: Bearer <keycloak_access_token>
     Keycloak-->>OpenHands: GitHub access_token (ghu_...)
 
-    OpenHands->>DB: Store GitHub token in AuthTokenStore
+    OpenHands->>DB: Store GitHub token in SecretsStore
 
     Note over OpenHands: User logged in<br/>Session created
 
@@ -72,12 +72,12 @@ sequenceDiagram
 
     Browser->>OpenHands: API request (e.g., list repos)
 
-    OpenHands->>DB: Load GitHub token from AuthTokenStore
+    OpenHands->>DB: Load GitHub token from SecretsStore
 
     alt Token Expired
         OpenHands->>GitHub: POST /login/oauth/access_token<br/>grant_type=refresh_token<br/>(direct refresh with GitHub)
         GitHub-->>OpenHands: New access_token
-        OpenHands->>DB: Update token in AuthTokenStore
+        OpenHands->>DB: Update token in SecretsStore
     end
 
     OpenHands->>GitHub: API call with GitHub token<br/>Authorization: Bearer ghu_...
