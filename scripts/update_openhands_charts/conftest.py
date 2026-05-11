@@ -37,7 +37,7 @@ Usage Example
 import base64
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from ruamel.yaml import YAML
@@ -546,6 +546,54 @@ def make_workflow_response():
         return mock_response
 
     return _make_response
+
+
+# =============================================================================
+# Mock response helpers for get_deploy_config error path tests
+# These plain functions (not fixtures) are used inside @pytest.mark.parametrize
+# decorators, which are evaluated at class scope where fixtures cannot be
+# injected. They centralize mock-response construction for error scenarios.
+# =============================================================================
+
+def make_http_error_response(status_code: int, message: str) -> Mock:
+    """Create a mock requests.get that raises an exception on raise_for_status()."""
+    mock_response = Mock()
+    mock_response.status_code = status_code
+    mock_response.raise_for_status.side_effect = Exception(f"HTTP {status_code}: {message}")
+    return Mock(return_value=mock_response)
+
+
+def make_json_error_response() -> Mock:
+    """Create a mock requests.get whose .json() call raises an exception."""
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.side_effect = Exception("Invalid JSON")
+    return Mock(return_value=mock_response)
+
+
+def make_missing_key_response(json_data: dict) -> Mock:
+    """Create a mock requests.get returning JSON with the given (possibly incomplete) data."""
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.return_value = json_data
+    return Mock(return_value=mock_response)
+
+
+def make_invalid_base64_response(invalid_content: str) -> Mock:
+    """Create a mock requests.get returning JSON with malformed base64 content."""
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.return_value = {"content": invalid_content}
+    return Mock(return_value=mock_response)
+
+
+def make_invalid_yaml_response(invalid_yaml: str) -> Mock:
+    """Create a mock requests.get returning valid base64 but invalid YAML content."""
+    encoded = base64.b64encode(invalid_yaml.encode()).decode()
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.json.return_value = {"content": encoded}
+    return Mock(return_value=mock_response)
 
 
 @pytest.fixture

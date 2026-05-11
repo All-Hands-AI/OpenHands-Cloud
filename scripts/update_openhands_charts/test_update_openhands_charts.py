@@ -22,6 +22,12 @@ from conftest import (
     assert_version_bumped,
     get_chart_value,
     get_dependency_version,
+    # Mock response helpers for get_deploy_config error path tests
+    make_http_error_response,
+    make_invalid_base64_response,
+    make_invalid_yaml_response,
+    make_json_error_response,
+    make_missing_key_response,
     # Fixture baseline constants for self-documenting assertions
     OPENHANDS_CHART_VERSION,
     OPENHANDS_CHART_APP_VERSION,
@@ -764,15 +770,15 @@ env:
         # =====================================================================
         (
             "connection_timeout",
-            lambda Mock, _: Mock(side_effect=Exception("Connection timed out")),
+            lambda: Mock(side_effect=Exception("Connection timed out")),
         ),
         (
             "connection_refused",
-            lambda Mock, _: Mock(side_effect=Exception("Connection refused")),
+            lambda: Mock(side_effect=Exception("Connection refused")),
         ),
         (
             "dns_resolution_failed",
-            lambda Mock, _: Mock(side_effect=Exception("Name resolution failed")),
+            lambda: Mock(side_effect=Exception("Name resolution failed")),
         ),
         # =====================================================================
         # HTTP error responses (4xx client errors vs 5xx server errors)
@@ -781,27 +787,27 @@ env:
         # =====================================================================
         (
             "http_401_unauthorized",
-            lambda Mock, _: _make_http_error_response(Mock, 401, "Unauthorized"),
+            lambda: make_http_error_response(401, "Unauthorized"),
         ),
         (
             "http_403_forbidden",
-            lambda Mock, _: _make_http_error_response(Mock, 403, "Forbidden"),
+            lambda: make_http_error_response(403, "Forbidden"),
         ),
         (
             "http_404_not_found",
-            lambda Mock, _: _make_http_error_response(Mock, 404, "Not Found"),
+            lambda: make_http_error_response(404, "Not Found"),
         ),
         (
             "http_500_server_error",
-            lambda Mock, _: _make_http_error_response(Mock, 500, "Internal Server Error"),
+            lambda: make_http_error_response(500, "Internal Server Error"),
         ),
         (
             "http_502_bad_gateway",
-            lambda Mock, _: _make_http_error_response(Mock, 502, "Bad Gateway"),
+            lambda: make_http_error_response(502, "Bad Gateway"),
         ),
         (
             "http_503_unavailable",
-            lambda Mock, _: _make_http_error_response(Mock, 503, "Service Unavailable"),
+            lambda: make_http_error_response(503, "Service Unavailable"),
         ),
         # =====================================================================
         # Response parsing errors (data corruption or API contract violations)
@@ -810,15 +816,15 @@ env:
         # =====================================================================
         (
             "invalid_json_response",
-            lambda Mock, _: _make_json_error_response(Mock),
+            lambda: make_json_error_response(),
         ),
         (
             "missing_content_key",
-            lambda Mock, _: _make_missing_key_response(Mock, {}),
+            lambda: make_missing_key_response({}),
         ),
         (
             "null_content_value",
-            lambda Mock, _: _make_missing_key_response(Mock, {"content": None}),
+            lambda: make_missing_key_response({"content": None}),
         ),
         # =====================================================================
         # Base64 decoding errors (corrupted file content in repository)
@@ -827,11 +833,11 @@ env:
         # =====================================================================
         (
             "invalid_base64_content",
-            lambda Mock, _: _make_invalid_base64_response(Mock, "not-valid-base64!!!"),
+            lambda: make_invalid_base64_response("not-valid-base64!!!"),
         ),
         (
             "corrupted_base64_content",
-            lambda Mock, _: _make_invalid_base64_response(Mock, "YWJj==="),  # Invalid padding
+            lambda: make_invalid_base64_response("YWJj==="),  # Invalid padding
         ),
         # =====================================================================
         # YAML parsing errors (malformed workflow file syntax)
@@ -840,11 +846,11 @@ env:
         # =====================================================================
         (
             "invalid_yaml_syntax",
-            lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "{{invalid: yaml: ::"),
+            lambda: make_invalid_yaml_response("{{invalid: yaml: ::"),
         ),
         (
             "yaml_with_tabs",
-            lambda Mock, base64: _make_invalid_yaml_response(Mock, base64, "env:\n\t\tinvalid_indent: true"),
+            lambda: make_invalid_yaml_response("env:\n\t\tinvalid_indent: true"),
         ),
     ])
     def test_returns_none_and_prints_error(self, error_name, setup_mock, monkeypatch, capsys):
@@ -858,7 +864,7 @@ env:
         deploy config is temporarily unavailable, while providing clear diagnostic
         output for operators to investigate and resolve the underlying issue.
         """
-        mock_get = setup_mock(Mock, base64)
+        mock_get = setup_mock()
         monkeypatch.setattr("update_openhands_charts.requests.get", mock_get)
 
         result = get_deploy_config("fake-token", "owner/repo")
@@ -868,48 +874,6 @@ env:
         assert "Error fetching deploy config" in captured.out, (
             f"Expected error message for {error_name}, got: {captured.out}"
         )
-
-
-# Helper functions for parameterized test setup
-def _make_http_error_response(Mock, status_code, message):
-    """Create a mock that raises HTTPError on raise_for_status()."""
-    mock_response = Mock()
-    mock_response.status_code = status_code
-    mock_response.raise_for_status.side_effect = Exception(f"HTTP {status_code}: {message}")
-    return Mock(return_value=mock_response)
-
-
-def _make_json_error_response(Mock):
-    """Create a mock that raises error on .json() call."""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.side_effect = Exception("Invalid JSON")
-    return Mock(return_value=mock_response)
-
-
-def _make_missing_key_response(Mock, json_data):
-    """Create a mock with JSON response missing required keys."""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.return_value = json_data
-    return Mock(return_value=mock_response)
-
-
-def _make_invalid_base64_response(Mock, invalid_content):
-    """Create a mock with invalid base64 content."""
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.return_value = {"content": invalid_content}
-    return Mock(return_value=mock_response)
-
-
-def _make_invalid_yaml_response(Mock, base64_module, invalid_yaml):
-    """Create a mock with valid base64 but invalid YAML content."""
-    encoded = base64_module.b64encode(invalid_yaml.encode()).decode()
-    mock_response = Mock()
-    mock_response.raise_for_status = Mock()
-    mock_response.json.return_value = {"content": encoded}
-    return Mock(return_value=mock_response)
 
 
 class TestResolveOpenhandsVersion:
