@@ -1631,25 +1631,18 @@ class TestMainOutputMessages:
     # Use a test constant to avoid magic strings scattered throughout tests
     MOCK_CLOUD_TAG = "cloud-1.20.0"
 
-    def test_latest_cloud_tag_message_format(self, capsys, mock_main_early_exit):
-        """Test that the latest cloud tag message uses correct format."""
-        mock_tag = self.MOCK_CLOUD_TAG
-        mock_main_early_exit(mock_tag)
+    @pytest.mark.parametrize("message_prefix", [
+        pytest.param("OpenHands cloud tag", id="latest cloud tag line"),
+        pytest.param("OpenHands-Cloud openhands chart appVersion", id="current appVersion line"),
+    ])
+    def test_message_format(self, capsys, mock_main_early_exit, message_prefix):
+        """Verify each main() output line uses the '<prefix>: <cloud_tag>' format."""
+        mock_main_early_exit(self.MOCK_CLOUD_TAG)
 
         main(dry_run=True)
 
         captured = capsys.readouterr()
-        assert f"OpenHands cloud tag: {mock_tag}" in captured.out
-
-    def test_current_app_version_message_format(self, capsys, mock_main_early_exit):
-        """Test that the current appVersion message uses correct format."""
-        mock_tag = self.MOCK_CLOUD_TAG
-        mock_main_early_exit(mock_tag)
-
-        main(dry_run=True)
-
-        captured = capsys.readouterr()
-        assert f"OpenHands-Cloud openhands chart appVersion: {mock_tag}" in captured.out
+        assert f"{message_prefix}: {self.MOCK_CLOUD_TAG}" in captured.out
 
 
 class TestGetLatestCloudTag:
