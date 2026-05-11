@@ -341,15 +341,19 @@ class TestUpdateChart:
 
     def test_maintainers_count_preserved_after_update(self, temp_chart_file):
         """Verify maintainers list length is not modified by chart update."""
+        original_count = len(get_chart_value(temp_chart_file, "maintainers"))
+
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
-        assert len(get_chart_value(temp_chart_file, "maintainers")) == 1
+        assert len(get_chart_value(temp_chart_file, "maintainers")) == original_count
 
     def test_dependencies_count_preserved_after_update(self, temp_chart_file):
         """Verify dependencies list length is not modified by chart update."""
+        original_count = len(get_chart_value(temp_chart_file, "dependencies"))
+
         update_openhands_chart(temp_chart_file, NEW_APP_VERSION, NEW_RUNTIME_API_VERSION)
 
-        assert len(get_chart_value(temp_chart_file, "dependencies")) == 2
+        assert len(get_chart_value(temp_chart_file, "dependencies")) == original_count
 
 
 
@@ -1446,9 +1450,11 @@ class TestUpdateRuntimeApiChart:
 
     def test_dependencies_count_preserved_after_version_bump(self, temp_runtime_api_chart_file):
         """Verify dependencies list length is not modified by runtime-api chart version bump."""
+        original_count = len(get_chart_value(temp_runtime_api_chart_file, "dependencies"))
+
         update_runtime_api_chart(temp_runtime_api_chart_file)
 
-        assert len(get_chart_value(temp_runtime_api_chart_file, "dependencies")) == 1
+        assert len(get_chart_value(temp_runtime_api_chart_file, "dependencies")) == original_count
 
     def test_dry_run_no_file_changes(self, temp_runtime_api_chart_file):
         """Test that dry-run doesn't modify the file."""
