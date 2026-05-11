@@ -2,7 +2,7 @@ sequenceDiagram
     autonumber
     participant Browser
     participant OpenHands as OpenHands (Enterprise Server)<br/>also hosts /bitbucket-dc-proxy/oauth2/userinfo<br/>(OIDC userinfo shim for BBDC)
-    participant DB as SecretsStore<br/>(secrets.json)
+    participant DB as SecretsStore
     participant Keycloak as Keycloak<br/>(Identity Provider)
     participant BBDC as Bitbucket Data Center<br/>(OAuth2 Provider)
 
