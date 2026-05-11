@@ -491,7 +491,10 @@ def mock_main_early_exit(monkeypatch):
     Sets up all mocks needed to run main() in a controlled way where it
     exits early (when current appVersion matches latest cloud tag).
 
-    Returns a function that accepts a cloud_tag and sets up all necessary mocks.
+    Returns a function that accepts a cloud_tag and an optional
+    runtime_image_tag, and sets up all necessary mocks. Pass
+    runtime_image_tag (default: None) for tests that exercise the
+    --skip-version-check path past the early-exit guard.
 
     Usage:
         def test_something(mock_main_early_exit, capsys):
@@ -500,7 +503,7 @@ def mock_main_early_exit(monkeypatch):
             captured = capsys.readouterr()
             assert "cloud-1.20.0" in captured.out
     """
-    def _mock_main(cloud_tag: str):
+    def _mock_main(cloud_tag: str, runtime_image_tag: str | None = None):
         # Mock GITHUB_TOKEN environment variable
         monkeypatch.setenv("GITHUB_TOKEN", "dummy-token")
 
@@ -518,6 +521,11 @@ def mock_main_early_exit(monkeypatch):
         monkeypatch.setattr(
             "update_openhands_charts.get_current_app_version",
             lambda path: cloud_tag
+        )
+        # Mock sandbox spec fetch — required when callers skip the early-exit guard
+        monkeypatch.setattr(
+            "update_openhands_charts.get_runtime_image_tag_from_sandbox_spec",
+            lambda token, repo, ref: runtime_image_tag,
         )
 
     return _mock_main
