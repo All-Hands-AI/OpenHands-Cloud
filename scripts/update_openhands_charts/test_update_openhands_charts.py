@@ -33,6 +33,8 @@ from conftest import (
     # Test input constants for update operations
     NEW_APP_VERSION,
     NEW_RUNTIME_API_VERSION,
+    NEW_RUNTIME_IMAGE_TAG,
+    RUNTIME_IMAGE_TAG,
 )
 from update_openhands_charts import (
     DeployConfig,
@@ -987,8 +989,8 @@ class TestUpdateValues:
 
     @pytest.mark.parametrize("expected_content", [
         pytest.param("tag: cloud-1.1.0", id="enterprise-server tag"),
-        pytest.param("tag: cloud-1.1.0-nikolaik", id="runtime tag"),
-        pytest.param('image: "ghcr.io/openhands/agent-server:cloud-1.1.0-nikolaik"', id="warmRuntimes tag"),
+        pytest.param(f"tag: {NEW_RUNTIME_IMAGE_TAG}", id="runtime tag"),
+        pytest.param(f'image: "ghcr.io/openhands/agent-server:{NEW_RUNTIME_IMAGE_TAG}"', id="warmRuntimes tag"),
     ])
     def test_each_image_tag_is_updated(self, temp_values_file, expected_content):
         """Test that enterprise-server, runtime, and warmRuntimes image tags are each updated.
@@ -999,7 +1001,7 @@ class TestUpdateValues:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert_file_contains(temp_values_file, expected_content)
@@ -1019,14 +1021,14 @@ class TestUpdateValues:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
-            runtime_image_tag="cloud-1.0.0-nikolaik",
+            runtime_image_tag=RUNTIME_IMAGE_TAG,
         )
 
         # Step 2: Reapply same values (tests idempotency)
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.0.0",
-            runtime_image_tag="cloud-1.0.0-nikolaik",
+            runtime_image_tag=RUNTIME_IMAGE_TAG,
         )
 
         # Verify: Boolean flag correctly indicates no changes
@@ -1042,7 +1044,7 @@ class TestUpdateValues:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert_file_contains_all(temp_values_file, [
@@ -1057,7 +1059,7 @@ class TestUpdateValues:
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert result.has_changes is True
@@ -1079,20 +1081,20 @@ image:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: cloud-1.0.0-nikolaik
+    tag: 1.0.0-python
 
 runtime-api:
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:1.0.0-python"
 """
         temp_file = make_temp_yaml_file(values_content)
 
         result = update_openhands_values(
             temp_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert result.has_error_containing("Could not find enterprise-server image tag")
@@ -1115,14 +1117,14 @@ runtime-api:
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:1.0.0-python"
 """
         temp_file = make_temp_yaml_file(values_content)
 
         result = update_openhands_values(
             temp_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert result.has_error_containing("Could not find runtime image tag")
@@ -1144,7 +1146,7 @@ image:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: cloud-1.0.0-nikolaik
+    tag: 1.0.0-python
 
 runtime-api:
   warmRuntimes:
@@ -1155,7 +1157,7 @@ runtime-api:
         result = update_openhands_values(
             temp_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert result.has_error_containing("Could not find warmRuntimes image tag")
@@ -1179,7 +1181,7 @@ serviceAccount:
         result = update_openhands_values(
             temp_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert result.error_count == 3
@@ -1383,7 +1385,7 @@ class TestDryRun:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
             dry_run=True,
         )
 
@@ -1396,7 +1398,7 @@ class TestDryRun:
         result = update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
             dry_run=True,
         )
 
@@ -1425,7 +1427,7 @@ class TestDryRun:
         update_openhands_values(
             temp_values_file,
             openhands_version="cloud-1.1.0",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
             dry_run=False,
         )
 
@@ -1492,7 +1494,7 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert_file_contains(temp_runtime_api_values_file, "tag: sha-abc1234")
@@ -1502,11 +1504,11 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         # Should use runtime_image_tag from deploy config
-        assert_file_contains(temp_runtime_api_values_file, 'image: "ghcr.io/openhands/agent-server:cloud-1.1.0-nikolaik"')
+        assert_file_contains(temp_runtime_api_values_file, f'image: "ghcr.io/openhands/agent-server:{NEW_RUNTIME_IMAGE_TAG}"')
 
     def test_idempotent_when_reapplying_same_values(self, temp_runtime_api_values_file):
         """Test that reapplying identical values is idempotent.
@@ -1518,14 +1520,14 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         # Step 2: Reapply same values
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         # Verify: Boolean flag correctly indicates no changes
@@ -1540,7 +1542,7 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert_file_contains_all(temp_runtime_api_values_file, [
@@ -1555,7 +1557,7 @@ class TestUpdateRuntimeApiValues:
         update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
             dry_run=True,
         )
 
@@ -1566,7 +1568,7 @@ class TestUpdateRuntimeApiValues:
         result = update_runtime_api_values(
             temp_runtime_api_values_file,
             runtime_api_sha="abc1234567890def",
-            runtime_image_tag="cloud-1.1.0-nikolaik",
+            runtime_image_tag=NEW_RUNTIME_IMAGE_TAG,
         )
 
         assert result.has_changes is True

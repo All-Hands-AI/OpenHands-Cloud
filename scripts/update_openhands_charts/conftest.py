@@ -73,6 +73,9 @@ RUNTIME_API_CHART_MINIMAL_APP_VERSION = "0.1.0"
 # New versions used when testing chart updates
 NEW_APP_VERSION = "cloud-2.0.0"  # OpenHands appVersion uses cloud-X.Y.Z tags
 NEW_RUNTIME_API_VERSION = "0.2.0"
+# Runtime image tag constants — agent-server uses X.Y.Z-python format (no cloud- prefix)
+RUNTIME_IMAGE_TAG = "1.0.0-python"       # Baseline tag matching sample fixtures
+NEW_RUNTIME_IMAGE_TAG = "1.1.0-python"   # New tag used when testing updates
 
 
 def get_dependency_version(file_path: Path, dep_name: str) -> str | None:
@@ -340,7 +343,7 @@ image:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: cloud-1.0.0-nikolaik
+    tag: 1.0.0-python
   runAsRoot: true
 
 runtime-api:
@@ -351,7 +354,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:1.0.0-python"
         working_dir: "/openhands/code/"
 """
 
@@ -367,14 +370,14 @@ image:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: cloud-1.0.0-nikolaik
+    tag: 1.0.0-python
 
 runtime-api:
   enabled: true
   warmRuntimes:
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
+        image: "ghcr.io/openhands/agent-server:1.0.0-python"
 """
 
 
@@ -398,7 +401,7 @@ warmRuntimes:
   count: 0
   configs:
     - name: default
-      image: "ghcr.io/openhands/agent-server:cloud-1.0.0-nikolaik"
+      image: "ghcr.io/openhands/agent-server:1.0.0-python"
       working_dir: "/openhands/code/"
       environment: {}
 """

@@ -400,7 +400,7 @@ def update_openhands_values(
     Args:
         values_path: Path to the values.yaml file
         openhands_version: The cloud version tag (e.g., 'cloud-1.21.0')
-        runtime_image_tag: The runtime image tag from deploy config (e.g., 'cloud-1.21.0-nikolaik')
+        runtime_image_tag: The agent-server image tag from sandbox spec (e.g., '1.21.0-python')
         dry_run: If True, don't write changes to file
 
     Returns UpdateResult containing changes made.
@@ -511,7 +511,7 @@ def update_runtime_api_values(
     Args:
         values_path: Path to the values.yaml file
         runtime_api_sha: The runtime-api commit SHA
-        runtime_image_tag: The runtime image tag from deploy config (e.g., 'cloud-1.21.0-nikolaik')
+        runtime_image_tag: The agent-server image tag from sandbox spec (e.g., '1.21.0-python')
         dry_run: If True, don't write changes to file
 
     Returns UpdateResult containing changes made.
