@@ -416,6 +416,20 @@ laminar:
         clusterIssuer: ""
       annotations: {}
 
+  # Pin to laminar 0.1.9's default. K8s forbids changing StatefulSet
+  # volumeClaimTemplates in place; the 0.1.10 default of 100Gi breaks
+  # `helm upgrade` with "spec: Forbidden". With replicaCount: 1 this
+  # value only describes the template, never new replicas.
+  #
+  # To grow rabbitmq disk where size is actually enforced (e.g. GKE
+  # hyperdisk-balanced), patch the live PVC out of band with
+  # `kubectl patch pvc`. On Replicated's openebs-hostpath this is a
+  # no-op — the LocalPV-hostpath provisioner has no resize handler
+  # and hostpath capacity is metadata only.
+  rabbitmq:
+    persistence:
+      size: "50Gi"
+
 litellm-helm:
   # Set this to false if you are using your own litellm instance
   # NOTE: We recommend using the provided LiteLLM instance (enabled: true) for simplicity
