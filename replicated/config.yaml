@@ -114,6 +114,8 @@ spec:
               title: "Groq"
             - name: "openrouter"
               title: "OpenRouter"
+            - name: "bedrock"
+              title: "AWS Bedrock"
             - name: "custom"
               title: "Custom/Local LLM"
         - name: anthropic_api_key
@@ -243,6 +245,44 @@ spec:
           type: password
           when: 'repl{{ ConfigOptionEquals "llm_provider" "openrouter" }}'
           required: true
+        - name: aws_auth_method
+          title: AWS Authentication Method
+          help_text: How LiteLLM authenticates to AWS Bedrock. "EC2 Instance Profile" requires OpenHands to be running on an EC2 instance with an attached IAM role that has bedrock:InvokeModel* permissions. In containerized deployments, the EC2 instance metadata service hop limit must be at least 2 so pods can reach IMDS.
+          type: select_one
+          default: "static_keys"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
+          required: true
+          items:
+            - name: "static_keys"
+              title: "Access Key + Secret"
+            - name: "instance_profile"
+              title: "EC2 Instance Profile"
+        - name: aws_access_key_id
+          title: AWS Access Key ID
+          help_text: AWS access key with bedrock:InvokeModel and bedrock:InvokeModelWithResponseStream permissions.
+          type: text
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "bedrock") (ConfigOptionEquals "aws_auth_method" "static_keys") }}'
+          required: true
+        - name: aws_secret_access_key
+          title: AWS Secret Access Key
+          help_text: Secret access key paired with the AWS Access Key ID above.
+          type: password
+          when: 'repl{{ and (ConfigOptionEquals "llm_provider" "bedrock") (ConfigOptionEquals "aws_auth_method" "static_keys") }}'
+          required: true
+        - name: aws_region_name
+          title: AWS Region
+          help_text: AWS region where Bedrock model access has been granted (e.g., us-west-2, us-east-1). Cross-region inference profile IDs (us.anthropic.*) work in any US region.
+          type: text
+          default: "us-west-2"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
+          required: true
+        - name: bedrock_model_id
+          title: Bedrock Model ID
+          help_text: Bedrock model ID or cross-region inference profile ID. Cross-region profiles (prefix `us.`) work in any US region; standard model IDs are region-specific. Most current Claude models on Bedrock are inference-profile only (e.g., `us.anthropic.claude-sonnet-4-5-20250929-v1:0`).
+          type: text
+          default: "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+          when: 'repl{{ ConfigOptionEquals "llm_provider" "bedrock" }}'
+          required: true
         - name: custom_base_url
           title: Custom LLM Base URL
           help_text: Base URL for your custom or local LLM endpoint
@@ -349,6 +389,18 @@ spec:
           value: '{{repl RandomString 32}}'
         - name: plugin_directory_session_secret
           title: Plugin Directory Session Secret
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: automation_service_key
+          title: Automation Service Key
+          help_text: Secret key for the automation service
+          type: password
+          hidden: true
+          value: '{{repl RandomString 32}}'
+        - name: automation_webhook_secret
+          title: Automation Webhook Secret
+          help_text: Secret for validating automation webhooks
           type: password
           hidden: true
           value: '{{repl RandomString 32}}'
@@ -710,12 +762,29 @@ spec:
           when: 'repl{{ ConfigOptionEquals "plugin_directory_enabled" "1" }}'
           required: true
 
-    - name: advanced_options
-      title: Advanced Options
-      description: Optional components and advanced configuration settings
+    - name: analytics_configuration
+      title: Analytics Configuration
+      description: Configure LLM observability and tracing with Laminar
       items:
         - name: analytics_enabled
           title: Enable Analytics
           help_text: Enable analytics for LLM observability and tracing
+          type: bool
+          default: "0"
+        - name: laminar_project_api_key
+          title: Laminar Project API Key
+          help_text: |
+            Your Laminar project API key. After enabling analytics and logging in to your Laminar instance via Keycloak, create a project API key in the Laminar UI. Ingest-only keys are strongly recommended — they are write-only and have no read access, which is more secure than default project API keys.
+          type: password
+          when: 'repl{{ ConfigOptionEquals "analytics_enabled" "1" }}'
+          required: false
+
+    - name: advanced_options
+      title: Advanced Options
+      description: Optional components and advanced configuration settings
+      items:
+        - name: automations_enabled
+          title: Enable Automations
+          help_text: Deploy the Automations UI and backend. If you use an external PostgreSQL instance, make sure the automations database requirements are satisfied before enabling this option.
           type: bool
           default: "0"
