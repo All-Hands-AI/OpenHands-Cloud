@@ -320,6 +320,10 @@ spec:
 
     replicated:
       enabled: true
+      redisPassword: 'repl{{ ConfigOption "redis_password" }}'
+      postgresUsername: 'repl{{ ConfigOption "postgres_username" }}'
+      postgresPassword: 'repl{{ ConfigOption "postgres_password" }}'
+      postgresDatabase: 'repl{{ ConfigOption "postgres_database" }}'
       image:
         registry: images.r9.all-hands.dev
         repository: library/replicated-sdk-image
