@@ -8,5 +8,5 @@ dependencies:
 - name: crd-check
   repository: oci://ghcr.io/all-hands-ai/helm-charts
   version: 0.1.0
-digest: sha256:c50cea506c46fb84db085fbe17509758f5baf083d8625dc56031fe06dbffd5c1
-generated: "2026-05-13T16:43:44.751144-05:00"
+digest: sha256:3e28e70aa364756fd5869cfe1dc85275396e4b87149932c1be8bef39b10ac6c5
+generated: "2026-05-13T15:45:12.067552-05:00"
