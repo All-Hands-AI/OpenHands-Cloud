@@ -106,11 +106,10 @@ spec:
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
-    # Runtime sandbox pod logs. runtime-api spawns these in dynamic
-    # runtime-api-* namespaces with a runtime_id label per sandbox; an empty
-    # namespace searches all namespaces, and a bare label key matches "exists
-    # with any value". Pod/event metadata is already captured by the top-level
-    # clusterResources collector.
+    # Runtime sandbox pod logs. Pod names are dynamic (runtime-*) and the
+    # logs collector has no glob-name support, so select by the runtime_id
+    # label — a bare key matches "label exists with any value". Pod/event
+    # metadata is already captured by the top-level clusterResources collector.
     - logs:
         name: runtime-sandboxes/logs
         selector:
