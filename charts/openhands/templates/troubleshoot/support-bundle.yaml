@@ -140,14 +140,14 @@ spec:
     {{- if and .Values.postgresql.enabled .Values.replicated.enabled }}
     - postgresql:
         collectorName: postgresql
-        uri: postgresql://{{ .Values.replicated.postgresUsername | urlquery }}:{{ .Values.replicated.postgresPassword | urlquery }}@{{ .Release.Name }}-postgresql:5432/{{ .Values.replicated.postgresDatabase }}?sslmode=disable
+        uri: postgresql://{{ .Values.replicated.postgresUsername | urlquery }}:{{ .Values.replicated.postgresPassword | urlquery }}@{{ .Release.Name }}-postgresql.{{ .Release.Namespace }}.svc.cluster.local:5432/{{ .Values.replicated.postgresDatabase }}?sslmode=disable
         tls:
           disabled: true
     {{- end }}
     {{- if and .Values.redis.enabled .Values.replicated.enabled }}
     - redis:
         collectorName: redis
-        uri: redis://default:{{ .Values.replicated.redisPassword | urlquery }}@{{ .Release.Name }}-redis-master:6379
+        uri: redis://default:{{ .Values.replicated.redisPassword | urlquery }}@{{ .Release.Name }}-redis-master.{{ .Release.Namespace }}.svc.cluster.local:6379
     {{- end }}
   analyzers: {{- include "troubleshoot.analyzers.shared" .  | nindent 4 }}
     - deploymentStatus:
