@@ -868,6 +868,15 @@ automation:
 
 replicated:
   enabled: false
+  # Database credentials below are rendered only into the support-bundle Secret
+  # (gated on replicated.enabled), following the same convention as the rest of
+  # replicated/openhands.yaml — the Replicated installer templates ConfigOption
+  # values into Secrets at install time. The troubleshoot v1beta2 redis/postgres
+  # collectors have no secretRef field, so auth must be inlined into the URI.
+  redisPassword: ""
+  postgresUsername: ""
+  postgresPassword: ""
+  postgresDatabase: ""
 
 global:
   security:
