@@ -106,6 +106,18 @@ spec:
           - app.kubernetes.io/instance={{ .Release.Name }}
         limits:
           maxAge: 168h
+    # Runtime sandbox pod logs. runtime-api spawns these in dynamic
+    # runtime-api-* namespaces with a runtime_id label per sandbox; an empty
+    # namespace searches all namespaces, and a bare label key matches "exists
+    # with any value". Pod/event metadata is already captured by the top-level
+    # clusterResources collector.
+    - logs:
+        name: runtime-sandboxes/logs
+        selector:
+          - runtime_id
+        limits:
+          maxAge: 168h
+        timestamps: true
     {{- end }}
     {{- if and (index .Values "litellm-helm") (index .Values "litellm-helm" "enabled") }}
     # LiteLLM logs
