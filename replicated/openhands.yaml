@@ -627,6 +627,26 @@ spec:
                   client_id: os.environ/AZURE_CLIENT_ID
                   client_secret: os.environ/AZURE_CLIENT_SECRET
 
+    # Custom / Local LLM — any OpenAI-compatible endpoint (OpenRouter, vLLM,
+    # Ollama, LM Studio, LiteLLM gateway, etc.). LiteLLM routes via the
+    # generic `openai/<model>` provider, which forwards the request body to
+    # <custom_base_url>/chat/completions with `Authorization: Bearer
+    # <custom_api_key>` headers.
+    - when: '{{repl ConfigOptionEquals "llm_provider" "custom" }}'
+      recursiveMerge: true
+      values:
+        env:
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/custom-llm'
+          OH_AGENT_SERVER_ENV: '{{repl printf "{\"CUSTOM_API_KEY\": \"%s\", \"CUSTOM_API_BASE\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOption "custom_api_key") (ConfigOption "custom_base_url") }}'
+        litellm-helm:
+          proxy_config:
+            model_list:
+              - model_name: 'custom-llm'
+                litellm_params:
+                  model: 'openai/{{repl ConfigOption "custom_model"}}'
+                  api_key: os.environ/CUSTOM_API_KEY
+                  api_base: os.environ/CUSTOM_API_BASE
+
     - when: '{{repl ConfigOptionEquals "google_api_type" "vertex" }}'
       recursiveMerge: true
       values:
