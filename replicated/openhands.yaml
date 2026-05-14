@@ -11,18 +11,18 @@ spec:
   helmUpgradeFlags: ["--wait", "--timeout", "600s"]
   values:
     global:
-      imageRegistry: "images.r9.all-hands.dev"
+      imageRegistry: 'images.r9.all-hands.dev'
       imagePullSecrets:
-        - "{{repl ImagePullSecretName }}"
+        - '{{repl ImagePullSecretName }}'
 
     image:
       repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/enterprise-server'
-      tag: "sha-609d1ee"
+      tag: 'sha-609d1ee'
     imagePullSecrets:
-      - name: "{{repl ImagePullSecretName }}"
+      - name: '{{repl ImagePullSecretName }}'
 
     env:
-      LITELLM_DEFAULT_MODEL: "litellm_proxy/claude-sonnet-4-5-20250929"
+      LITELLM_DEFAULT_MODEL: 'litellm_proxy/claude-sonnet-4-5-20250929'
       REQUIRE_PAYMENT: 0
       ENABLE_BILLING: false
       OH_WEB_CLIENT_FEATURE_FLAGS_ENABLE_BILLING: false
@@ -48,18 +48,18 @@ spec:
 
     tls:
       enabled: true
-      env: "{{repl Namespace }}"
+      env: '{{repl Namespace }}'
 
     runtime:
       image:
         # this is what we need to use for real deployments
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
         # repository: 'ghcr.io/openhands/agent-server'
-        tag: "1.21.1-python"
+        tag: '1.21.1-python'
 
     keycloak:
       enabled: true
-      url: "http://keycloak"
+      url: 'http://keycloak'
       resourcesPreset: none
       resources:
         requests:
@@ -121,7 +121,7 @@ spec:
           readOnly: true
 
     litellm:
-      url: "http://openhands-litellm:4000"
+      url: 'http://openhands-litellm:4000'
 
     litellm-helm:
       enabled: true
@@ -143,7 +143,7 @@ spec:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/berriai/litellm-database'
         tag: "v1.83.14-stable"
       imagePullSecrets:
-        - name: "{{repl ImagePullSecretName }}"
+        - name: '{{repl ImagePullSecretName }}'
       environmentSecrets:
         - litellm-env-secrets
       # caBundle wiring: mount the trust-manager Bundle ConfigMap and point
@@ -201,7 +201,7 @@ spec:
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/runtime-api'
       imagePullSecrets:
-        - name: "{{repl ImagePullSecretName }}"
+        - name: '{{repl ImagePullSecretName }}'
       ingress:
         enabled: true
         className: traefik
@@ -230,7 +230,7 @@ spec:
         DB_USER: '{{repl if ConfigOptionEquals "postgres_type" "external_postgres"}}{{repl ConfigOption "external_postgres_username"}}{{repl else}}postgres{{repl end}}'
         DB_NAME: "runtime_api_db"
         RUNTIME_BASE_URL: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}runtime.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "runtime_base_hostname"}}{{repl end}}'
-        RUNTIME_IMAGE_PULL_SECRETS: "{{repl ImagePullSecretName }}"
+        RUNTIME_IMAGE_PULL_SECRETS: '{{repl ImagePullSecretName }}'
         STORAGE_CLASS: "openebs-hostpath"
         INGRESS_CLASS: "traefik"
         RUNTIME_CLASS: ""
@@ -289,7 +289,7 @@ spec:
           annotations:
             kubernetes.io/ingress.class: traefik
     sandbox:
-      apiHostname: "http://openhands-runtime-api:5000"
+      apiHostname: 'http://openhands-runtime-api:5000'
     postgresql:
       enabled: repl{{ ConfigOptionEquals "postgres_type" "embedded_postgres" }}
     redis:
@@ -306,7 +306,7 @@ spec:
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/quay.io/minio/minio'
       imagePullSecrets:
-        - name: "{{repl ImagePullSecretName }}"
+        - name: '{{repl ImagePullSecretName }}'
     bitbucketDataCenter:
       enabled: repl{{ ConfigOptionEquals "bitbucket_data_center_auth_enabled" "1" }}
       host: 'repl{{ ConfigOption "bitbucket_data_center_domain" }}'
@@ -341,7 +341,7 @@ spec:
       image:
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/rancher/kubectl'
       imagePullSecrets:
-        - name: "{{repl ImagePullSecretName }}"
+        - name: '{{repl ImagePullSecretName }}'
 
     caBundle:
       enabled: true
@@ -449,7 +449,7 @@ spec:
           image:
             repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/automation'
           imagePullSecrets:
-            - name: "{{repl ImagePullSecretName }}"
+            - name: '{{repl ImagePullSecretName }}'
           openhandsApiUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
           automationBaseUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "app_hostname"}}{{repl end}}'
           filestore:
@@ -471,21 +471,21 @@ spec:
           postgresql:
             image:
               repository: 'proxy/{{repl LicenseFieldValue "appSlug"}}/docker.io/bitnamilegacy/postgresql'
-    - when: "{{repl HasLocalRegistry }}"
+    - when: '{{repl HasLocalRegistry }}'
       recursiveMerge: true
       values:
         global:
-          imageRegistry: "{{repl LocalRegistryHost }}"
+          imageRegistry: '{{repl LocalRegistryHost }}'
         image:
-          repository: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/deploy"
+          repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/deploy'
         runtime:
           image:
-            repository: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server"
-            tag: "1.21.1-python"
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server'
+            tag: '1.21.1-python'
           warmRuntimes:
             configs:
               - name: default
-                image: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.21.1-python"
+                image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/agent-server:1.21.1-python'
                 working_dir: "/workspace"
                 environment:
                   LOG_JSON: "1"
@@ -518,34 +518,34 @@ spec:
                 fs_group: 10001
         keycloak:
           image:
-            repository: "{{repl LocalRegistryNamespace }}/keycloak"
+            repository: '{{repl LocalRegistryNamespace }}/keycloak'
           keycloakConfigCli:
             image:
-              repository: "{{repl LocalRegistryNamespace }}/keycloak-config-cli"
+              repository: '{{repl LocalRegistryNamespace }}/keycloak-config-cli'
           waitForDb:
-            image: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest"
+            image: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/postgresql:latest'
         postgresql:
           image:
-            repository: "{{repl LocalRegistryNamespace }}/postgresql"
+            repository: '{{repl LocalRegistryNamespace }}/postgresql'
         redis:
           image:
-            repository: "{{repl LocalRegistryNamespace }}/redis"
+            repository: '{{repl LocalRegistryNamespace }}/redis'
         minio:
           image:
-            repository: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/minio"
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/minio'
         litellm-helm:
           image:
-            repository: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/litellm-database"
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/litellm-database'
         runtime-api:
           image:
-            repository: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/runtime-api"
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/runtime-api'
         replicated:
           image:
-            registry: "{{repl LocalRegistryHost }}"
-            repository: "{{repl LocalRegistryNamespace }}/replicated-sdk-image"
+            registry: '{{repl LocalRegistryHost }}'
+            repository: '{{repl LocalRegistryNamespace }}/replicated-sdk-image'
         crdCheck:
           image:
-            repository: "{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/kubectl"
+            repository: '{{repl LocalRegistryHost }}/{{repl LocalRegistryNamespace }}/kubectl'
     # Compute NO_PROXY variable, then evaluate proxy_enabled gate.
     # Assignments produce no output; the when value resolves to just the boolean.
     - when: >-
@@ -570,7 +570,7 @@ spec:
         env:
           HTTP_PROXY: '{{repl ConfigOption "http_proxy"}}'
           HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
-          NO_PROXY: "{{repl $computedNoProxy}}"
+          NO_PROXY: '{{repl $computedNoProxy}}'
           SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"HTTP_PROXY\": \"%s\", \"HTTPS_PROXY\": \"%s\", \"NO_PROXY\": \"%s\", \"SSL_VERIFY\": \"%s\", \"GIT_SSL_NO_VERIFY\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOption "http_proxy") (ConfigOption "https_proxy") $computedNoProxy (ConfigOptionEquals "ssl_verify" "1" | ternary "True" "False") (ConfigOptionEquals "ssl_verify" "1" | ternary "False" "True") }}'
         keycloak:
@@ -592,12 +592,12 @@ spec:
             - name: HTTPS_PROXY
               value: '{{repl ConfigOption "https_proxy"}}'
             - name: NO_PROXY
-              value: "{{repl $computedNoProxy}}"
+              value: '{{repl $computedNoProxy}}'
         litellm-helm:
           envVars:
             HTTP_PROXY: '{{repl ConfigOption "http_proxy"}}'
             HTTPS_PROXY: '{{repl ConfigOption "https_proxy"}}'
-            NO_PROXY: "{{repl $computedNoProxy}}"
+            NO_PROXY: '{{repl $computedNoProxy}}'
             SSL_VERIFY: '{{repl if ConfigOptionEquals "ssl_verify" "1"}}True{{repl else}}False{{repl end}}'
     - when: '{{repl and (ConfigOptionEquals "llm_provider" "azure") (ConfigOptionEquals "azure_auth_method" "api_key") }}'
       recursiveMerge: true
@@ -640,12 +640,12 @@ spec:
       recursiveMerge: true
       values:
         env:
-          LITELLM_DEFAULT_MODEL: "litellm_proxy/custom-llm"
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/custom-llm'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"CUSTOM_API_KEY\": \"%s\", \"CUSTOM_API_BASE\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOption "custom_api_key") (ConfigOption "custom_base_url") }}'
         litellm-helm:
           proxy_config:
             model_list:
-              - model_name: "custom-llm"
+              - model_name: 'custom-llm'
                 litellm_params:
                   model: 'openai/{{repl ConfigOption "custom_model"}}'
                   api_key: os.environ/CUSTOM_API_KEY
@@ -655,7 +655,7 @@ spec:
       recursiveMerge: true
       values:
         env:
-          LITELLM_DEFAULT_MODEL: "litellm_proxy/gemini-2.5-flash"
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/gemini-2.5-flash'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"VERTEXAI_CREDENTIALS\": %s, \"VERTEXAI_PROJECT\": \"%s\", \"VERTEXAI_LOCATION\": \"%s\", \"SSL_CERT_FILE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"REQUESTS_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"GIT_SSL_CAINFO\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"CURL_CA_BUNDLE\": \"/etc/openhands/ca-bundle/ca-bundle.crt\", \"NODE_EXTRA_CA_CERTS\": \"/etc/openhands/ca-bundle/ca-bundle.crt\"}" (ConfigOptionData "google_vertex_credentials" | toJson) (ConfigOption "google_vertex_project_id") (ConfigOption "google_vertex_location") }}'
         litellm-helm:
           # volumes / volumeMounts are arrays — recursiveMerge replaces them,
@@ -700,12 +700,12 @@ spec:
       recursiveMerge: true
       values:
         env:
-          LITELLM_DEFAULT_MODEL: "litellm_proxy/bedrock"
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/bedrock'
           OH_AGENT_SERVER_ENV: '{{repl printf "{\"AWS_ACCESS_KEY_ID\": \"%s\", \"AWS_SECRET_ACCESS_KEY\": \"%s\", \"AWS_REGION_NAME\": \"%s\"}" (ConfigOption "aws_access_key_id") (ConfigOption "aws_secret_access_key") (ConfigOption "aws_region_name") }}'
         litellm-helm:
           proxy_config:
             model_list:
-              - model_name: "bedrock"
+              - model_name: 'bedrock'
                 litellm_params:
                   model: 'bedrock/{{repl ConfigOption "bedrock_model_id"}}'
                   aws_access_key_id: os.environ/AWS_ACCESS_KEY_ID
@@ -718,11 +718,11 @@ spec:
       recursiveMerge: true
       values:
         env:
-          LITELLM_DEFAULT_MODEL: "litellm_proxy/bedrock"
+          LITELLM_DEFAULT_MODEL: 'litellm_proxy/bedrock'
         litellm-helm:
           proxy_config:
             model_list:
-              - model_name: "bedrock"
+              - model_name: 'bedrock'
                 litellm_params:
                   model: 'bedrock/{{repl ConfigOption "bedrock_model_id"}}'
                   aws_region_name: os.environ/AWS_REGION_NAME
@@ -823,7 +823,7 @@ spec:
             image:
               repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/plugin-directory-server'
           imagePullSecrets:
-            - name: "{{repl ImagePullSecretName }}"
+            - name: '{{repl ImagePullSecretName }}'
 
   builder:
     keycloak:
