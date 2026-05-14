@@ -167,10 +167,10 @@ spec:
         enabled: true
         className: traefik
         hosts:
-          - host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}llm-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "llm_proxy_hostname"}}{{repl end}}'
-            paths:
-              - path: /
-                pathType: Prefix
+        - host: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}llm-proxy.{{repl ConfigOption "base_domain"}}{{repl else}}{{repl ConfigOption "llm_proxy_hostname"}}{{repl end}}'
+          paths:
+          - path: /
+            pathType: Prefix
         tls:
           - secretName: openhands-tls
             hosts:
@@ -791,7 +791,7 @@ spec:
               tls:
                 enabled: true
                 secretName: "openhands-tls"
-                clusterIssuer: "" # leave empty — cert-manager not needed
+                clusterIssuer: ""  # leave empty — cert-manager not needed
             env:
               nextauthUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
               nextPublicUrl: '{{repl if ConfigOptionEquals "hostname_mode" "derive"}}https://analytics.app.{{repl ConfigOption "base_domain"}}{{repl else}}https://{{repl ConfigOption "analytics_hostname"}}{{repl end}}'
