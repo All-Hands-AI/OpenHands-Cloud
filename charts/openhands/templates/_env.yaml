@@ -368,6 +368,10 @@
 - name: LMNR_FORCE_HTTP
   value: {{ .Values.laminar.forceHttp | quote }}
 {{- end }}
+{{- if .Values.laminar.httpPort }}
+- name: LMNR_HTTP_PORT
+  value: {{ .Values.laminar.httpPort | quote }}
+{{- end }}
 {{- end }}
 - name: DB_PASS
   valueFrom:

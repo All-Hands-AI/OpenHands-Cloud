@@ -379,6 +379,10 @@ laminar:
   # Useful for development/test environments without TLS
   forceHttp: true
 
+  # HTTP port for Laminar app server (default: 443)
+  # Set to 8000 for self-hosted environments where laminar exposes HTTP on port 8000
+  httpPort: null
+
   frontend:
     ingress:
       enabled: true          # required gate in 0.1.8; must be true for any frontend ingress to render
@@ -411,6 +415,20 @@ laminar:
         secretName: "laminar-app-server-tls"
         clusterIssuer: ""
       annotations: {}
+
+  # Pin to laminar 0.1.9's default. K8s forbids changing StatefulSet
+  # volumeClaimTemplates in place; the 0.1.10 default of 100Gi breaks
+  # `helm upgrade` with "spec: Forbidden". With replicaCount: 1 this
+  # value only describes the template, never new replicas.
+  #
+  # To grow rabbitmq disk where size is actually enforced (e.g. GKE
+  # hyperdisk-balanced), patch the live PVC out of band with
+  # `kubectl patch pvc`. On Replicated's openebs-hostpath this is a
+  # no-op — the LocalPV-hostpath provisioner has no resize handler
+  # and hostpath capacity is metadata only.
+  rabbitmq:
+    persistence:
+      size: "50Gi"
 
 litellm-helm:
   # Set this to false if you are using your own litellm instance
@@ -864,6 +882,15 @@ automation:
 
 replicated:
   enabled: false
+  # Database credentials below are rendered only into the support-bundle Secret
+  # (gated on replicated.enabled), following the same convention as the rest of
+  # replicated/openhands.yaml — the Replicated installer templates ConfigOption
+  # values into Secrets at install time. The troubleshoot v1beta2 redis/postgres
+  # collectors have no secretRef field, so auth must be inlined into the URI.
+  redisPassword: ""
+  postgresUsername: ""
+  postgresPassword: ""
+  postgresDatabase: ""
 
 global:
   security:
