@@ -45,6 +45,21 @@ service:
   # Port the container listens on (8000 for Python/FastAPI backend)
   port: 8000
 
+# Path prefix the application is mounted under. Must match:
+#   1. The image's `NEXT_PUBLIC_BASE_PATH` build arg (baked into the SPA
+#      bundle at image-build time -- see the project Dockerfile).
+#   2. The parent chart's `templates/ingress-integrations-hub.yaml` path.
+#
+# Wired to the FastAPI container as `INTHUB_ROOT_PATH`, which causes
+# `backend/app/main.py::build_app` to mount every route -- including the
+# SPA static files and `/api/health` -- under this prefix. Container
+# probes below also honour the prefix automatically.
+#
+# Set to an empty string to serve the app from the cluster root (only
+# makes sense for a dedicated subdomain image where the SPA was built
+# without `NEXT_PUBLIC_BASE_PATH`).
+rootPath: "/integrations-hub"
+
 # Bypass authentication for local development only. When true the FastAPI
 # app rejects non-loopback requests and uses a synthetic dev@localhost
 # owner; never enable this in staging/production.

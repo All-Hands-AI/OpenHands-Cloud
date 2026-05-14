@@ -16,6 +16,9 @@
                                       parser and would require list syntax)
     INTHUB_CREDENTIAL_ENCRYPTION_KEY fallback: CREDENTIAL_ENCRYPTION_KEY
     INTHUB_STATIC_DIR                set in the Dockerfile to /app/out
+    INTHUB_ROOT_PATH                 sub-path mount; defaulted by the
+                                     Dockerfile to /integrations-hub and
+                                     overridable via .Values.rootPath
 
   In addition, backend/app/oauth_flow.py reads:
     AUTH_REDIRECT_PROXY_URL          stable origin for OAuth callback proxy
@@ -73,6 +76,15 @@
 # in staging/production.
 - name: INTHUB_DISABLE_AUTH
   value: {{ .Values.disableAuth | default false | quote }}
+
+# Sub-path mount for the FastAPI app. The Dockerfile already defaults
+# INTHUB_ROOT_PATH to /integrations-hub so the image works behind the
+# default ingress out of the box; this block re-emits the value so chart
+# overrides flow through. Rendered unconditionally (including when
+# .Values.rootPath is "") so that an empty override actually clears the
+# image default instead of silently inheriting it.
+- name: INTHUB_ROOT_PATH
+  value: {{ .Values.rootPath | default "" | quote }}
 
 # Credential encryption key (required: signs/encrypts stored OAuth tokens
 # and other provider secrets at rest).

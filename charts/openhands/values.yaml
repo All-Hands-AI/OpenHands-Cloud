@@ -1011,6 +1011,19 @@ integrations-hub:
     # Dockerfile's `EXPOSE 8000` on the development branch).
     port: 8000
 
+  # Path prefix that the hub is mounted under. This single value drives
+  # three things at once and they MUST agree:
+  #   - The parent chart's `templates/ingress-integrations-hub.yaml`
+  #     routing rule (host-based ingress + this path).
+  #   - The FastAPI container's `INTHUB_ROOT_PATH` env var, which causes
+  #     `backend/app/main.py::build_app` to mount every route under the
+  #     prefix.
+  #   - The Next.js SPA's `NEXT_PUBLIC_BASE_PATH`, which is baked into
+  #     the image at build time (default `/integrations-hub` in the
+  #     project Dockerfile). Override the image's build arg if you set a
+  #     different rootPath here.
+  rootPath: "/integrations-hub"
+
   # Bypass authentication for local development only -- never enable in
   # staging/production. Exposed as INTHUB_DISABLE_AUTH.
   disableAuth: false
