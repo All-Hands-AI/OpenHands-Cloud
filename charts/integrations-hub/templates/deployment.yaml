@@ -83,7 +83,7 @@ spec:
           - |
             DB_HOST="{{ .Values.database.host }}"
             echo "Waiting for PostgreSQL at $DB_HOST to be ready..."
-            until PGPASSWORD=$INTEGRATIONS_HUB_DB_PASS psql -h $DB_HOST -p {{ .Values.database.port }} -U {{ .Values.database.user }} -c '\q' > /dev/null 2>&1; do
+            until PGPASSWORD=$INTHUB_DB_PASS psql -h $DB_HOST -p {{ .Values.database.port }} -U {{ .Values.database.user }} -c '\q' > /dev/null 2>&1; do
               echo "PostgreSQL is unavailable - sleeping for 2 seconds"
               sleep 2
             done
@@ -105,22 +105,25 @@ spec:
         - containerPort: {{ .Values.service.port | default 8000 }}
         resources:
           {{- toYaml .Values.deployment.resources | nindent 12 }}
+        # Health endpoint lives at /api/health on the dev branch FastAPI
+        # app (backend/app/routers/health.py). There is no separate /ready
+        # endpoint, so readiness reuses the same probe path.
         startupProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: {{ .Values.service.port | default 8000 }}
           failureThreshold: {{ .Values.probes.startup.failureThreshold }}
           periodSeconds: {{ .Values.probes.startup.periodSeconds }}
         livenessProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: {{ .Values.service.port | default 8000 }}
           initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
           periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
           failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
         readinessProbe:
           httpGet:
-            path: /ready
+            path: /api/health
             port: {{ .Values.service.port | default 8000 }}
           initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
           periodSeconds: {{ .Values.probes.readiness.periodSeconds }}

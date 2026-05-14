@@ -1,97 +1,128 @@
-{{- define "integrations-hub.env.defaults" }}
-# Python/FastAPI service configuration
-- name: INTEGRATIONS_HUB_HOST
-  value: "0.0.0.0"
-- name: INTEGRATIONS_HUB_SERVER_PORT
-  value: {{ .Values.service.port | default 8000 | quote }}
-- name: INTEGRATIONS_HUB_LOG_LEVEL
-  value: "info"
+{{- /*
+  Environment variables consumed by the Integrations Hub backend
+  (Python/FastAPI on the `development` branch of OpenHands/integrations-hub).
 
-# OpenHands authentication configuration
-{{- if .Values.openhands.baseUrl }}
-- name: INTEGRATIONS_HUB_OPENHANDS_BASE_URL
-  value: {{ .Values.openhands.baseUrl | quote }}
-{{- else if .Values.global }}
+  The backend reads its config in backend/app/config.py using the prefix
+  `INTHUB_*`, with legacy unprefixed fallbacks for backwards compatibility:
+
+    INTHUB_POSTGRES_URL              fallback: POSTGRES_URL, DATABASE_URL
+    INTHUB_DISABLE_AUTH              (bool, defaults to false)
+    INTHUB_OPENHANDS_BASE_URL        fallback: OPENHANDS_BASE_URL
+    INTHUB_OPENHANDS_AUTH_COOKIE_NAME  fallback: OPENHANDS_AUTH_COOKIE_NAME
+    INTHUB_INTERNAL_AUTH_SECRET      fallback: INTERNAL_AUTH_SECRET, AUTH_SECRET, NEXTAUTH_SECRET
+    INTHUB_CRON_SECRET               fallback: CRON_SECRET
+    APP_ADMIN_EMAILS                 (use the unprefixed name; the prefixed
+                                      form is JSON-decoded by the SDK env
+                                      parser and would require list syntax)
+    INTHUB_CREDENTIAL_ENCRYPTION_KEY fallback: CREDENTIAL_ENCRYPTION_KEY
+    INTHUB_STATIC_DIR                set in the Dockerfile to /app/out
+
+  In addition, backend/app/oauth_flow.py reads:
+    AUTH_REDIRECT_PROXY_URL          stable origin for OAuth callback proxy
+    AUTH_URL / NEXTAUTH_URL          preview-deployment callback target
+*/}}
+{{- define "integrations-hub.env.defaults" }}
+# Database connection -- backend reads INTHUB_POSTGRES_URL first; we build
+# it from the configured host/port/user/db plus the password secret using
+# Kubernetes $(VAR_NAME) expansion. If .Values.database.url is set it wins.
+{{- if .Values.database.url }}
+- name: INTHUB_POSTGRES_URL
+  value: {{ .Values.database.url | quote }}
+{{- else }}
+- name: INTHUB_DB_HOST
+  value: {{ .Values.database.host | quote }}
+- name: INTHUB_DB_PORT
+  value: {{ .Values.database.port | quote }}
+- name: INTHUB_DB_USER
+  value: {{ .Values.database.user | quote }}
+- name: INTHUB_DB_NAME
+  value: {{ .Values.database.name | quote }}
+- name: INTHUB_DB_PASS
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.database.secretName }}
+      key: {{ .Values.database.secretKey }}
+- name: INTHUB_POSTGRES_URL
+  value: "postgresql://$(INTHUB_DB_USER):$(INTHUB_DB_PASS)@$(INTHUB_DB_HOST):$(INTHUB_DB_PORT)/$(INTHUB_DB_NAME)"
+{{- end }}
+
+# OpenHands identity provider used to validate session cookies / API keys.
+{{- $openhandsBaseUrl := .Values.openhands.baseUrl }}
+{{- if and (not $openhandsBaseUrl) .Values.global }}
 {{- if .Values.global.ingress }}
 {{- if .Values.global.ingress.host }}
 {{- $host := .Values.global.ingress.host }}
 {{- if and .Values.global.ingress.prefixWithBranch .Values.global.branchSanitized }}
 {{- $host = printf "%s.%s" .Values.global.branchSanitized .Values.global.ingress.host }}
 {{- end }}
-- name: INTEGRATIONS_HUB_OPENHANDS_BASE_URL
-  value: {{ printf "https://%s" $host | quote }}
+{{- $openhandsBaseUrl = printf "https://%s" $host }}
 {{- end }}
 {{- end }}
 {{- end }}
-
+{{- if $openhandsBaseUrl }}
+- name: INTHUB_OPENHANDS_BASE_URL
+  value: {{ $openhandsBaseUrl | quote }}
+{{- end }}
 {{- if .Values.openhands.authCookieName }}
-- name: INTEGRATIONS_HUB_OPENHANDS_AUTH_COOKIE_NAME
+- name: INTHUB_OPENHANDS_AUTH_COOKIE_NAME
   value: {{ .Values.openhands.authCookieName | quote }}
 {{- end }}
 
-# Service base URL
-{{- if .Values.service.baseUrl }}
-- name: INTEGRATIONS_HUB_BASE_URL
-  value: {{ .Values.service.baseUrl | quote }}
-{{- end }}
+# Local-dev auth bypass. Defaults to false; the FastAPI app will reject
+# non-loopback requests when this is true, so it should never be enabled
+# in staging/production.
+- name: INTHUB_DISABLE_AUTH
+  value: {{ .Values.disableAuth | default false | quote }}
 
-# Credential encryption key
-- name: INTEGRATIONS_HUB_CREDENTIAL_ENCRYPTION_KEY
+# Credential encryption key (required: signs/encrypts stored OAuth tokens
+# and other provider secrets at rest).
+- name: INTHUB_CREDENTIAL_ENCRYPTION_KEY
   valueFrom:
     secretKeyRef:
       name: {{ .Values.credentialEncryption.secretName }}
       key: {{ .Values.credentialEncryption.secretKey }}
 
-# Admin configuration
+# Internal service-to-service secret. Optional in SPA-only K8s deployments
+# (the backend validates the OpenHands session cookie directly when no
+# Next.js proxy is in front of it) but required if any internal caller
+# attaches the X-Integrations-Hub-Internal-Secret header.
+{{- if and .Values.auth .Values.auth.internalSecretName }}
+- name: INTHUB_INTERNAL_AUTH_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.auth.internalSecretName }}
+      key: {{ .Values.auth.internalSecretKey | default "internal-auth-secret" }}
+{{- end }}
+
+# Admin allowlist for /api/admin/* routes. Use the unprefixed name --
+# INTHUB_APP_ADMIN_EMAILS goes through the SDK env parser which expects
+# JSON list syntax.
 {{- if .Values.admin.emails }}
-- name: INTEGRATIONS_HUB_APP_ADMIN_EMAILS
+- name: APP_ADMIN_EMAILS
   value: {{ .Values.admin.emails | quote }}
 {{- end }}
 
-# PostgreSQL database configuration
-- name: INTEGRATIONS_HUB_DB_HOST
-  value: {{ .Values.database.host | quote }}
-- name: INTEGRATIONS_HUB_DB_PORT
-  value: {{ .Values.database.port | quote }}
-- name: INTEGRATIONS_HUB_DB_USER
-  value: {{ .Values.database.user | quote }}
-- name: INTEGRATIONS_HUB_DB_NAME
-  value: {{ .Values.database.name | quote }}
-- name: INTEGRATIONS_HUB_DB_PASS
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Values.database.secretName }}
-      key: {{ .Values.database.secretKey }}
-- name: INTEGRATIONS_HUB_DB_POOL_SIZE
-  value: {{ .Values.database.poolSize | default 10 | quote }}
-- name: INTEGRATIONS_HUB_DB_MAX_OVERFLOW
-  value: {{ .Values.database.maxOverflow | default 5 | quote }}
-
-{{- if .Values.gcp.dbInstance }}
-# GCP Cloud SQL configuration
-- name: INTEGRATIONS_HUB_GCP_DB_INSTANCE
-  value: {{ .Values.gcp.dbInstance | quote }}
-- name: INTEGRATIONS_HUB_GCP_PROJECT
-  value: {{ .Values.gcp.project | quote }}
-- name: INTEGRATIONS_HUB_GCP_REGION
-  value: {{ .Values.gcp.region | quote }}
-{{- end }}
-
-# Cron job authentication
-- name: INTEGRATIONS_HUB_CRON_SECRET
+# Cron secret -- required by /api/cron/expire-grants.
+- name: INTHUB_CRON_SECRET
   valueFrom:
     secretKeyRef:
       name: {{ .Values.cron.secretName }}
       key: {{ .Values.cron.secretKey }}
 
-# CORS configuration
-{{- if .Values.cors.origins }}
-- name: INTEGRATIONS_HUB_CORS_ORIGINS
-  value: {{ .Values.cors.origins | quote }}
+# OAuth preview-deployment proxy (optional). When set, service OAuth
+# callbacks register/exchange against the stable origin and then forward
+# back to the preview deployment captured in OAuth state.
+{{- if .Values.openhands.redirectProxyUrl }}
+- name: AUTH_REDIRECT_PROXY_URL
+  value: {{ .Values.openhands.redirectProxyUrl | quote }}
+{{- end }}
+{{- if .Values.openhands.authUrl }}
+- name: AUTH_URL
+  value: {{ .Values.openhands.authUrl | quote }}
 {{- end }}
 
 {{- if .Values.datadog.enabled }}
-# Datadog configuration
+# Datadog APM
 - name: DD_AGENT_HOST
   value: "datadog-agent.all-hands-system.svc.cluster.local"
 - name: DD_TRACE_AGENT_PORT

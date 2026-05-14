@@ -980,34 +980,53 @@ integrations-hub:
   # Service configuration
   service:
     baseUrl: ""
-    port: 3000
+    # Port the FastAPI container listens on (matches the integrations-hub
+    # Dockerfile's `EXPOSE 8000` on the development branch).
+    port: 8000
 
-  # OpenHands authentication configuration
+  # Bypass authentication for local development only -- never enable in
+  # staging/production. Exposed as INTHUB_DISABLE_AUTH.
+  disableAuth: false
+
+  # OpenHands identity provider used to validate session cookies / API keys.
   openhands:
+    # Backend env var: INTHUB_OPENHANDS_BASE_URL (falls back to the global
+    # ingress host when left empty -- see charts/integrations-hub/templates/_env.yaml).
     baseUrl: ""
+    # Backend env var: INTHUB_OPENHANDS_AUTH_COOKIE_NAME
+    authCookieName: "keycloak_auth"
+    # Stable-origin URL used as the OAuth callback proxy for preview
+    # deployments. Backend env var: AUTH_REDIRECT_PROXY_URL.
+    redirectProxyUrl: ""
+    # Optional callback target for preview deployments paired with
+    # redirectProxyUrl. Backend env var: AUTH_URL.
+    authUrl: ""
 
-  # Credential encryption key configuration
+  # Credential encryption key configuration.
+  # Backend env var: INTHUB_CREDENTIAL_ENCRYPTION_KEY.
   credentialEncryption:
     secretName: "integrations-hub-encryption-secret"
     secretKey: "encryption-key"
 
-  # Auth.js/NextAuth configuration
+  # Optional internal service-to-service auth secret. Only needed when a
+  # Next.js proxy in front of FastAPI injects X-Integrations-Hub-Internal-Secret;
+  # in pure SPA + FastAPI K8s deployments this is unused. Leave
+  # internalSecretName empty to skip wiring INTHUB_INTERNAL_AUTH_SECRET.
   auth:
-    secretName: "integrations-hub-auth-secret"
-    secretKey: "auth-secret"
-    github:
-      clientIdSecretName: ""
-      clientIdSecretKey: "client-id"
-      clientSecretSecretName: ""
-      clientSecretSecretKey: "client-secret"
-    redirectProxyUrl: ""
+    internalSecretName: ""
+    internalSecretKey: "internal-auth-secret"
 
-  # Admin configuration
+  # Admin allowlist for /api/admin/* routes.
+  # Backend env var: APP_ADMIN_EMAILS (comma-separated).
   admin:
     emails: ""
 
-  # PostgreSQL database configuration
+  # PostgreSQL database configuration. The backend reads a single
+  # connection URL via INTHUB_POSTGRES_URL; the chart builds it from the
+  # components below using $(VAR_NAME) expansion in templates/_env.yaml.
+  # Set `database.url` to bypass that builder and supply a pre-formed URL.
   database:
+    url: ""
     host: ""
     port: "5432"
     user: "integrations_hub_user"
