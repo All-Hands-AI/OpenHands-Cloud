@@ -116,7 +116,7 @@ gitlabWebhookInstallation:
 
 image:
   repository: ghcr.io/openhands/enterprise-server
-  tag: cloud-1.26.1
+  tag: cloud-1.29.1
 
 ingress:
   enabled: false
@@ -213,7 +213,7 @@ resendSync:
 runtime:
   image:
     repository: ghcr.io/openhands/agent-server
-    tag: 1.19.1-python
+    tag: 1.21.1-python
 
 sandbox:
   # REQUIRED: Update so this matches what you have set in the runtime api ingress
@@ -593,7 +593,7 @@ runtime-api:
     count: 1
     configs:
       - name: default
-        image: "ghcr.io/openhands/agent-server:1.19.1-python"
+        image: "ghcr.io/openhands/agent-server:1.21.1-python"
         working_dir: "/workspace"
         environment:
           LOG_JSON: "1"
@@ -831,6 +831,11 @@ automation:
     # When true, runs an init container to create the database and user
     # Useful when sharing a PostgreSQL instance with other services
     createDatabaseUser: false
+    # Superuser used to create the automation database and user.
+    # Defaults to "postgres" but must be overridden when the external PostgreSQL
+    # admin account uses a different name.
+    # Only used when createDatabaseUser=true
+    superuserName: "postgres"
     # Secret containing the postgres superuser password (for creating the automation user)
     # Only used when createDatabaseUser=true
     superuserSecretName: "postgres-password"
