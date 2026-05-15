@@ -563,6 +563,7 @@ spec:
         {{repl if ne $llmDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $llmDomain }}{{repl end }}
         {{repl if ne $runtimeApiDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $runtimeApiDomain }}{{repl end }}
         {{repl if ne $runtimeBaseDomain "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy $runtimeBaseDomain }}{{repl end }}
+        {{repl if ConfigOptionEquals "analytics_enabled" "1" }}{{repl $computedNoProxy = printf "%s,laminar-app-server-service,laminar-clickhouse,laminar-frontend,laminar-postgres,laminar-query-engine,laminar-quickwit-control-plane,laminar-quickwit-indexer,laminar-quickwit-janitor,laminar-quickwit-metastore,laminar-quickwit-searcher,laminar-rabbitmq,laminar-redis" $computedNoProxy }}{{repl end }}
         {{repl if ne (ConfigOption "no_proxy") "" }}{{repl $computedNoProxy = printf "%s,%s" $computedNoProxy (ConfigOption "no_proxy") }}{{repl end }}
         {{repl ConfigOptionEquals "proxy_enabled" "1" }}
       recursiveMerge: true
