@@ -409,13 +409,20 @@ warmRuntimes:
 
 @pytest.fixture
 def sample_replicated_openhands_wrapper_values():
-    """Sample replicated openhands wrapper YAML with agent-server image references."""
+    """Sample replicated openhands wrapper YAML with agent-server image references.
+
+    The proxy block intentionally carries a commented-out alternate repository
+    line between repository: and tag: to mirror the real replicated/openhands.yaml,
+    where that comment documents the non-proxy fallback path.
+    """
     return """\
 spec:
   values:
     runtime:
       image:
+        # this is what we need to use for real deployments
         repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/agent-server'
+        # repository: 'ghcr.io/openhands/agent-server'
         tag: '1.19.0-python'
       warmRuntimes:
         configs:

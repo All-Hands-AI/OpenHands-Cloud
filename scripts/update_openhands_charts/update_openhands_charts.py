@@ -35,6 +35,7 @@ CHART_PATH = REPO_ROOT / "charts" / "openhands" / "Chart.yaml"
 VALUES_PATH = REPO_ROOT / "charts" / "openhands" / "values.yaml"
 RUNTIME_API_CHART_PATH = REPO_ROOT / "charts" / "runtime-api" / "Chart.yaml"
 RUNTIME_API_VALUES_PATH = REPO_ROOT / "charts" / "runtime-api" / "values.yaml"
+REPLICATED_OPENHANDS_PATH = REPO_ROOT / "replicated" / "openhands.yaml"
 
 # Regex patterns for values.yaml image tag updates
 ENTERPRISE_SERVER_TAG_PATTERN = (
@@ -48,7 +49,7 @@ RUNTIME_API_TAG_PATTERN = (
     r'(image:\n\s+repository: ghcr\.io/openhands/runtime-api\n\s+tag: )(sha-[a-f0-9]+)'
 )
 REPLICATED_PROXY_AGENT_SERVER_TAG_PATTERN = (
-    r"(repository:\s*'images\.r9\.all-hands\.dev/proxy/\{\{repl LicenseFieldValue \"appSlug\"\}\}/ghcr\.io/openhands/agent-server'\s*\n\s*tag:\s*')([^']+)'"
+    r"(repository:\s*'images\.r9\.all-hands\.dev/proxy/\{\{repl LicenseFieldValue \"appSlug\"\}\}/ghcr\.io/openhands/agent-server'\s*\n(?:\s*#[^\n]*\n)*\s*tag:\s*')([^']+)'"
 )
 REPLICATED_PROXY_WARM_RUNTIME_IMAGE_PATTERN = (
     r"(image:\s*'images\.r9\.all-hands\.dev/proxy/\{\{repl LicenseFieldValue \"appSlug\"\}\}/ghcr\.io/openhands/agent-server:)([^']+)'"
@@ -434,6 +435,28 @@ def update_openhands_values(
         result,
         replacement_suffix='"',
     )
+
+    if not dry_run and result.has_changes:
+        values_path.write_text(content)
+
+    return result
+
+
+def update_replicated_openhands_values(
+    values_path: Path,
+    runtime_image_tag: str,
+    dry_run: bool = False,
+) -> UpdateResult:
+    """Update agent-server image tags in the replicated/openhands.yaml KOTS wrapper.
+
+    The wrapper carries its own copy of the agent-server tag in four locations:
+    proxy-style and LocalRegistry-style image refs, each in both the chart-level
+    image block and the warmRuntimes default config. The chart-values updater
+    cannot reach these because the templating only renders inside the KOTS wrapper.
+    """
+    content = values_path.read_text()
+    result = UpdateResult()
+
     content = update_all_tags_in_content(
         content,
         REPLICATED_PROXY_AGENT_SERVER_TAG_PATTERN,
@@ -441,7 +464,6 @@ def update_openhands_values(
         "replicated runtime image tag",
         result,
         replacement_suffix="'",
-        error_if_missing=False,
     )
     content = update_tag_in_content(
         content,
@@ -450,7 +472,6 @@ def update_openhands_values(
         "replicated warmRuntimes image tag",
         result,
         replacement_suffix="'",
-        error_if_missing=False,
     )
     content = update_all_tags_in_content(
         content,
@@ -459,7 +480,6 @@ def update_openhands_values(
         "replicated local registry runtime image tag",
         result,
         replacement_suffix="'",
-        error_if_missing=False,
     )
     content = update_tag_in_content(
         content,
@@ -468,7 +488,6 @@ def update_openhands_values(
         "replicated local registry warmRuntimes image tag",
         result,
         replacement_suffix="'",
-        error_if_missing=False,
     )
 
     if not dry_run and result.has_changes:
@@ -645,6 +664,15 @@ def update_openhands_workflow(
         dry_run=dry_run,
     )
     values_result.print_summary()
+
+    print()
+    print("Updating replicated/openhands.yaml...")
+    replicated_result = update_replicated_openhands_values(
+        REPLICATED_OPENHANDS_PATH,
+        runtime_image_tag,
+        dry_run=dry_run,
+    )
+    replicated_result.print_summary()
 
     print()
     print("Updating openhands Chart.yaml...")

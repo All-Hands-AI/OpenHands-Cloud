@@ -59,6 +59,7 @@ from update_openhands_charts import (
     update_openhands_chart,
     update_openhands_values,
     update_openhands_workflow,
+    update_replicated_openhands_values,
     update_runtime_api_chart,
     update_runtime_api_values,
     update_runtime_api_workflow,
@@ -1050,8 +1051,8 @@ serviceAccount:
 
 
 
-class TestUpdateReplicatedOpenhandsWrapperValues:
-    """Tests for replicated OpenHands wrapper agent-server image updates."""
+class TestUpdateReplicatedOpenhandsValues:
+    """Tests for replicated/openhands.yaml agent-server image updates."""
 
     @pytest.fixture
     def temp_replicated_wrapper_file(self, make_temp_yaml_file, sample_replicated_openhands_wrapper_values):
@@ -1071,9 +1072,8 @@ class TestUpdateReplicatedOpenhandsWrapperValues:
     ])
     def test_replicated_wrapper_file_content_updated(self, temp_replicated_wrapper_file, expected_content):
         """Test that each agent-server tag location in the replicated wrapper file is updated."""
-        update_openhands_values(
+        update_replicated_openhands_values(
             temp_replicated_wrapper_file,
-            openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
 
@@ -1087,9 +1087,8 @@ class TestUpdateReplicatedOpenhandsWrapperValues:
     ])
     def test_result_records_replicated_wrapper_change(self, temp_replicated_wrapper_file, change_key):
         """Test that each replicated wrapper tag key is recorded as changed in the result."""
-        result = update_openhands_values(
+        result = update_replicated_openhands_values(
             temp_replicated_wrapper_file,
-            openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
 
@@ -1098,14 +1097,12 @@ class TestUpdateReplicatedOpenhandsWrapperValues:
     @pytest.fixture
     def reapplied_replicated_wrapper_result(self, temp_replicated_wrapper_file):
         """Apply identical replicated wrapper values twice and return the second-call UpdateResult."""
-        update_openhands_values(
+        update_replicated_openhands_values(
             temp_replicated_wrapper_file,
-            openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
-        return update_openhands_values(
+        return update_replicated_openhands_values(
             temp_replicated_wrapper_file,
-            openhands_version="cloud-1.19.1",
             runtime_image_tag="1.19.1-python",
         )
 
@@ -1629,10 +1626,16 @@ class TestUpdateOpenhandsWorkflow:
 
     @pytest.fixture
     def patched_inner_calls(self, monkeypatch):
-        """Mock both inner update functions and return their MagicMocks."""
+        """Mock all three inner update functions and return their MagicMocks.
+
+        Mocking update_replicated_openhands_values is mandatory: without it,
+        the workflow writes to the real replicated/openhands.yaml on disk.
+        """
         mock_values = MagicMock(return_value=update_openhands_charts.UpdateResult(has_changes=True))
+        mock_replicated = MagicMock(return_value=update_openhands_charts.UpdateResult())
         mock_chart = MagicMock(return_value=update_openhands_charts.UpdateResult())
         monkeypatch.setattr("update_openhands_charts.update_openhands_values", mock_values)
+        monkeypatch.setattr("update_openhands_charts.update_replicated_openhands_values", mock_replicated)
         monkeypatch.setattr("update_openhands_charts.update_openhands_chart", mock_chart)
         return mock_values, mock_chart
 
@@ -1641,6 +1644,10 @@ class TestUpdateOpenhandsWorkflow:
         monkeypatch.setattr(
             "update_openhands_charts.update_openhands_values",
             MagicMock(return_value=update_openhands_charts.UpdateResult(has_changes=True)),
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.update_replicated_openhands_values",
+            MagicMock(return_value=update_openhands_charts.UpdateResult()),
         )
         mock_chart = MagicMock(return_value=update_openhands_charts.UpdateResult())
         monkeypatch.setattr("update_openhands_charts.update_openhands_chart", mock_chart)
@@ -1660,6 +1667,10 @@ class TestUpdateOpenhandsWorkflow:
         monkeypatch.setattr(
             "update_openhands_charts.update_openhands_values",
             MagicMock(return_value=update_openhands_charts.UpdateResult(has_changes=False)),
+        )
+        monkeypatch.setattr(
+            "update_openhands_charts.update_replicated_openhands_values",
+            MagicMock(return_value=update_openhands_charts.UpdateResult()),
         )
         mock_chart = MagicMock(return_value=update_openhands_charts.UpdateResult())
         monkeypatch.setattr("update_openhands_charts.update_openhands_chart", mock_chart)
@@ -1745,6 +1756,69 @@ class TestUpdateOpenhandsWorkflow:
 
         assert mock_values.call_args.kwargs["dry_run"] is dry_run
         assert mock_chart.call_args.kwargs["dry_run"] is dry_run
+
+
+class TestUpdateOpenhandsWorkflowReplicated:
+    """Tests that update_openhands_workflow also updates replicated/openhands.yaml.
+
+    The replicated KOTS wrapper embeds its own copy of the agent-server image tag
+    (proxy + LocalRegistry variants) that the chart-values updater cannot reach.
+    The workflow must update that file too, or Replicated installs ship a stale tag.
+    """
+
+    @pytest.fixture
+    def patched_inner_calls(self, monkeypatch):
+        """Mock all three inner update functions and return their MagicMocks."""
+        mock_values = MagicMock(return_value=update_openhands_charts.UpdateResult(has_changes=True))
+        mock_replicated = MagicMock(return_value=update_openhands_charts.UpdateResult(has_changes=True))
+        mock_chart = MagicMock(return_value=update_openhands_charts.UpdateResult())
+        monkeypatch.setattr("update_openhands_charts.update_openhands_values", mock_values)
+        monkeypatch.setattr("update_openhands_charts.update_replicated_openhands_values", mock_replicated)
+        monkeypatch.setattr("update_openhands_charts.update_openhands_chart", mock_chart)
+        return mock_values, mock_replicated, mock_chart
+
+    def test_replicated_updater_invoked_with_replicated_openhands_path(self, patched_inner_calls):
+        """The workflow points the replicated updater at replicated/openhands.yaml."""
+        _, mock_replicated, _ = patched_inner_calls
+
+        update_openhands_workflow(
+            DeployConfig(runtime_api_sha="abc"),
+            openhands_version="cloud-1.0.0",
+            runtime_api_version="0.1.0",
+            runtime_image_tag="tag",
+            dry_run=False,
+        )
+
+        assert mock_replicated.call_args.args[0] == update_openhands_charts.REPLICATED_OPENHANDS_PATH
+
+    def test_replicated_updater_receives_runtime_image_tag(self, patched_inner_calls):
+        """runtime_image_tag is forwarded to the replicated updater."""
+        _, mock_replicated, _ = patched_inner_calls
+
+        update_openhands_workflow(
+            DeployConfig(runtime_api_sha="abc"),
+            openhands_version="cloud-1.0.0",
+            runtime_api_version="0.1.0",
+            runtime_image_tag="9.9.9-python",
+            dry_run=False,
+        )
+
+        assert mock_replicated.call_args.args[1] == "9.9.9-python"
+
+    @pytest.mark.parametrize("dry_run", [True, False])
+    def test_replicated_updater_receives_dry_run(self, patched_inner_calls, dry_run):
+        """The dry_run flag is forwarded to the replicated updater."""
+        _, mock_replicated, _ = patched_inner_calls
+
+        update_openhands_workflow(
+            DeployConfig(runtime_api_sha="abc"),
+            openhands_version="cloud-1.0.0",
+            runtime_api_version="0.1.0",
+            runtime_image_tag="tag",
+            dry_run=dry_run,
+        )
+
+        assert mock_replicated.call_args.kwargs["dry_run"] is dry_run
 
 
 class TestMainOutputMessages:
