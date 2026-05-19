@@ -47,8 +47,10 @@ jobs:
           #
           # Check if runtime-api is a dependency in openhands chart and update it to use local path
           if yq -e '.dependencies[] | select(.name == "runtime-api")' charts/openhands/Chart.yaml > /dev/null 2>&1; then
-            echo "Updating openhands chart to use local runtime-api dependency"
+            RUNTIME_API_VERSION=$(yq '.version' charts/runtime-api/Chart.yaml)
+            echo "Updating openhands chart to use local runtime-api dependency ${RUNTIME_API_VERSION}"
             yq -i '(.dependencies[] | select(.name == "runtime-api")).repository = "file://../runtime-api"' charts/openhands/Chart.yaml
+            yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_VERSION}\"" charts/openhands/Chart.yaml
           fi
 
       - name: Lint Replicated release
