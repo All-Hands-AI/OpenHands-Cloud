@@ -22,7 +22,7 @@ dependencies:
   version: 1.9.0
 - name: runtime-api
   repository: oci://ghcr.io/all-hands-ai/helm-charts
-  version: 0.3.3
+  version: 0.3.4
 - name: automation
   repository: oci://ghcr.io/all-hands-ai/helm-charts
   version: 0.1.9
