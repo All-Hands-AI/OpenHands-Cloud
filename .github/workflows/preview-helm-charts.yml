@@ -187,6 +187,7 @@ jobs:
           RUNTIME_API_PREVIEW="${RUNTIME_API_VERSION}-alpha.${{ github.event.pull_request.number }}"
 
           yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
+          yq -i "(.dependencies[] | select(.name == \"runtime-api\")).repository = \"oci://ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/helm-charts\"" charts/openhands/Chart.yaml
 
       - name: Update automation dependency version
         if: steps.check.outputs.should_publish == 'true' && matrix.chart.name == 'openhands' && needs.detect-changes.outputs.automation == 'true'
@@ -322,6 +323,7 @@ jobs:
 
           echo "Updating openhands runtime-api dependency to ${RUNTIME_API_PREVIEW}"
           yq -i "(.dependencies[] | select(.name == \"runtime-api\")).version = \"${RUNTIME_API_PREVIEW}\"" charts/openhands/Chart.yaml
+          yq -i "(.dependencies[] | select(.name == \"runtime-api\")).repository = \"oci://ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/helm-charts\"" charts/openhands/Chart.yaml
 
       - name: Update automation dependency version for openhands
         if: matrix.chart.name == 'openhands' && needs.detect-changes.outputs.automation == 'true'
