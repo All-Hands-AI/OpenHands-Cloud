@@ -17,7 +17,7 @@ spec:
 
     image:
       repository: 'images.r9.all-hands.dev/proxy/{{repl LicenseFieldValue "appSlug"}}/ghcr.io/openhands/enterprise-server'
-      tag: 'sha-7dfd8b0'
+      tag: 'sha-b315fbf'
     imagePullSecrets:
       - name: '{{repl ImagePullSecretName }}'
 
